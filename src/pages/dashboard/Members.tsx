@@ -111,16 +111,7 @@ export default function Members() {
             A list of all members in the system
           </p>
         </div>
-        <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-          <button
-            onClick={() => setShowPromoteModal(true)}
-            type="button"
-            className="flex items-center justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
-          >
-            <Shield className="h-4 w-4 mr-2" />
-            Promote to Officer
-          </button>
-        </div>
+        
       </div>
 
       {/* Promote Modal */}
@@ -307,11 +298,16 @@ export default function Members() {
                       <tr key={member.id}>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                           <div className="flex items-center">
-                            <img
+                            {member.avatar_url ? (<img
                               src={member.avatar_url || 'https://via.placeholder.com/40'}
                               alt=""
                               className="h-10 w-10 rounded-full mr-3"
                             />
+                            ) : (
+                              <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <span className="text-sm font-medium text-green-600">{member.name.charAt(0)}</span>
+                              </div>
+                            )}
                             {member.name}
                           </div>
                         </td>
