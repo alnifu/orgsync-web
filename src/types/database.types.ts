@@ -31,8 +31,6 @@ export type Organization = {
   org_type: 'Prof' | 'SPIN' | 'Socio-Civic';
   created_at: string;
   updated_at: string;
-  adviser_id: string | null;
-  adviser?: Officer | null;
 };
 
 export type OrganizationMember = {
@@ -45,6 +43,12 @@ export type OrganizationMember = {
   organization?: Organization;
 };
 
+
+export type Adviser = Member & {
+  org_id: string;
+  assigned_at: string;
+  organization?: Organization;
+};
 
 export interface Posts {
   id: string;

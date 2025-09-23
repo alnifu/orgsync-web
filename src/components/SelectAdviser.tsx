@@ -1,125 +1,127 @@
 import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
 import { Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Officer } from '../types/database.types';
+import type { Member } from '../types/database.types';
 
 type SelectAdviserProps = {
-  currentAdviserId: string | null;
-  onChange: (officerId: string | null) => void;
-  className?: string;
+  isOpen: boolean;
+  onClose: () => void;
+  orgId: string;
+  onError?: (error: string) => void;
 };
 
-export default function SelectAdviser({
-  currentAdviserId,
-  onChange,
-  className = ''
-}: SelectAdviserProps) {
-  const [search, setSearch] = useState('');
-  const [officers, setOfficers] = useState<Officer[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function SelectAdviser({ isOpen, onClose, orgId, onError }: SelectAdviserProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const searchOfficers = async (searchTerm: string) => {
-    setLoading(true);
+  // Fetch all members
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('members')
+          .select('*')
+          .order('name');
+
+        if (error) throw error;
+        setMembers(data || []);
+      } catch (err) {
+        onError?.(err instanceof Error ? err.message : 'Failed to load members');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchMembers();
+    }
+  }, [isOpen, onError]);
+
+  // Handle adviser assignment
+  const handleAssignAdviser = async (memberId: string) => {
     try {
-      let query = supabase
-        .from('officers')
-        .select(`
-          id,
-          org_id,
-          position,
-          assigned_at,
-          members!inner(
-            name,
-            avatar_url,
-            email,
-            department,
-            year,
-            course,
-            created_at,
-            updated_at
-          )
-        `);
+      const { error: assignError } = await supabase
+        .rpc('assign_adviser', {
+          m_id: memberId,
+          o_id: orgId
+        });
 
-      if (currentAdviserId) {
-        query = query.neq('id', currentAdviserId);
-      }
-
-      if (searchTerm) {
-        query = query.textSearch('members.name', searchTerm);
-      }
-
-      const { data, error } = await query
-        .limit(10)
-        .order('position');
-
-      if (error) throw error;
-
-      setOfficers(data.map(officer => ({
-        id: officer.id,
-        org_id: officer.org_id,
-        position: officer.position,
-        assigned_at: officer.assigned_at,
-        name: officer.members?.name || '',
-        avatar_url: officer.members?.avatar_url,
-        email: officer.members?.email || '',
-        department: officer.members?.department || '',
-        year: officer.members?.year || '',
-        course: officer.members?.course || '',
-        created_at: officer.members?.created_at || new Date().toISOString(),
-        updated_at: officer.members?.updated_at || new Date().toISOString()
-      })));
-    } catch (error) {
-      console.error('Error searching officers:', error);
-    } finally {
-      setLoading(false);
+      if (assignError) throw assignError;
+      onClose();
+    } catch (err) {
+      onError?.(err instanceof Error ? err.message : 'Failed to assign adviser');
+      console.log('error:', err);
     }
   };
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      searchOfficers(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search, currentAdviserId]);
+  // Filter members based on search query
+  const filteredMembers = members.filter(member =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className={className}>
-      <label htmlFor="adviser" className="block text-sm font-medium text-gray-700">
-        Organization Adviser
-      </label>
-      <div className="mt-1 relative">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white p-6 shadow-lg duration-200 sm:rounded-lg">
+      
+          <DialogTitle className="text-lg font-semibold leading-none tracking-tight">
+            Select Adviser
+          </DialogTitle>
+
+        {/* Search input */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search officers..."
-            className="block w-full rounded-t-md border-gray-300 pl-10 focus:border-green-500 focus:ring-green-500 sm:text-sm"
+            placeholder="Search members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full rounded-md border-0 py-2 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-green-600 sm:text-sm"
           />
         </div>
-        <select
-          id="adviser"
-          value={currentAdviserId || ''}
-          onChange={(e) => onChange(e.target.value || null)}
-          className={`mt-1 block w-full rounded-b-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-green-500 focus:outline-none focus:ring-green-500 sm:text-sm ${loading ? 'opacity-50' : ''}`}
-          size={5}
-        >
-          <option value="">No Adviser Selected</option>
-          {officers.map((officer) => (
-            <option key={officer.id} value={officer.id}>
-              {officer.name} - {officer.position} ({officer.department})
-            </option>
-          ))}
-        </select>
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50">
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-green-500"></div>
-          </div>
-        )}
-      </div>
-    </div>
+
+        {/* Members list */}
+        <div className="relative max-h-[400px] overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center py-4">
+              <div className="h-6 w-6 animate-spin rounded-full border-t-2 border-b-2 border-green-500"></div>
+            </div>
+          ) : filteredMembers.length === 0 ? (
+            <p className="text-center text-sm text-gray-500 py-4">No members found</p>
+          ) : (
+            <div className="grid gap-2">
+              {filteredMembers.map((member: Member) => (
+                <button
+                  key={member.id}
+                  onClick={() => handleAssignAdviser(member.id)}
+                  className="flex items-center space-x-3 rounded-lg p-3 hover:bg-gray-100 transition-colors text-left w-full"
+                >
+                  {member.avatar_url ? (
+                    <img
+                      src={member.avatar_url}
+                      alt={member.name}
+                      className="h-10 w-10 rounded-full"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                      <span className="text-green-700 font-medium text-sm">
+                        {member.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-medium text-gray-900">{member.name}</div>
+                    <div className="text-sm text-gray-500">{member.email}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
