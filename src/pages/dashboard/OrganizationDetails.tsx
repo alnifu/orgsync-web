@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { supabase } from '../../lib/supabase';
-import type { Organization, Adviser } from '../../types/database.types';
+import type { Organization, Adviser, Member } from '../../types/database.types';
 import OrganizationOverview from '../../components/OrganizationOverview';
 import OrganizationMembers from '../../components/OrganizationMembers';
 import OrganizationPosts from '../../components/OrganizationPosts';
@@ -32,7 +32,7 @@ export default function OrganizationDetails() {
           .select('*')
           .eq('id', id)
           .single();
-        
+
         if (error) throw error;
         setOrganization(data);
       } catch (err) {
@@ -49,54 +49,61 @@ export default function OrganizationDetails() {
   useEffect(() => {
     const fetchAdviser = async () => {
       if (!id) return;
+
       try {
         const { data, error } = await supabase
           .from('advisers')
           .select(`
-            member_id,
-            org_id,
-            assigned_at,
-            member:members!inner(
-              id,
-              name,
-              avatar_url,
-              email,
-              department,
-              year,
-              course,
-              created_at,
-              updated_at
-            )
-          `)
+          member_id,
+          org_id,
+          assigned_at,
+          member:members!inner(
+            id,
+            name,
+            avatar_url,
+            email,
+            department,
+            year,
+            course,
+            created_at,
+            updated_at
+          )
+        `)
           .eq('org_id', id)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows returned"
-        if (data) {
+        if (error) throw error;
+
+        if (data?.member) {
           setAdviser({
-            id: data.member.id,
+            member_id: data.member_id,
             org_id: data.org_id,
             assigned_at: data.assigned_at,
-            name: data.member.name,
-            avatar_url: data.member.avatar_url,
-            email: data.member.email,
-            department: data.member.department,
-            year: data.member.year,
-            course: data.member.course,
-            created_at: data.member.created_at,
-            updated_at: data.member.updated_at
+            member: {
+              id: data.member.id,
+              name: data.member.name,
+              avatar_url: data.member.avatar_url,
+              email: data.member.email,
+              department: data.member.department,
+              year: data.member.year,
+              course: data.member.course,
+              created_at: data.member.created_at,
+              updated_at: data.member.updated_at,
+            },
           });
+        } else {
+          setAdviser(null); // No adviser yet
+          console.log('No adviser assigned yet for this org.');
         }
       } catch (err) {
-        if (!(err instanceof Error && err.message.includes('PGRST116'))) {
-          setError(err instanceof Error ? err.message : 'Failed to load adviser');
-          console.log('error:', err);
-        }
+        setError(err instanceof Error ? err.message : 'Failed to load adviser');
+        console.error('Error fetching adviser:', err);
       }
     };
 
     fetchAdviser();
   }, [id]);
+
 
   const handleRemoveAdviser = async (memberId: string, orgId: string) => {
     try {
@@ -162,31 +169,31 @@ export default function OrganizationDetails() {
       <div className="bg-white shadow sm:rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-base font-semibold leading-6 text-gray-900">Organization Adviser</h3>
-          
+
           {adviser ? (
             <div className="mt-2 max-w-xl text-sm text-gray-500">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  {adviser.avatar_url ? (
+                  {adviser.member?.avatar_url ? (
                     <img
-                      src={adviser.avatar_url}
-                      alt={adviser.name}
+                      src={adviser.member?.avatar_url}
+                      alt={adviser.member?.name}
                       className="h-10 w-10 rounded-full"
                     />
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                       <span className="text-green-700 font-medium text-sm">
-                        {adviser.name.slice(0, 2).toUpperCase()}
+                        {adviser.member?.name.slice(0, 2).toUpperCase()}
                       </span>
                     </div>
                   )}
                   <div>
-                    <div className="font-medium text-gray-900">{adviser.name}</div>
-                    <div className="text-sm text-gray-500">{adviser.email}</div>
+                    <div className="font-medium text-gray-900">{adviser.member?.name}</div>
+                    <div className="text-sm text-gray-500">{adviser.member?.email}</div>
                   </div>
                 </div>
                 <button
-                  onClick={() => handleRemoveAdviser(adviser.id, organization.id)}
+                  onClick={() => handleRemoveAdviser(adviser.member_id, organization.id)}
                   className="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-500"
                 >
                   Remove adviser
@@ -242,16 +249,16 @@ export default function OrganizationDetails() {
 
         {/* Members Tab */}
         <TabsContent value="members" className="space-y-4">
-          <OrganizationMembers 
-            organizationId={id!} 
+          <OrganizationMembers
+            organizationId={id!}
             onError={handleError}
           />
         </TabsContent>
 
         {/* Posts Tab */}
         <TabsContent value="posts" className="space-y-4">
-          <OrganizationPosts 
-            organizationId={id!} 
+          <OrganizationPosts
+            organizationId={id!}
             onError={handleError}
           />
         </TabsContent>
