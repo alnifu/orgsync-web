@@ -15,16 +15,16 @@ export default function Officers() {
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState<string>('');
   const [filterPosition, setFilterPosition] = useState<string>('');
-  
+
   // Sorting states
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -35,7 +35,7 @@ export default function Officers() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Since officers.id = members.id, we join them properly
       let query = supabase
         .from('officers')
@@ -52,7 +52,7 @@ export default function Officers() {
             year,
             course
           ),
-          organizations!inner(
+          organizations!officers_org_id_fkey(
             name,
             abbrev_name
           )
@@ -78,7 +78,7 @@ export default function Officers() {
       // Apply sorting
       let orderColumn: string;
       let orderTable: string | undefined;
-      
+
       switch (sortField) {
         case 'name':
         case 'email':
@@ -97,9 +97,9 @@ export default function Officers() {
       }
 
       if (orderTable) {
-        query = query.order(orderColumn, { 
+        query = query.order(orderColumn, {
           ascending: sortDirection === 'asc',
-          foreignTable: orderTable 
+          foreignTable: orderTable
         });
       } else {
         query = query.order(orderColumn, { ascending: sortDirection === 'asc' });
@@ -117,18 +117,20 @@ export default function Officers() {
       }
 
       // Transform the data to match our Officer type
-      const transformedData: Officer[] = data?.map(row => ({
+      const transformedData: Officer[] = data.map(row => ({
         id: row.id,
         org_id: row.org_id,
         position: row.position,
         assigned_at: row.assigned_at,
         // Flatten member data
-        name: row.members.name,
-        avatar_url: row.members.avatar_url,
-        email: row.members.email,
-        department: row.members.department,
-        year: row.members.year,
-        course: row.members.course,
+        member: {
+          name: row.members.name,
+          avatar_url: row.members.avatar_url,
+          email: row.members.email,
+          department: row.members.department,
+          year: row.members.year,
+          course: row.members.course,
+        },
         // Add organization data
         organization: {
           id: row.org_id, // We have the org_id from officers
@@ -140,6 +142,7 @@ export default function Officers() {
 
       setOfficers(transformedData);
       setTotalCount(count || 0);
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching officers';
       console.error('Error fetching officers:', err);
@@ -150,10 +153,10 @@ export default function Officers() {
   };
 
   // Demote officer to member
-  const demoteOfficer = async (officerId: string, orgId: string) => {
+  const demoteOfficer = async (officerId?: string, orgId?: string) => {
     try {
       setError(null);
-      
+
       const { error: rpcError } = await supabase
         .rpc('demote_to_member', {
           officer_id: officerId,
@@ -164,7 +167,7 @@ export default function Officers() {
         console.error('RPC error:', rpcError);
         throw rpcError;
       }
-      
+
       // Refresh the list
       await fetchOfficers();
     } catch (err) {
@@ -194,13 +197,12 @@ export default function Officers() {
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ChevronDown className="h-4 w-4 text-gray-400" />;
-    return sortDirection === 'asc' ? 
-      <ChevronUp className="h-4 w-4 text-green-600" /> : 
+    return sortDirection === 'asc' ?
+      <ChevronUp className="h-4 w-4 text-green-600" /> :
       <ChevronDown className="h-4 w-4 text-green-600" />;
   };
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
-
   return (
     <div className="p-6">
       <div className="sm:flex sm:items-center">
@@ -230,7 +232,7 @@ export default function Officers() {
           onChange={(e) => setFilterDepartment(e.target.value)}
           className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
         >
-         <option value="">All Departments</option>
+          <option value="">All Departments</option>
           <option value="CITE">CITE</option>
           <option value="CBEAM">CBEAM</option>
           <option value="COL">COL</option>
@@ -259,7 +261,7 @@ export default function Officers() {
           <div className="flex">
             <div className="ml-3">
               <p className="text-sm font-medium text-red-800">{error}</p>
-              <button 
+              <button
                 onClick={() => setError(null)}
                 className="text-sm text-red-600 underline hover:text-red-800 mt-1"
               >
@@ -278,8 +280,8 @@ export default function Officers() {
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th 
-                      scope="col" 
+                    <th
+                      scope="col"
                       className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('name')}
                     >
@@ -288,8 +290,8 @@ export default function Officers() {
                         <span className="ml-2 flex-none rounded"><SortIcon field="name" /></span>
                       </div>
                     </th>
-                    <th 
-                      scope="col" 
+                    <th
+                      scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('position')}
                     >
@@ -298,14 +300,14 @@ export default function Officers() {
                         <span className="ml-2 flex-none rounded"><SortIcon field="position" /></span>
                       </div>
                     </th>
-                    <th 
-                      scope="col" 
+                    <th
+                      scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                     >
                       Organization
                     </th>
-                    <th 
-                      scope="col" 
+                    <th
+                      scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('department')}
                     >
@@ -314,8 +316,8 @@ export default function Officers() {
                         <span className="ml-2 flex-none rounded"><SortIcon field="department" /></span>
                       </div>
                     </th>
-                    <th 
-                      scope="col" 
+                    <th
+                      scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('assigned_at')}
                     >
@@ -342,28 +344,38 @@ export default function Officers() {
                   ) : officers.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center py-8 text-gray-500">
-                        {searchQuery || filterDepartment || filterPosition ? 
-                          'No officers match your search criteria' : 
+                        {searchQuery || filterDepartment || filterPosition ?
+                          'No officers match your search criteria' :
                           'No officers found'
                         }
                       </td>
                     </tr>
                   ) : (
                     officers.map((officer) => (
-                      <tr key={`${officer.id}-${officer.org_id}`} className="hover:bg-gray-50">
+
+                      <tr key={`${officer.member?.id}-${officer.org_id}`} className="hover:bg-gray-50">
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                           <div className="flex items-center">
-                            <img
-                              src={officer.avatar_url || 'https://via.placeholder.com/40'}
-                              alt={`${officer.name} avatar`}
-                              className="h-10 w-10 rounded-full mr-3 object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = 'https://via.placeholder.com/40';
-                              }}
-                            />
+                            {officer.member?.avatar_url ? (
+                              <img
+                                src={officer.member.avatar_url}
+                                alt={`${officer.member?.name} avatar`}
+                                className="h-10 w-10 rounded-full mr-3 object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                                }}
+                              />
+                            ) : (
+                              <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <span className="text-sm font-medium text-green-600">
+                                  {officer.member?.name?.charAt(0).toUpperCase() || '?'}
+                                </span>
+                              </div>
+                            )}
                             <div>
-                              <div className="font-medium">{officer.name}</div>
-                              <div className="text-gray-500 text-xs">{officer.email}</div>
+                              <div className="font-medium">{officer.member?.name}</div>
+                              <div className="text-gray-500 text-xs">{officer.member?.email}</div>
                             </div>
                           </div>
                         </td>
@@ -379,9 +391,9 @@ export default function Officers() {
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {officer.department}
+                          {officer.member?.department}
                           <div className="text-xs text-gray-400">
-                            {officer.year} - {officer.course}
+                            {officer.member?.year} - {officer.member?.course}
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
@@ -393,7 +405,7 @@ export default function Officers() {
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                           <button
-                            onClick={() => demoteOfficer(officer.id, officer.org_id)}
+                            onClick={() => demoteOfficer(officer.member?.id, officer.org_id)}
                             className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors"
                             title="Demote to member"
                           >
