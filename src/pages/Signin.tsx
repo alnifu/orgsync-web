@@ -51,6 +51,7 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                             <input
                                 id="email"
                                 type="email"
+                                autocomplete="username"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -65,6 +66,7 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                             <input
                                 id="password"
                                 type="password"
+                                autocomplete="current-password"
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
