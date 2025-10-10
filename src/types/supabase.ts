@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      adviser_assignments: {
+        Row: {
+          assigned_at: string
+          org_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          org_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          org_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adviser_assignments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adviser_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advisers: {
         Row: {
           assigned_at: string | null
@@ -226,6 +259,30 @@ export type Database = {
           },
         ]
       }
+      game_rooms: {
+        Row: {
+          created_at: string | null
+          id: number
+          save_data: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          save_data?: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          save_data?: Json
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       gamification_logs: {
         Row: {
           action_type: string
@@ -422,6 +479,51 @@ export type Database = {
           },
         ]
       }
+      officer_profiles: {
+        Row: {
+          assigned_at: string
+          officer_contact_number: string | null
+          officer_email: string | null
+          org_id: string
+          position_title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          officer_contact_number?: string | null
+          officer_email?: string | null
+          org_id: string
+          position_title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          officer_contact_number?: string | null
+          officer_email?: string | null
+          org_id?: string
+          position_title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "officer_profiles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "officer_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       officers: {
         Row: {
           assigned_at: string | null
@@ -454,6 +556,78 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_managers: {
+        Row: {
+          assigned_at: string
+          manager_role: string
+          org_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          manager_role: string
+          org_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          manager_role?: string
+          org_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_managers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_managers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_members: {
+        Row: {
+          is_active: boolean | null
+          joined_at: string | null
+          org_id: string
+          user_id: string
+        }
+        Insert: {
+          is_active?: boolean | null
+          joined_at?: string | null
+          org_id: string
+          user_id: string
+        }
+        Update: {
+          is_active?: boolean | null
+          joined_at?: string | null
+          org_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_members_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -764,41 +938,6 @@ export type Database = {
         }
         Relationships: []
       }
-      rooms: {
-        Row: {
-          created_at: string
-          id: number
-          name: string
-          theme: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: never
-          name: string
-          theme?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: never
-          name?: string
-          theme?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rooms_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       rsvps: {
         Row: {
           created_at: string | null
@@ -950,36 +1089,107 @@ export type Database = {
         }
         Relationships: []
       }
+      tables_to_delete: {
+        Row: {
+          created_at: string
+          id: number
+          name_of_table: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          name_of_table?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          name_of_table?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          granted_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_url: string | null
+          college: string | null
           created_at: string
-          full_name: string | null
+          department: string | null
+          email: string | null
+          employee_id: string | null
+          first_name: string | null
           id: string
-          points: number
+          last_name: string | null
+          points: number | null
+          position: string | null
           preferences: Json | null
-          role: Database["public"]["Enums"]["user_role"]
+          program: string | null
+          student_number: string | null
           updated_at: string
+          user_type: string | null
+          year_level: number | null
         }
         Insert: {
           avatar_url?: string | null
+          college?: string | null
           created_at?: string
-          full_name?: string | null
+          department?: string | null
+          email?: string | null
+          employee_id?: string | null
+          first_name?: string | null
           id: string
-          points?: number
+          last_name?: string | null
+          points?: number | null
+          position?: string | null
           preferences?: Json | null
-          role?: Database["public"]["Enums"]["user_role"]
+          program?: string | null
+          student_number?: string | null
           updated_at?: string
+          user_type?: string | null
+          year_level?: number | null
         }
         Update: {
           avatar_url?: string | null
+          college?: string | null
           created_at?: string
-          full_name?: string | null
+          department?: string | null
+          email?: string | null
+          employee_id?: string | null
+          first_name?: string | null
           id?: string
-          points?: number
+          last_name?: string | null
+          points?: number | null
+          position?: string | null
           preferences?: Json | null
-          role?: Database["public"]["Enums"]["user_role"]
+          program?: string | null
+          student_number?: string | null
           updated_at?: string
+          user_type?: string | null
+          year_level?: number | null
         }
         Relationships: []
       }
@@ -990,6 +1200,22 @@ export type Database = {
     Functions: {
       assign_adviser: {
         Args: { m_id: string; o_id: string }
+        Returns: undefined
+      }
+      complete_user_profile: {
+        Args: {
+          p_college?: string
+          p_department?: string
+          p_employee_id?: string
+          p_first_name: string
+          p_last_name: string
+          p_position?: string
+          p_program?: string
+          p_student_number?: string
+          p_user_id: string
+          p_user_type: string
+          p_year_level?: number
+        }
         Returns: undefined
       }
       delete_organization: {
@@ -1023,6 +1249,7 @@ export type Database = {
     }
     Enums: {
       user_role: "Member" | "Officer" | "Admin"
+      user_type: "student" | "faculty"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1151,6 +1378,7 @@ export const Constants = {
   public: {
     Enums: {
       user_role: ["Member", "Officer", "Admin"],
+      user_type: ["student", "faculty"],
     },
   },
 } as const

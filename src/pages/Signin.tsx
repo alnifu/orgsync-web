@@ -16,12 +16,12 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
 
     const handleSignin = async (e: React.FormEvent) => {
         e.preventDefault();
-
+        console.log("Attempting to sign in with", email);
         const { success, error, data } = await signInUser({
             email,
             password,
         });
-
+        console.log("Sign-in response:", { success, error, data });
         if (!success) {
             setError(error || 'An error occurred during sign in');
         } else {
@@ -30,6 +30,7 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                 onSigninSuccess(data.user);
             }
             // Redirect to dashboard after successful sign in
+            console.log("Signin successful, navigating to dashboard");
             navigate("/dashboard");
         }
     };
@@ -51,7 +52,7 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                             <input
                                 id="email"
                                 type="email"
-                                autocomplete="username"
+                                autoComplete="username"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -66,7 +67,7 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                             <input
                                 id="password"
                                 type="password"
-                                autocomplete="current-password"
+                                autoComplete="current-password"
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}

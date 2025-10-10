@@ -1,50 +1,129 @@
-import {
-  createBrowserRouter,
-  RouterProvider,
-  Navigate
-} from "react-router";
+import { createBrowserRouter, Navigate, RouterProvider, Link } from "react-router";
+import { useAuth } from "./context/AuthContext";
+
+// Shared Components
 import PrivateRoute from "./components/PrivateRoute";
-import Dashboard from "./pages/Dashboard";
-import Organizations from "./pages/dashboard/Organizations";
-import NewOrganization from "./pages/dashboard/NewOrganization";
-import OrganizationDetails from "./pages/dashboard/OrganizationDetails";
-import OrgTable from "./pages/dashboard/OrgTable";
-import Officers from "./pages/dashboard/Officers";
-import Members from "./pages/dashboard/Members";
-import Posts from "./pages/dashboard/Posts";
-import Signup from "./pages/Signup";
+
+// Admin Routes
+import AdminDashboard from "./admin/pages/Dashboard";
+import AdminOrganizations from "./admin/pages/dashboard/Organizations";
+import AdminNewOrganization from "./admin/pages/dashboard/NewOrganization";
+import AdminOrganizationDetails from "./admin/pages/dashboard/OrganizationDetails";
+import AdminOrgTable from "./admin/pages/dashboard/OrgTable";
+import AdminOfficers from "./admin/pages/dashboard/Officers";
+import AdminMembers from "./admin/pages/dashboard/Members";
+import AdminPosts from "./admin/pages/dashboard/Posts";
+
+// User Routes
+import UserDashboard from "./user/pages/Dashboard";
+import UserNewsFeed from "./user/pages/dashboard/NewsFeed";
+import UserEvents from "./user/pages/dashboard/Events";
+import UserOrganizations from "./user/pages/dashboard/Organizations";
+import UserProfile from "./user/pages/dashboard/Profile";
+import UserGames from "./user/pages/dashboard/Games";
+import UserDashboardHome from "./user/pages/dashboard/DashboardHome";
+import UnityGame from "./user/pages/dashboard/UnityGame";
+
+// Auth Pages
 import Signin from "./pages/Signin";
-import App from "./App";
+import Signup from "./pages/Signup";
+
+const DashboardRedirect = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-2xl w-full space-y-8 p-8">
+        <h2 className="text-center text-3xl font-bold text-gray-900">Select Dashboard</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Link to="/user/dashboard" 
+            className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-green-500 flex flex-col items-center">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Student Portal</h3>
+            <p className="text-gray-600 text-center">Access news feed, events, organizations, and games</p>
+          </Link>
+          <Link to="/admin/dashboard"
+            className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-blue-500 flex flex-col items-center">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Admin Portal</h3>
+            <p className="text-gray-600 text-center">Manage organizations, officers, members, and posts</p>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const router = createBrowserRouter([
-  { 
+  {
     path: "/",
-    element: <Navigate to="/signin" replace />
+    element: <PrivateRoute><Navigate to="/dashboard" replace /></PrivateRoute>
   },
-  { path: "/signin", element: <Signin /> },
-  { path: "/signup", element: <Signup /> },
+  {
+    path: "/signin",
+    element: <Signin />
+  },
+  {
+    path: "/signup",
+    element: <Signup />
+  },
   {
     path: "/dashboard",
-    element: (
-      <PrivateRoute>
-        <Dashboard />
-      </PrivateRoute>
-    ),
+    element: <PrivateRoute><DashboardRedirect /></PrivateRoute>
+  },
+  // Admin Routes
+  {
+    path: "/admin/dashboard",
+    element: <PrivateRoute><AdminDashboard /></PrivateRoute>,
     children: [
+      {
+        path: "",
+        element: <AdminOrgTable />
+      },
       { 
         path: "organizations", 
         children: [
-          { index: true, element: <Organizations /> },
-          { path: "new", element: <NewOrganization /> },
-          { path: ":id", element: <OrganizationDetails /> }
+          { index: true, element: <AdminOrganizations /> },
+          { path: "new", element: <AdminNewOrganization /> },
+          { path: ":id", element: <AdminOrganizationDetails /> }
         ] 
       },
-      { path: "org-table", element: <OrgTable /> },
-      { path: "officers", element: <Officers /> },
-      { path: "members", element: <Members /> },
-      { path: "posts", element: <Posts /> },
-    ],
+      { path: "officers", element: <AdminOfficers /> },
+      { path: "members", element: <AdminMembers /> },
+      { path: "posts", element: <AdminPosts /> }
+    ]
   },
+  // User Routes
+  {
+    path: "/user/dashboard",
+    element: <PrivateRoute><UserDashboard /></PrivateRoute>,
+    children: [
+      {
+        path: "",
+        element: <UserDashboardHome />
+      },
+      {
+        path: "newsfeed",
+        element: <UserNewsFeed />
+      },
+      {
+        path: "events",
+        element: <UserEvents />
+      },
+      {
+        path: "organizations",
+        element: <UserOrganizations />
+      },
+      {
+        path: "profile",
+        element: <UserProfile />
+      },
+      {
+        path: "games",
+        element: <UserGames />
+      },
+      {
+        path: "games/unity",
+        element: <UnityGame />
+      }
+    ]
+  }
 ]);
 
 export default function Root() {
