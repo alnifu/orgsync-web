@@ -2,16 +2,28 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
+import type { SignupFormData } from "../types/userTypes";
 
 type SignupProps = {
   onSignupSuccess?: (user: any) => void;
 };
 
 export default function Signup({ onSignupSuccess }: SignupProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState<SignupFormData>({
+    email: "",
+    password: "",
+    userType: "student",
+    firstName: "",
+    lastName: "",
+    studentNumber: "",
+    yearLevel: undefined,
+    program: "",
+    college: "",
+    employeeId: "",
+    department: "",
+    position: "",
+  });
   const [error, setError] = useState<string | null>(null);
-  
 
   const { signUpNewUser } = useAuth();
   const navigate = useNavigate();
@@ -19,10 +31,7 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { success, error, data } = await signUpNewUser({
-      email,
-      password,
-    });
+    const { success, error, data } = await signUpNewUser(formData);
 
     if (!success) {
       setError(error || 'An error occurred during signup');
@@ -36,6 +45,14 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -47,31 +64,80 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
         <form onSubmit={handleSignup} className="mt-8 space-y-6">
           <div className="rounded-md space-y-4">
             <div>
-              <label htmlFor="email" className="sr-only">
+              <label htmlFor="userType" className="block text-sm font-medium text-gray-700">
+                I am a
+              </label>
+              <select
+                id="userType"
+                name="userType"
+                required
+                value={formData.userType}
+                onChange={handleInputChange}
+                className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+              >
+                <option value="student">Student</option>
+                <option value="faculty">Faculty</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  required
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  required
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
               />
             </div>
+
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
               />
             </div>
           </div>

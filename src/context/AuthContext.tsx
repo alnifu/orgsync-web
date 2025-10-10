@@ -1,18 +1,16 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import type { SignupFormData } from "../types/userTypes";
 
 type AuthContextType = {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signUpNewUser: (credentials: { 
-    email: string; 
-    password: string; 
-  }) => Promise<{ success: boolean; data?: any; error?: string }>;
-  signInUser: (credentials: { 
-    email: string; 
-    password: string; 
+  signUpNewUser: (formData: SignupFormData) => Promise<{ success: boolean; data?: any; error?: string }>;
+  signInUser: (credentials: {
+    email: string;
+    password: string;
   }) => Promise<{ success: boolean; data?: any; error?: string }>;
   signOut: () => Promise<{ success: boolean; error?: string }>;
 };
@@ -31,25 +29,44 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true);
 
   // Sign up
-  const signUpNewUser = async ({ 
-    email, 
-    password 
-  }: { 
-    email: string; 
-    password: string; 
-  }): Promise<AuthResponse> => {
+  const signUpNewUser = async (formData: SignupFormData): Promise<AuthResponse> => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.toLowerCase(),
-        password,
+      // Step 1: Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email.toLowerCase(),
+        password: formData.password,
       });
 
-      if (error) {
-        console.error("Error signing up:", error.message);
-        return { success: false, error: error.message };
+      if (authError) {
+        console.error("Auth error:", authError, formData.email, formData.password);
+        return { success: false, error: authError.message };
       }
 
-      return { success: true, data };
+      if (!authData.user) {
+        return { success: false, error: "No user data returned from signup" };
+      }
+
+      // Step 2: Complete the user profile
+      const { error: profileError } = await supabase.rpc('complete_user_profile', {
+        p_user_id: authData.user.id,
+        p_user_type: formData.userType,
+        p_first_name: formData.firstName,
+        p_last_name: formData.lastName,
+        p_student_number: formData.studentNumber || null,
+        p_year_level: formData.yearLevel || null,
+        p_program: formData.program || null,
+        p_college: formData.college || null,
+        p_employee_id: formData.employeeId || null,
+        p_department: formData.department || null,
+        p_position: formData.position || null
+      });
+
+      if (profileError) {
+        console.error("Profile error:", profileError.message);
+        return { success: false, error: "Failed to create user profile" };
+      }
+
+      return { success: true, data: authData };
     } catch (err) {
       const error = err as Error;
       console.error("Unexpected error during sign up:", error.message);
@@ -61,12 +78,12 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   };
 
   // Sign in
-  const signInUser = async ({ 
-    email, 
-    password 
-  }: { 
-    email: string; 
-    password: string; 
+  const signInUser = async ({
+    email,
+    password
+  }: {
+    email: string;
+    password: string;
   }): Promise<AuthResponse> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
