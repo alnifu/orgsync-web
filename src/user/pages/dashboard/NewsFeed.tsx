@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";;
 import { Heart, X, Search } from "lucide-react";
 import type { Posts } from "../../../types/database.types";
@@ -13,6 +14,7 @@ interface PostWithEvent extends Posts {
 }
 
 export default function NewsFeed() {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<PostWithEvent[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<PostWithEvent[]>([]);
   const [query, setQuery] = useState("");
@@ -43,7 +45,7 @@ export default function NewsFeed() {
         id,
         user_id,
         org_id,
-        type,
+        post_type,
         title,
         content,
         tags,
@@ -52,6 +54,7 @@ export default function NewsFeed() {
         is_pinned,
         created_at,
         updated_at,
+        media,
         events (
           event_type,
           event_date,
@@ -89,7 +92,7 @@ export default function NewsFeed() {
               post.tags.some((tag) =>
                 tag.toLowerCase().includes(query.toLowerCase())
               )) ||
-            (post.type === "event" &&
+            (post.post_type === "event" &&
               post.events?.event_type
                 ?.toLowerCase()
                 .includes(query.toLowerCase()))
@@ -203,7 +206,11 @@ export default function NewsFeed() {
         <div className="text-center text-gray-500 mt-6">No posts found</div>
       ) : (
         filteredPosts.map((post) => (
-          <div key={post.id} className="bg-white shadow rounded-lg p-6 mb-4">
+          <div 
+            key={post.id} 
+            className="bg-white shadow rounded-lg p-6 mb-4 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => navigate(`/user/dashboard/posts/${post.id}`)}
+          >
             {/* Header */}
             <div className="flex items-start space-x-3">
               <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold">
@@ -216,7 +223,7 @@ export default function NewsFeed() {
                 <p className="text-sm text-gray-500">
                   Posted on {formatDate(post.created_at)}
                 </p>
-                {post.type === "event" && post.events ? (
+                {post.post_type === "event" && post.events ? (
                   <span className="inline-block mt-2 text-xs font-medium text-purple-700 bg-purple-100 px-2 py-1 rounded">
                     {post.events.event_type}
                   </span>
@@ -236,7 +243,7 @@ export default function NewsFeed() {
               <h2 className="text-lg font-bold text-gray-900">{post.title}</h2>
               <p className="text-gray-700 mt-2">{post.content}</p>
 
-              {post.type === "event" && post.events && (
+              {post.post_type === "event" && post.events && (
                 <div className="mt-3 space-y-1 text-sm text-gray-600">
                   <p>
                     <span className="font-medium">When:</span>{" "}
@@ -255,7 +262,7 @@ export default function NewsFeed() {
 
             {/* Actions */}
             <div className="mt-6 flex items-center justify-between">
-              {post.type === "event" && post.events && (
+              {post.post_type === "event" && post.events && (
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleRSVPClick(post)}

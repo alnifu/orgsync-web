@@ -1,5 +1,4 @@
 import { createBrowserRouter, Navigate, RouterProvider, Link } from "react-router";
-import { useAuth } from "./context/AuthContext";
 
 // Shared Components
 import PrivateRoute from "./components/PrivateRoute";
@@ -13,6 +12,7 @@ import AdminOrgTable from "./admin/pages/dashboard/OrgTable";
 import AdminOfficers from "./admin/pages/dashboard/Officers";
 import AdminMembers from "./admin/pages/dashboard/Members";
 import AdminPosts from "./admin/pages/dashboard/Posts";
+import PostDetail from "./admin/pages/PostDetail";
 
 // User Routes
 import UserDashboard from "./user/pages/Dashboard";
@@ -73,7 +73,7 @@ const router = createBrowserRouter([
     element: <PrivateRoute><AdminDashboard /></PrivateRoute>,
     children: [
       {
-        path: "",
+        path: "org-table",
         element: <AdminOrgTable />
       },
       { 
@@ -86,7 +86,8 @@ const router = createBrowserRouter([
       },
       { path: "officers", element: <AdminOfficers /> },
       { path: "members", element: <AdminMembers /> },
-      { path: "posts", element: <AdminPosts /> }
+      { path: "posts", element: <AdminPosts /> },
+      { path: "posts/:postId", element: <PostDetail /> }
     ]
   },
   // User Routes
@@ -121,6 +122,10 @@ const router = createBrowserRouter([
       {
         path: "games/unity",
         element: <UnityGame />
+      },
+      {
+        path: "posts/:postId",
+        element: <PostDetail />
       }
     ]
   }

@@ -62,4 +62,22 @@ export interface Posts {
   is_pinned: boolean | null;
   created_at: string;
   updated_at: string | null;
+  media?: MediaItem[] | null;
+  post_type?: PostType;
+}
+
+export type PostType = 'general' | 'event' | 'poll' | 'feedback';
+
+export interface MediaItem {
+  url: string;
+  type: 'image' | 'video';
+  filename: string;
+  size?: number;
+}
+
+export interface PostLikes {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
 }

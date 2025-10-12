@@ -10,7 +10,7 @@ import {
   LayoutDashboard
 } from "lucide-react";
 
-export default function Sidebar() {
+export default function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
   const { signOut } = useAuth();
   
   const links = [
@@ -28,9 +28,19 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-green-700 w-50 border-r border-green-600">
-      <div className="flex h-16 items-center justify-center border-b border-green-600">
-        <h2 className="text-2xl font-bold text-white">OrgSync</h2>
+    <div className={`flex h-full flex-col bg-green-700 border-r border-green-600 transition-all duration-300 ${
+      isCollapsed 
+        ? 'hidden md:flex md:w-16' 
+        : 'flex w-50 fixed md:relative z-50 md:z-auto inset-y-0 left-0 md:left-auto'
+    }`}>
+      <div className="flex h-16 items-center justify-between border-b border-green-600 px-4">
+        {!isCollapsed && <h2 className="text-2xl font-bold text-white">OrgSync</h2>}
+        <button
+          onClick={onToggle}
+          className="rounded-lg p-2 text-white hover:bg-green-600 transition-colors"
+        >
+          {isCollapsed ? '→' : '←'}
+        </button>
       </div>
 
       <div className="flex-1 overflow-auto py-4">
@@ -40,15 +50,16 @@ export default function Sidebar() {
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium transition-colors ${
+                `flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} rounded-md px-4 py-3 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-green-600 text-white"
                     : "text-green-100 hover:bg-green-600/50 hover:text-white"
                 }`
               }
+              title={isCollapsed ? label : undefined}
             >
               <Icon className="h-5 w-5" />
-              {label}
+              {!isCollapsed && label}
             </NavLink>
           ))}
         </nav>
@@ -58,9 +69,10 @@ export default function Sidebar() {
         <button
           onClick={handleSignOut}
           className="flex w-full items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 transition-colors"
+          title={isCollapsed ? "Sign Out" : undefined}
         >
           <LogOut className="h-5 w-5" />
-          Sign Out
+          {!isCollapsed && "Sign Out"}
         </button>
       </div>
     </div>

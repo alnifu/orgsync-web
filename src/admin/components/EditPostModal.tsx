@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Edit3 } from "lucide-react";
-import type { Posts } from '../../types/database.types';
+import { X, Edit3, Upload, Image, Video, Trash2 } from "lucide-react";
+import type { Posts, MediaItem, PostType } from '../../types/database.types';
+import { uploadFiles, validateFile, deleteFile, getFilePathFromUrl } from '../../lib/media';
 
 interface EditPostModalProps {
   post: Posts | null;
@@ -16,7 +17,12 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
   const [content, setContent] = useState<string>("");
   const [tags, setTags] = useState<string>("");
   const [status, setStatus] = useState<string>("published");
+  const [postType, setPostType] = useState<PostType>("general");
   const [loading, setLoading] = useState<boolean>(false);
+  const [existingMedia, setExistingMedia] = useState<MediaItem[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [mediaPreviews, setMediaPreviews] = useState<MediaItem[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   // Update form when post changes
   useEffect(() => {
@@ -25,6 +31,11 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
       setContent(post.content);
       setTags(post.tags ? post.tags.join(', ') : '');
       setStatus(post.status || 'published');
+      setPostType(post.post_type || 'general');
+      setExistingMedia(post.media || []);
+      setSelectedFiles([]);
+      setMediaPreviews([]);
+      setUploadProgress(0);
     }
   }, [post]);
 
@@ -32,6 +43,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
     if (!post) return;
     
     setLoading(true);
+    setUploadProgress(0);
 
     if (!title.trim() || !content.trim()) {
       alert("Please fill in both title and content");
@@ -39,29 +51,54 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
       return;
     }
 
-    const tagsArray: string[] = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    try {
+      let finalMedia: MediaItem[] = [...existingMedia];
 
-    const updates: Partial<Posts> = {
-      title: title.trim(),
-      content: content.trim(),
-      tags: tagsArray,
-      status,
-      updated_at: new Date().toISOString(),
-    };
+      // Upload new files if any
+      if (selectedFiles.length > 0) {
+        const uploadResults = await uploadFiles(selectedFiles, post.user_id);
+        const successfulUploads = uploadResults.filter(result => result.success && result.mediaItem);
+        finalMedia = [...finalMedia, ...successfulUploads.map(result => result.mediaItem!)];
 
-    const { error } = await supabase
-      .from("posts")
-      .update(updates)
-      .eq('id', post.id);
+        if (successfulUploads.length !== selectedFiles.length) {
+          const failedCount = selectedFiles.length - successfulUploads.length;
+          alert(`${failedCount} file(s) failed to upload. Post will be updated with successful uploads only.`);
+        }
 
-    if (error) {
+        setUploadProgress(100);
+      }
+
+      const tagsArray: string[] = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+
+      const updates: Partial<Posts> = {
+        title: title.trim(),
+        content: content.trim(),
+        tags: tagsArray,
+        status,
+        post_type: postType,
+        updated_at: new Date().toISOString(),
+        media: finalMedia.length > 0 ? finalMedia : null,
+      };
+
+      const { error } = await supabase
+        .from("posts")
+        .update(updates)
+        .eq('id', post.id);
+
+      if (error) {
+        console.error(error);
+        alert("Error updating post: " + error.message);
+      } else {
+        onOpenChange(false);
+        onPostUpdated();
+      }
+    } catch (error) {
       console.error(error);
-      alert("Error updating post: " + error.message);
-    } else {
-      onOpenChange(false);
-      onPostUpdated();
+      alert("Error updating post");
+    } finally {
+      setLoading(false);
+      setUploadProgress(0);
     }
-    setLoading(false);
   }
 
   function resetForm(): void {
@@ -79,7 +116,69 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
       setContent(post.content);
       setTags(post.tags ? post.tags.join(', ') : '');
       setStatus(post.status || 'published');
+      setPostType(post.post_type || 'general');
+      setExistingMedia(post.media || []);
+      setSelectedFiles([]);
+      setMediaPreviews([]);
+      setUploadProgress(0);
     }
+  }
+
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>): void {
+    const files = Array.from(event.target.files || []);
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    files.forEach(file => {
+      const validation = validateFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        errors.push(`${file.name}: ${validation.error}`);
+      }
+    });
+
+    if (errors.length > 0) {
+      alert(`Some files were rejected:\n${errors.join('\n')}`);
+    }
+
+    if (validFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+
+      // Create preview URLs for valid files
+      const newPreviews: MediaItem[] = validFiles.map(file => ({
+        url: URL.createObjectURL(file),
+        type: file.type.startsWith('image/') ? 'image' : 'video',
+        filename: file.name,
+        size: file.size
+      }));
+
+      setMediaPreviews(prev => [...prev, ...newPreviews]);
+    }
+
+    // Reset input
+    event.target.value = '';
+  }
+
+  function removeNewFile(index: number): void {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setMediaPreviews(prev => {
+      // Revoke object URL to prevent memory leaks
+      URL.revokeObjectURL(prev[index].url);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
+  function removeExistingMedia(index: number): void {
+    setExistingMedia(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
   return (
@@ -148,6 +247,123 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
                 <option value="draft">Draft</option>
                 <option value="archived">Archived</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Post Type</label>
+              <select
+                value={postType}
+                onChange={(e) => setPostType(e.target.value as PostType)}
+                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              >
+                <option value="general">General Post</option>
+                <option value="event">Event</option>
+                <option value="poll">Poll</option>
+                <option value="feedback">Feedback Form</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Media</label>
+              <div className="space-y-3">
+                {/* Existing Media */}
+                {existingMedia.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">Current media:</p>
+                    {existingMedia.map((mediaItem, index) => (
+                      <div key={`existing-${index}`} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                        <div className="flex-shrink-0">
+                          {mediaItem.type === 'image' ? (
+                            <Image className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <Video className="w-5 h-5 text-blue-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {mediaItem.filename}
+                          </p>
+                          {mediaItem.size && (
+                            <p className="text-xs text-gray-500">
+                              {formatFileSize(mediaItem.size)}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removeExistingMedia(index)}
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Remove media"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* File Upload */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,video/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="edit-media-upload"
+                  />
+                  <label htmlFor="edit-media-upload" className="cursor-pointer">
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-600">
+                      Click to add more photos or videos
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Supports JPEG, PNG, GIF, WebP images and MP4, WebM, OGG videos (max 50MB each)
+                    </p>
+                  </label>
+                </div>
+
+                {/* New Files Preview */}
+                {mediaPreviews.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">New files to add:</p>
+                    {mediaPreviews.map((preview, index) => (
+                      <div key={`new-${index}`} className="flex items-center gap-3 p-2 bg-blue-50 rounded-lg">
+                        <div className="flex-shrink-0">
+                          {preview.type === 'image' ? (
+                            <Image className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <Video className="w-5 h-5 text-blue-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {preview.filename}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatFileSize(preview.size || 0)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => removeNewFile(index)}
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Remove file"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
