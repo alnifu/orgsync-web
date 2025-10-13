@@ -44,7 +44,7 @@ export default function Games() {
           </p>
           <div className="flex justify-center">
             <Link
-              to="/unity-game"
+              to="unity-game"
               className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 transition"
             >
               Play

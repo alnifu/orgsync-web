@@ -1,7 +1,11 @@
 // OrganizationMembers.tsx
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import type { Member, OrganizationMember } from '../../types/database.types';
+import type { User, OrgMember } from '../../types/database.types';
+
+type OrgMemberWithUser = OrgMember & {
+  users: User;
+};
 import { UserPlus, Users, X, Mail, GraduationCap } from 'lucide-react';
 
 interface OrganizationMembersProps {
@@ -10,8 +14,8 @@ interface OrganizationMembersProps {
 }
 
 export default function OrganizationMembers({ organizationId, onError }: OrganizationMembersProps) {
-  const [organizationMembers, setOrganizationMembers] = useState<OrganizationMember[]>([]);
-  const [availableMembers, setAvailableMembers] = useState<Member[]>([]);
+  const [organizationMembers, setOrganizationMembers] = useState<OrgMemberWithUser[]>([]);
+  const [availableMembers, setAvailableMembers] = useState<User[]>([]);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [memberPosition, setMemberPosition] = useState('');
@@ -25,10 +29,10 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   const fetchOrganizationMembers = async () => {
     try {
       const { data, error } = await supabase
-        .from('organization_members')
+        .from('org_members')
         .select(`
           *,
-          member:members(*)
+          users(*)
         `)
         .eq('org_id', organizationId)
         .order('joined_at', { ascending: false });
@@ -43,13 +47,13 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   const fetchAvailableMembers = async () => {
     try {
       const { data: allMembers, error: membersError } = await supabase
-        .from('members')
+        .from('users')
         .select('*')
-        .order('name');
+        .order('first_name');
 
       if (membersError) throw membersError;
 
-      const existingIds = new Set(organizationMembers.map(m => m.member_id));
+      const existingIds = new Set(organizationMembers.map(m => m.user_id));
       setAvailableMembers(allMembers?.filter(m => !existingIds.has(m.id)) || []);
     } catch (err) {
       console.error('Failed to fetch available members:', err);
@@ -71,10 +75,9 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
     if (!selectedMemberId) return;
     try {
       setAddingMember(true);
-      const { error } = await supabase.from('organization_members').insert({
-        member_id: selectedMemberId,
-        org_id: organizationId,
-        position: memberPosition
+      const { error } = await supabase.from('org_members').insert({
+        user_id: selectedMemberId,
+        org_id: organizationId
       });
       if (error) throw error;
       setSelectedMemberId('');
@@ -91,10 +94,10 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   const removeMember = async (memberId: string) => {
     try {
       const { error } = await supabase
-        .from('organization_members')
+        .from('org_members')
         .delete()
         .eq('org_id', organizationId)
-        .eq('member_id', memberId);
+        .eq('user_id', memberId);
       if (error) throw error;
       fetchOrganizationMembers();
     } catch (err) {
@@ -105,9 +108,10 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   // Filter available members by search
   const filteredAvailableMembers = availableMembers.filter(
     m =>
-      m.name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+      m.first_name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+      m.last_name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
       m.email.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-      m.department.toLowerCase().includes(memberSearchQuery.toLowerCase())
+      (m.department?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
   );
 
   return (
@@ -133,7 +137,7 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
         >
           <option value="">Select a member</option>
           {filteredAvailableMembers.map(m => (
-            <option key={m.id} value={m.id}>{m.name} - {m.department} ({m.year})</option>
+            <option key={m.id} value={m.id}>{m.first_name} {m.last_name} - {m.department} ({m.year_level})</option>
           ))}
         </select>
 
@@ -181,28 +185,28 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
             <p className="text-sm text-gray-500 text-center py-4">No members yet</p>
           ) : (
             organizationMembers.map(m => (
-              <div key={m.member_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+              <div key={m.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
                     <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-green-600">{m.member?.name.charAt(0)}</span>
+                      <span className="text-sm font-medium text-green-600">{m.users?.first_name.charAt(0)}</span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{m.member?.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{m.users?.first_name} {m.users?.last_name}</p>
                       <p className="text-xs text-gray-500 flex items-center">
-                        <Mail className="h-3 w-3 mr-1" />{m.member?.email}
+                        <Mail className="h-3 w-3 mr-1" />{m.users?.email}
                       </p>
                       <p className="text-xs text-gray-500 flex items-center">
                         <GraduationCap className="h-3 w-3 mr-1" />
-                        {m.member?.department} - {m.member?.course} ({m.member?.year})
+                        {m.users?.department} - {m.users?.program} ({m.users?.year_level})
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs text-green-600 font-medium mt-1">{m.position}</p>
+                  <p className="text-xs text-green-600 font-medium mt-1">Member</p>
                   <p className="text-xs text-gray-400">Joined: {new Date(m.joined_at).toLocaleDateString()}</p>
                 </div>
                 <button
-                  onClick={() => removeMember(m.member_id)}
+                  onClick={() => removeMember(m.user_id)}
                   className="text-red-600 hover:text-red-700 p-1"
                 >
                   <X className="h-4 w-4" />

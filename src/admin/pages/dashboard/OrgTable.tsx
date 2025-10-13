@@ -156,7 +156,7 @@ export default function OrgTable() {
                     </td>
                     <td className="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                       <Link
-                        to={`/dashboard/organizations/${org.id}`}
+                        to={`/admin/dashboard/organizations/${org.id}`}
                         className="text-green-600 hover:text-green-900"
                       >
                         View<span className="sr-only">, {org.name}</span>

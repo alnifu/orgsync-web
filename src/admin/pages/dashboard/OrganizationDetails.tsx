@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { supabase } from '../../../lib/supabase';
-import type { Organization, Adviser } from '../../../types/database.types';
+import type { Organization, User } from '../../../types/database.types';
 import OrganizationOverview from '../../components/OrganizationOverview';
 import OrganizationMembers from '../../components/OrganizationMembers';
 import OrganizationPosts from '../../components/OrganizationPosts';
@@ -17,7 +17,7 @@ export default function OrganizationDetails() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [adviser, setAdviser] = useState<Adviser | null>(null);
+  const [adviser, setAdviser] = useState<User | null>(null);
   const [isSelectAdviserOpen, setIsSelectAdviserOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -51,47 +51,45 @@ export default function OrganizationDetails() {
       if (!id) return;
       try {
         const { data, error } = await supabase
-          .from('advisers')
+          .from('org_managers')
           .select(`
-            member_id,
+            user_id,
             org_id,
+            manager_role,
             assigned_at,
-            member:members!inner(
+            users (
               id,
-              name,
+              first_name,
+              last_name,
               avatar_url,
-              email,
-              department,
-              year,
-              course,
+              points,
+              preferences,
               created_at,
-              updated_at
+              updated_at,
+              student_number,
+              program,
+              college,
+              year_level,
+              employee_id,
+              department,
+              position,
+              user_type,
+              email
             )
           `)
           .eq('org_id', id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows returned"
+          .eq('manager_role', 'adviser')
+          .maybeSingle();
+        console.log('Adviser data:', data, 'Error:', error);     
+        if (error) throw error;
         if (data) {
-          setAdviser({
-            id: data.member.id,
-            org_id: data.org_id,
-            assigned_at: data.assigned_at,
-            name: data.member.name,
-            avatar_url: data.member.avatar_url,
-            email: data.member.email,
-            department: data.member.department,
-            year: data.member.year,
-            course: data.member.course,
-            created_at: data.member.created_at,
-            updated_at: data.member.updated_at
-          });
+          setAdviser(data.users);
+        } else {
+          setAdviser(null);
         }
       } catch (err) {
-        if (!(err instanceof Error && err.message.includes('PGRST116'))) {
-          setError(err instanceof Error ? err.message : 'Failed to load adviser');
-          console.log('error:', err);
-        }
+        console.error('Error fetching adviser:', err);
+        setAdviser(null);
       }
     };
 
@@ -101,10 +99,11 @@ export default function OrganizationDetails() {
   const handleRemoveAdviser = async (memberId: string, orgId: string) => {
     try {
       const { error: removeError } = await supabase
-        .rpc('remove_adviser', {
-          m_id: memberId,
-          o_id: orgId
-        });
+        .from('org_managers')
+        .delete()
+        .eq('user_id', memberId)
+        .eq('org_id', orgId)
+        .eq('manager_role', 'adviser');
 
       if (removeError) throw removeError;
       setAdviser(null);
@@ -170,18 +169,18 @@ export default function OrganizationDetails() {
                   {adviser.avatar_url ? (
                     <img
                       src={adviser.avatar_url}
-                      alt={adviser.name}
+                      alt={`${adviser.first_name} ${adviser.last_name}`}
                       className="h-10 w-10 rounded-full"
                     />
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                       <span className="text-green-700 font-medium text-sm">
-                        {adviser.name.slice(0, 2).toUpperCase()}
+                        {adviser.first_name.charAt(0).toUpperCase()}{adviser.last_name.charAt(0).toUpperCase()}
                       </span>
                     </div>
                   )}
                   <div>
-                    <div className="font-medium text-gray-900">{adviser.name}</div>
+                    <div className="font-medium text-gray-900">{adviser.first_name} {adviser.last_name}</div>
                     <div className="text-sm text-gray-500">{adviser.email}</div>
                   </div>
                 </div>

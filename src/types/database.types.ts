@@ -1,21 +1,49 @@
 //types/database.types.ts
-export type Member = {
+
+export type User = {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   avatar_url: string | null;
-  email: string;
-  department: string;
-  year: string;
-  course: string;
+  points: number | null;
+  preferences: any | null;
   created_at: string;
   updated_at: string;
+  student_number: string | null; // student
+  program: string | null; // student
+  college: string | null; // student
+  year_level: string | null; // student
+  employee_id: string | null; // faculty
+  department: string | null; // faculty
+  position: string | null; // faculty
+  user_type: string | null; // e.g., 'student', 'faculty'
+  email: string;
 };
 
-export type Officer = Member & {
+export type OrgManager = {
+  user_id: string;
   org_id: string;
-  position: string;
+  manager_role: string; // e.g., 'adviser', 'officer', if they have these roles, they have access to admin dashboard limited to their organization
+  position: string | null; // specific position like 'president', 'secretary', etc. (null for advisers)
   assigned_at: string;
+  user?: User;
   organization?: Organization;
+};
+
+export type OrgMember = {
+  user_id: string;
+  org_id: string;
+  joined_at: string;
+  is_active: boolean;
+  user?: User;
+  organization?: Organization;
+};
+
+export type UserRole = {
+  user_id: string;
+  role: string; // e.g., 'admin', 'member', it denotes whether or not they have access to admin dashboard
+  granted_at: string;
+  user?: User;
 };
 
 export type Organization = {
@@ -23,31 +51,17 @@ export type Organization = {
   org_code: string;
   name: string;
   abbrev_name: string;
+  org_pic: string | null;
   email: string;
   description: string | null;
-  department: 'CITE' | 'CBEAM' | 'COL' | 'CON' | 'CEAS' | 'OTHERS';
+  department: string;
   status: 'active' | 'inactive' | 'pending';
   date_established: string;
-  org_type: 'Prof' | 'SPIN' | 'Socio-Civic';
+  org_type: string;
   created_at: string;
   updated_at: string;
-};
-
-export type OrganizationMember = {
-  member_id: string;
-  org_id: string;
-  position: string;
-  joined_at: string;
-  // Include related data when needed
-  member?: Member;
-  organization?: Organization;
-};
-
-
-export type Adviser = Member & {
-  org_id: string;
-  assigned_at: string;
-  organization?: Organization;
+  adviser_id: string | null;
+  adviser?: User;
 };
 
 export interface Posts {

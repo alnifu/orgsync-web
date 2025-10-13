@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Search, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import type { Member, Organization } from '../../types/database.types';
+import type { User, Organization } from '../../types/database.types';
 
 interface PromoteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPromote: (memberId: string, orgId: string, position: string) => Promise<void>;
-  selectedMember: Member | null;
+  selectedMember: User | null;
 }
 
 const PRESET_POSITIONS = [
@@ -22,7 +21,6 @@ const PRESET_POSITIONS = [
 export default function PromoteModal({ 
   isOpen, 
   onClose, 
-  onPromote, 
   selectedMember 
 }: PromoteModalProps) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -113,29 +111,33 @@ export default function PromoteModal({
     setError(null);
 
     try {
-      // Call the RPC function with the original parameter names
-      const { data, error } = await supabase.rpc('promote_to_officer', {
-        member_id: selectedMember.id,
-        organization_id: selectedOrg.id,
-        officer_position: position.trim()
-      });
+      // Insert into org_managers table
+      const { error } = await supabase
+        .from('org_managers')
+        .insert({
+          user_id: selectedMember.id,
+          org_id: selectedOrg.id,
+          manager_role: 'officer',
+          position: position.trim()
+        });
 
       if (error) throw error;
       
-      console.log('Promotion successful:', data);
+      console.log('Promotion successful');
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error promoting member:', err);
       
       // Handle specific database errors
-      if (err.message?.includes('Member does not exist')) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      if (errorMessage.includes('Member does not exist')) {
         setError('This member does not belong to the selected organization.');
-      } else if (err.message?.includes('already an officer')) {
+      } else if (errorMessage.includes('already an officer')) {
         setError('This member is already an officer in this organization.');
-      } else if (err.message) {
-        setError(`Error: ${err.message}`);
-      } else if (err.details) {
-        setError(`Database error: ${err.details}`);
+      } else if (errorMessage) {
+        setError(`Error: ${errorMessage}`);
+      } else if ((err as any).details) {
+        setError(`Database error: ${(err as any).details}`);
       } else {
         setError('Failed to promote member. Please try again.');
       }
@@ -167,18 +169,18 @@ export default function PromoteModal({
             <div className="flex items-start space-x-3">
               <img
                 src={selectedMember.avatar_url || '/api/placeholder/48/48'}
-                alt={`${selectedMember.name}'s avatar`}
+                alt={`${selectedMember.first_name} ${selectedMember.last_name}'s avatar`}
                 className="w-12 h-12 rounded-full object-cover"
               />
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-gray-900 truncate">
-                  {selectedMember.name}
+                  {selectedMember.first_name} {selectedMember.last_name}
                 </h3>
                 <p className="text-sm text-gray-600 truncate">
                   {selectedMember.email}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {selectedMember.department} • {selectedMember.year} Year • {selectedMember.course}
+                  {selectedMember.department} • {selectedMember.year_level} Year • {selectedMember.program}
                 </p>
               </div>
             </div>

@@ -261,6 +261,7 @@ export type Database = {
       }
       game_rooms: {
         Row: {
+          coins: number | null
           created_at: string | null
           id: number
           save_data: Json
@@ -268,6 +269,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          coins?: number | null
           created_at?: string | null
           id?: number
           save_data?: Json
@@ -275,6 +277,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          coins?: number | null
           created_at?: string | null
           id?: number
           save_data?: Json
@@ -565,18 +568,21 @@ export type Database = {
           assigned_at: string
           manager_role: string
           org_id: string
+          position: string | null
           user_id: string
         }
         Insert: {
           assigned_at?: string
           manager_role: string
           org_id: string
+          position?: string | null
           user_id: string
         }
         Update: {
           assigned_at?: string
           manager_role?: string
           org_id?: string
+          position?: string | null
           user_id?: string
         }
         Relationships: [
@@ -861,12 +867,43 @@ export type Database = {
         }
         Relationships: []
       }
+      post_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           content: string
           created_at: string
           id: string
           is_pinned: boolean | null
+          media: Json | null
+          media_urls: string | null
           org_id: string | null
           post_type: string
           status: string | null
@@ -882,6 +919,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_pinned?: boolean | null
+          media?: Json | null
+          media_urls?: string | null
           org_id?: string | null
           post_type?: string
           status?: string | null
@@ -897,6 +936,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_pinned?: boolean | null
+          media?: Json | null
+          media_urls?: string | null
           org_id?: string | null
           post_type?: string
           status?: string | null
@@ -937,6 +978,48 @@ export type Database = {
           title?: string | null
         }
         Relationships: []
+      }
+      reward_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          points: number
+          post_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          points?: number
+          post_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          points?: number
+          post_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_log_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rsvps: {
         Row: {
@@ -1200,6 +1283,21 @@ export type Database = {
     Functions: {
       assign_adviser: {
         Args: { m_id: string; o_id: string }
+        Returns: undefined
+      }
+      award_like_coins: {
+        Args: { p_post_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      award_user_coins_once: {
+        Args:
+          | {
+              p_action: string
+              p_points: number
+              p_post_id: string
+              p_user_id: string
+            }
+          | { p_post_id: string; p_user_id: string }
         Returns: undefined
       }
       complete_user_profile: {

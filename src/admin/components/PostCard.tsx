@@ -201,7 +201,10 @@ export default function PostCard({
                   >
                     {onEdit && (
                       <DropdownMenu.Item
-                        onClick={() => onEdit(post)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(post);
+                        }}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md cursor-pointer outline-none"
                       >
                         <Edit3 size={14} />
@@ -211,7 +214,10 @@ export default function PostCard({
                     {onEdit && onDelete && <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />}
                     {onDelete && (
                       <DropdownMenu.Item
-                        onClick={() => onDelete(post)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(post);
+                        }}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md cursor-pointer outline-none"
                       >
                         <Trash2 size={14} />

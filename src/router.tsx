@@ -12,6 +12,8 @@ import AdminOrgTable from "./admin/pages/dashboard/OrgTable";
 import AdminOfficers from "./admin/pages/dashboard/Officers";
 import AdminMembers from "./admin/pages/dashboard/Members";
 import AdminPosts from "./admin/pages/dashboard/Posts";
+import AdminUserProfile from "./admin/pages/UserProfile";
+import AdminReports from "./admin/pages/Reports";
 import PostDetail from "./admin/pages/PostDetail";
 
 // User Routes
@@ -19,7 +21,7 @@ import UserDashboard from "./user/pages/Dashboard";
 import UserNewsFeed from "./user/pages/dashboard/NewsFeed";
 import UserEvents from "./user/pages/dashboard/Events";
 import UserOrganizations from "./user/pages/dashboard/Organizations";
-import UserProfile from "./user/pages/dashboard/Profile";
+import UserProfile from "./user/pages/UserProfile";
 import UserGames from "./user/pages/dashboard/Games";
 import UserDashboardHome from "./user/pages/dashboard/DashboardHome";
 import UnityGame from "./user/pages/dashboard/UnityGame";
@@ -87,6 +89,8 @@ const router = createBrowserRouter([
       { path: "officers", element: <AdminOfficers /> },
       { path: "members", element: <AdminMembers /> },
       { path: "posts", element: <AdminPosts /> },
+      { path: "reports", element: <AdminReports /> },
+      { path: "profile/:id", element: <AdminUserProfile /> },
       { path: "posts/:postId", element: <PostDetail /> }
     ]
   },
@@ -116,11 +120,15 @@ const router = createBrowserRouter([
         element: <UserProfile />
       },
       {
+        path: "profile/:id",
+        element: <UserProfile />
+      },
+      {
         path: "games",
         element: <UserGames />
       },
       {
-        path: "games/unity",
+        path: "unity-game",
         element: <UnityGame />
       },
       {

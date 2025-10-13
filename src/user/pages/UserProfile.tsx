@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { supabase } from '../../../lib/supabase';
-import type { User } from '../../../types/database.types';
+import { supabase } from '../../lib/supabase';
+import type { User } from '../../types/database.types';
 import { ArrowLeft, Edit, Camera, Save, X } from 'lucide-react';
 
 export default function UserProfile() {
@@ -29,16 +29,13 @@ export default function UserProfile() {
   // Fetch user profile
   useEffect(() => {
     const fetchUser = async () => {
-      // If no ID provided, assume it's the current user's profile
-      // In a real app, you'd get the current user ID from auth context
-      const userId = id || 'current-user-id'; // TODO: Get from auth context
-      
+      if (!id) return;
       try {
         setLoading(true);
         const { data, error } = await supabase
           .from('users')
           .select('*')
-          .eq('id', userId)
+          .eq('id', id)
           .single();
 
         if (error) throw error;
@@ -70,6 +67,28 @@ export default function UserProfile() {
     // For now, allow editing if it's the current user's profile
     // In a real app, you'd check authentication
     return true; // TODO: Implement proper auth check
+  };
+
+  // Check if a field should be editable based on user type
+  const canEditField = (fieldName: string) => {
+    if (!user) return false;
+
+    // Always allow editing basic info
+    if (['first_name', 'last_name', 'email', 'department', 'program', 'position', 'college'].includes(fieldName)) {
+      return true;
+    }
+
+    // Student-specific fields
+    if (['student_number', 'year_level'].includes(fieldName)) {
+      return user.user_type !== 'faculty'; // Faculty can't edit student fields
+    }
+
+    // Faculty-specific fields
+    if (['employee_id'].includes(fieldName)) {
+      return user.user_type !== 'student'; // Students can't edit faculty fields
+    }
+
+    return false;
   };
 
   const handleSave = async () => {
@@ -287,7 +306,7 @@ export default function UserProfile() {
                     </dd>
                   </div>
 
-                  {user.user_type === 'student' && (
+                  {user.user_type === 'student' && canEditField('student_number') && (
                     <>
                       <div>
                         <dt className="text-sm font-medium text-gray-500">Student Number</dt>
@@ -328,7 +347,7 @@ export default function UserProfile() {
                     </>
                   )}
 
-                  {user.user_type === 'faculty' && (
+                  {user.user_type === 'faculty' && canEditField('employee_id') && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Employee ID</dt>
                       <dd className="text-sm text-gray-900">

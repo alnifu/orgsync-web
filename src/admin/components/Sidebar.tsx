@@ -2,25 +2,29 @@ import { NavLink } from "react-router";
 import { useAuth } from "../../context/AuthContext";
 import { 
   Building2, 
+  ArrowLeft,
+  ArrowRight,
   Table, 
   Users, 
   User, 
   FileText,
   LogOut, 
-  LayoutDashboard
+  LayoutDashboard,
+  BarChart3
 } from "lucide-react";
 
 export default function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   
   const links = [
+    { to: `profile/${user?.id}`, label: "My Profile", icon: User },
     { to: "organizations", label: "Organizations", icon: Building2 },
     { to: "org-table", label: "Org Table", icon: Table },
     { to: "officers", label: "Officers", icon: Users },
     { to: "members", label: "Members", icon: User },
     { to: "posts", label: "Posts", icon: FileText },
+    { to: "reports", label: "Reports", icon: BarChart3 },
     { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }
-
   ];
 
   const handleSignOut = async () => {
@@ -39,7 +43,7 @@ export default function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolea
           onClick={onToggle}
           className="rounded-lg p-2 text-white hover:bg-green-600 transition-colors"
         >
-          {isCollapsed ? '→' : '←'}
+          {isCollapsed ? <ArrowRight /> : <ArrowLeft />}
         </button>
       </div>
 
