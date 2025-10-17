@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { useUserRoles } from '../../../utils/roles';
+import AccessDenied from '../../../components/AccessDenied';
 import type { Organization } from '../../../types/database.types';
 
 type SortField = 'name' | 'org_code' | 'date_established' | 'org_type';
@@ -17,6 +20,8 @@ type SortDirection = 'asc' | 'desc';
 
 export default function Organizations() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { roles, loading: rolesLoading, isAdmin, isOfficer, isAdviser } = useUserRoles(user?.id);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +48,28 @@ export default function Organizations() {
       let query = supabase
         .from('organizations')
         .select('*', { count: 'exact' });
+
+      // Filter organizations based on user role
+      if (!isAdmin()) {
+        // For officers and advisers, only show organizations they manage
+        const { data: managedOrgs, error: orgError } = await supabase
+          .from('org_managers')
+          .select('org_id')
+          .eq('user_id', user?.id);
+
+        if (orgError) throw orgError;
+
+        if (managedOrgs && managedOrgs.length > 0) {
+          const orgIds = managedOrgs.map(org => org.org_id);
+          query = query.in('id', orgIds);
+        } else {
+          // No managed organizations, return empty result
+          setOrganizations([]);
+          setTotalCount(0);
+          setLoading(false);
+          return;
+        }
+      }
 
       // Apply search filters
       if (searchQuery) {
@@ -96,6 +123,19 @@ export default function Organizations() {
       <ChevronUp className="h-4 w-4 text-green-600" /> : 
       <ChevronDown className="h-4 w-4 text-green-600" />;
   };
+
+  // Check if user has admin access
+  if (rolesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (!isAdmin() && !isOfficer() && !isAdviser()) {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="p-6">

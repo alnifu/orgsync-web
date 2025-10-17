@@ -43,6 +43,30 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
   // Handle adviser assignment
   const handleAssignAdviser = async (userId: string) => {
     try {
+      // First, update or insert user_roles to ensure they have adviser role
+      const { data: existingRole, error: roleCheckError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (roleCheckError && roleCheckError.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw roleCheckError;
+      }
+
+      // If no role exists or current role is 'member', update to 'adviser'
+      if (!existingRole || existingRole.role === 'member') {
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: userId,
+            role: 'adviser',
+            granted_at: new Date().toISOString()
+          });
+
+        if (roleUpdateError) throw roleUpdateError;
+      }
+
       const { error: assignError } = await supabase
         .from('org_managers')
         .insert({

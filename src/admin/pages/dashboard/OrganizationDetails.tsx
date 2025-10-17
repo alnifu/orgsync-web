@@ -3,10 +3,14 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { useUserRoles, canManageOrg } from '../../../utils/roles';
+import AccessDenied from '../../../components/AccessDenied';
 import type { Organization, User } from '../../../types/database.types';
 import OrganizationOverview from '../../components/OrganizationOverview';
 import OrganizationMembers from '../../components/OrganizationMembers';
 import OrganizationPosts from '../../components/OrganizationPosts';
+import OrganizationReports from '../../components/OrganizationReports';
 import SelectAdviser from '../../components/SelectAdviser';
 import EditOrganizationModal from '../../components/EditOrganizationModal';
 import DeleteOrganizationModal from '../../components/DeleteOrganizationModal';
@@ -14,6 +18,8 @@ import { Pencil, Trash2, UserPlus2 } from 'lucide-react';
 
 export default function OrganizationDetails() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const { roles, orgManagers, loading: rolesLoading, isAdmin } = useUserRoles(user?.id);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -106,6 +112,25 @@ export default function OrganizationDetails() {
         .eq('manager_role', 'adviser');
 
       if (removeError) throw removeError;
+
+      // Check if user has any remaining manager roles
+      const { data: remainingRoles, error: checkError } = await supabase
+        .from('org_managers')
+        .select('manager_role')
+        .eq('user_id', memberId);
+
+      if (checkError) throw checkError;
+
+      // If no remaining roles, demote back to member
+      if (!remainingRoles || remainingRoles.length === 0) {
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .update({ role: 'member' })
+          .eq('user_id', memberId);
+
+        if (roleUpdateError) throw roleUpdateError;
+      }
+
       setAdviser(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove adviser');
@@ -116,6 +141,19 @@ export default function OrganizationDetails() {
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
   };
+
+  // Check if user has access to this organization
+  if (rolesLoading) {
+    return (
+      <div className="p-6 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (!canManageOrg(roles?.role || null, orgManagers, id || '')) {
+    return <AccessDenied />;
+  }
 
   if (loading) return (
     <div className="p-6 flex justify-center">
@@ -140,20 +178,24 @@ export default function OrganizationDetails() {
           <p className="text-sm text-gray-500">{organization.org_code} • {organization.abbrev_name}</p>
         </div>
         <div className="flex space-x-2">
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </button>
-          <button
-            onClick={() => setIsDeleteModalOpen(true)}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </button>
+          {isAdmin() && (
+            <>
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </button>
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -184,12 +226,14 @@ export default function OrganizationDetails() {
                     <div className="text-sm text-gray-500">{adviser.email}</div>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleRemoveAdviser(adviser.id, organization.id)}
-                  className="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-500"
-                >
-                  Remove adviser
-                </button>
+                {isAdmin() && (
+                  <button
+                    onClick={() => handleRemoveAdviser(adviser.id, organization.id)}
+                    className="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-500"
+                  >
+                    Remove adviser
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -197,15 +241,17 @@ export default function OrganizationDetails() {
               <p className="mt-2 text-sm text-gray-500">
                 No adviser assigned to this organization yet.
               </p>
-              <div className="mt-5">
-                <button
-                  onClick={() => setIsSelectAdviserOpen(true)}
-                  className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
-                >
-                  <UserPlus2 className="h-4 w-4 mr-2" />
-                  Assign Adviser
-                </button>
-              </div>
+              {isAdmin() && (
+                <div className="mt-5">
+                  <button
+                    onClick={() => setIsSelectAdviserOpen(true)}
+                    className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+                  >
+                    <UserPlus2 className="h-4 w-4 mr-2" />
+                    Assign Adviser
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -232,6 +278,12 @@ export default function OrganizationDetails() {
           >
             Posts
           </TabsTrigger>
+          <TabsTrigger
+            value="reports"
+            className="px-4 py-2 -mb-px transition transform active:scale-95 hover:bg-gray-100 focus:outline-none rounded-md"
+          >
+            Reports
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -250,6 +302,14 @@ export default function OrganizationDetails() {
         {/* Posts Tab */}
         <TabsContent value="posts" className="space-y-4">
           <OrganizationPosts 
+            organizationId={id!} 
+            onError={handleError}
+          />
+        </TabsContent>
+
+        {/* Reports Tab */}
+        <TabsContent value="reports" className="space-y-4">
+          <OrganizationReports 
             organizationId={id!} 
             onError={handleError}
           />

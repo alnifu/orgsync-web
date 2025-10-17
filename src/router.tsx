@@ -2,6 +2,8 @@ import { createBrowserRouter, Navigate, RouterProvider, Link } from "react-route
 
 // Shared Components
 import PrivateRoute from "./components/PrivateRoute";
+import { useAuth } from "./context/AuthContext";
+import { useUserRoles } from "./utils/roles";
 
 // Admin Routes
 import AdminDashboard from "./admin/pages/Dashboard";
@@ -31,22 +33,49 @@ import Signin from "./pages/Signin";
 import Signup from "./pages/Signup";
 
 const DashboardRedirect = () => {
+  const { user } = useAuth();
+  const { roles, loading, isAdmin, isOfficer, isAdviser } = useUserRoles(user?.id);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Verifying Access</h3>
+          <p className="text-gray-600">Checking your permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const showAdminPortal = isAdmin() || isOfficer() || isAdviser();
+  const showUserPortal = !isAdmin() || true; // Always show user portal, or show it for non-admins
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-2xl w-full space-y-8 p-8">
         <h2 className="text-center text-3xl font-bold text-gray-900">Select Dashboard</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link to="/user/dashboard" 
-            className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-green-500 flex flex-col items-center">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Student Portal</h3>
-            <p className="text-gray-600 text-center">Access news feed, events, organizations, and games</p>
-          </Link>
-          <Link to="/admin/dashboard"
-            className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-blue-500 flex flex-col items-center">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Admin Portal</h3>
-            <p className="text-gray-600 text-center">Manage organizations, officers, members, and posts</p>
-          </Link>
+        <div className={`grid grid-cols-1 ${showAdminPortal && showUserPortal ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-md mx-auto'} gap-6`}>
+          {showUserPortal && (
+            <Link to="/user/dashboard"
+              className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-green-500 flex flex-col items-center">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">User Portal</h3>
+              <p className="text-gray-600 text-center">Access news feed, events, organizations, and games</p>
+            </Link>
+          )}
+          {showAdminPortal && (
+            <Link to="/admin/dashboard"
+              className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-blue-500 flex flex-col items-center">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Admin Portal</h3>
+              <p className="text-gray-600 text-center">Manage organizations, officers, members, and posts</p>
+            </Link>
+          )}
         </div>
+        {roles && (
+          <div className="text-center text-sm text-gray-500">
+            Logged in as: <span className="font-medium capitalize">{roles.role}</span>
+          </div>
+        )}
       </div>
     </div>
   );

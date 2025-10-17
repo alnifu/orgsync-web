@@ -111,6 +111,30 @@ export default function PromoteModal({
     setError(null);
 
     try {
+      // First, update or insert user_roles to ensure they have officer role
+      const { data: existingRole, error: roleCheckError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', selectedMember.id)
+        .maybeSingle();
+
+      if (roleCheckError && roleCheckError.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw roleCheckError;
+      }
+
+      // If no role exists or current role is 'member', update to 'officer'
+      if (!existingRole || existingRole.role === 'member') {
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: selectedMember.id,
+            role: 'officer',
+            granted_at: new Date().toISOString()
+          });
+
+        if (roleUpdateError) throw roleUpdateError;
+      }
+
       // Insert into org_managers table
       const { error } = await supabase
         .from('org_managers')

@@ -189,6 +189,24 @@ export default function Officers() {
         throw deleteError;
       }
 
+      // Check if user has any remaining manager roles
+      const { data: remainingRoles, error: checkError } = await supabase
+        .from('org_managers')
+        .select('manager_role')
+        .eq('user_id', userId);
+
+      if (checkError) throw checkError;
+
+      // If no remaining roles, demote back to member
+      if (!remainingRoles || remainingRoles.length === 0) {
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .update({ role: 'member' })
+          .eq('user_id', userId);
+
+        if (roleUpdateError) throw roleUpdateError;
+      }
+
       // Refresh the list
       await fetchOfficers();
     } catch (err) {
