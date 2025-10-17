@@ -45,12 +45,14 @@ export default function Organizations() {
     try {
       setLoading(true);
       
+      const isUserAdmin = isAdmin();
+      
       let query = supabase
         .from('organizations')
         .select('*', { count: 'exact' });
 
       // Filter organizations based on user role
-      if (!isAdmin()) {
+      if (!isUserAdmin) {
         // For officers and advisers, only show organizations they manage
         const { data: managedOrgs, error: orgError } = await supabase
           .from('org_managers')
@@ -84,6 +86,8 @@ export default function Organizations() {
         query = query.eq('department', filterDepartment);
       }
 
+      console.log('fetchOrganizations: filters applied', { searchQuery, filterOrgType, filterDepartment, sortField, sortDirection, currentPage });
+
       // Apply sorting
       query = query.order(sortField, { ascending: sortDirection === 'asc' });
 
@@ -92,6 +96,8 @@ export default function Organizations() {
       query = query.range(start, start + itemsPerPage - 1);
 
       const { data, error: fetchError, count } = await query;
+
+      console.log('fetchOrganizations: query result', { data, error: fetchError, count });
 
       if (fetchError) throw fetchError;
 
@@ -105,8 +111,10 @@ export default function Organizations() {
   };
 
   useEffect(() => {
-    fetchOrganizations();
-  }, [searchQuery, filterOrgType, filterDepartment, sortField, sortDirection, currentPage]);
+    if (!rolesLoading) {
+      fetchOrganizations();
+    }
+  }, [searchQuery, filterOrgType, filterDepartment, sortField, sortDirection, currentPage, rolesLoading]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

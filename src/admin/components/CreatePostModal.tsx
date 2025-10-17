@@ -16,9 +16,10 @@ interface CreatePostModalProps {
   onPostCreated: () => void;
   currentUser: AuthUser | null;
   defaultPostType?: PostType;
+  organizationId?: string;
 }
 
-export default function CreatePostModal({ open, onOpenChange, onPostCreated, currentUser, defaultPostType = "general" }: CreatePostModalProps) {
+export default function CreatePostModal({ open, onOpenChange, onPostCreated, currentUser, defaultPostType = "general", organizationId }: CreatePostModalProps) {
   const [title, setTitle] = useState<string>("");
   const [content, setContent] = useState<string>("");
   const [tags, setTags] = useState<string>("");
@@ -177,7 +178,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
         user_id: currentUser.id,
         tags: tagsArray,
         status,
-        org_id: null,
+        org_id: organizationId || null,
         post_type: postType,
         media: uploadedMedia.length > 0 ? uploadedMedia : null,
         ...(postType === 'event' && {
