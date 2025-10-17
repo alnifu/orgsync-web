@@ -10,6 +10,7 @@ import {
 import { supabase } from '../../../lib/supabase';
 import type { User } from '../../../types/database.types';
 import PromoteModal from '../../components/PromoteModal';
+import AccessControl from '../../components/AccessControl';
 
 type SortField = 'first_name' | 'last_name' | 'email' | 'department' | 'year_level' | 'program' | 'created_at';
 type SortDirection = 'asc' | 'desc';
@@ -106,7 +107,8 @@ export default function Members() {
   };
 
   return (
-    <div className="p-6">
+    <AccessControl requiredPermission="isAdmin">
+      <div className="p-6">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Members</h1>
@@ -360,5 +362,6 @@ export default function Members() {
         </div>
       )}
     </div>
+    </AccessControl>
   );
 }

@@ -1,5 +1,6 @@
 import { NavLink } from "react-router";
 import { useAuth } from "../../context/AuthContext";
+import { getUserPermissions } from "../../lib/permissions";
 import { 
   Building2, 
   ArrowLeft,
@@ -14,18 +15,57 @@ import {
 } from "lucide-react";
 
 export default function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
-  const { signOut, user } = useAuth();
+  const { signOut, user, userRole, orgManagers } = useAuth();
+  const permissions = getUserPermissions(userRole, orgManagers);
   
-  const links = [
-    { to: `profile/${user?.id}`, label: "My Profile", icon: User },
-    { to: "organizations", label: "Organizations", icon: Building2 },
-    { to: "org-table", label: "Org Table", icon: Table },
-    { to: "officers", label: "Officers", icon: Users },
-    { to: "members", label: "Members", icon: User },
-    { to: "posts", label: "Posts", icon: FileText },
-    { to: "reports", label: "Reports", icon: BarChart3 },
-    { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }
-  ];
+  console.log('📋 Sidebar permissions:', {
+    userRole,
+    orgManagers,
+    permissions: {
+      isAdmin: permissions.isAdmin,
+      isOfficer: permissions.isOfficer,
+      isAdviser: permissions.isAdviser,
+      isMember: permissions.isMember
+    }
+  });
+
+  // Define links based on user role
+  const getLinks = () => {
+    const baseLinks = [
+      { to: `profile/${user?.id}`, label: "My Profile", icon: User },
+      { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }
+    ];
+
+    if (permissions.isAdmin) {
+      console.log('👑 Admin user - showing all links');
+      // Admin sees all links
+      return [
+        { to: `profile/${user?.id}`, label: "My Profile", icon: User },
+        { to: "organizations", label: "Organizations", icon: Building2 },
+        { to: "org-table", label: "Org Table", icon: Table },
+        { to: "officers", label: "Officers", icon: Users },
+        { to: "members", label: "Members", icon: User },
+        { to: "posts", label: "Posts", icon: FileText },
+        { to: "reports", label: "Reports", icon: BarChart3 },
+        { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }
+      ];
+    } else if (permissions.isOfficer || permissions.isAdviser) {
+      console.log('👔 Officer/Adviser user - showing limited links');
+      // Officers and advisers see limited links
+      return [
+        { to: `profile/${user?.id}`, label: "My Profile", icon: User },
+        { to: "organizations", label: "Organizations", icon: Building2 },
+        { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }
+      ];
+    } else {
+      console.log('👤 Member user - showing basic links');
+      // Members and others see basic links
+      return baseLinks;
+    }
+  };
+
+  const links = getLinks();
+  console.log('🔗 Generated sidebar links:', links.map(l => l.label));
 
   const handleSignOut = async () => {
     await signOut();

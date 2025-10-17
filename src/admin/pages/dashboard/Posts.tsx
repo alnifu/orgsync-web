@@ -8,6 +8,7 @@ import EditPostModal from '../../components/EditPostModal';
 import DeletePostModal from '../../components/DeletePostModal';
 import ResponsesModal from '../../components/ResponsesModal';
 import PostCard from '../../components/PostCard';
+import AccessControl from '../../components/AccessControl';
 
 // Type for the user object from Supabase auth
 interface AuthUser {
@@ -147,7 +148,8 @@ export default function PostsComponent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <AccessControl requiredPermission="isOfficer">
+      <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -351,5 +353,6 @@ export default function PostsComponent() {
         post={selectedPost}
       />
     </div>
+    </AccessControl>
   );
 }

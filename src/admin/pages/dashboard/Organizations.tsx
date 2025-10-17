@@ -10,13 +10,18 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { getUserPermissions } from '../../../lib/permissions';
 import type { Organization } from '../../../types/database.types';
+import AccessControl from '../../components/AccessControl';
 
 type SortField = 'name' | 'org_code' | 'date_established' | 'org_type';
 type SortDirection = 'asc' | 'desc';
 
 export default function Organizations() {
   const navigate = useNavigate();
+  const { userRole, orgManagers } = useAuth();
+  const permissions = getUserPermissions(userRole, orgManagers);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +48,17 @@ export default function Organizations() {
       let query = supabase
         .from('organizations')
         .select('*', { count: 'exact' });
+
+      // For non-admin users, only show organizations they manage
+      if (!permissions.isAdmin && permissions.managedOrgs.length > 0) {
+        query = query.in('id', permissions.managedOrgs);
+      } else if (!permissions.isAdmin) {
+        // If user has no managed organizations, return empty result
+        setOrganizations([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
+      }
 
       // Apply search filters
       if (searchQuery) {
@@ -98,12 +114,16 @@ export default function Organizations() {
   };
 
   return (
-    <div className="p-6">
+    <AccessControl requiredPermission="isOfficer">
+      <div className="p-6">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Organizations</h1>
           <p className="mt-2 text-sm text-gray-700">
-            A list of all registered organizations in the system
+            {permissions.isAdmin 
+              ? "A list of all registered organizations in the system"
+              : "Organizations you are assigned to manage"
+            }
           </p>
         </div>
         <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
@@ -257,5 +277,6 @@ export default function Organizations() {
         </div>
       )}
     </div>
+    </AccessControl>
   );
 }

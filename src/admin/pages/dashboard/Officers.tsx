@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import type { OrgManager, User, Organization } from '../../../types/database.types';
+import AccessControl from '../../components/AccessControl';
 
 type SortField = 'first_name' | 'last_name' | 'email' | 'department' | 'manager_role' | 'position' | 'assigned_at';
 type SortDirection = 'asc' | 'desc';
@@ -225,7 +226,8 @@ export default function Officers() {
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   return (
-    <div className="p-6">
+    <AccessControl requiredPermission="isAdmin">
+      <div className="p-6">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Officers</h1>
@@ -498,5 +500,6 @@ export default function Officers() {
         </div>
       </div>
     </div>
+    </AccessControl>
   );
 }

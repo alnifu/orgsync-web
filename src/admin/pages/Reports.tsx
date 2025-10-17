@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { BarChart3, Users, Building2, FileText, TrendingUp, Calendar } from 'lucide-react';
+import AccessControl from '../components/AccessControl';
 
 interface ReportStats {
   totalUsers: number;
@@ -128,7 +129,8 @@ export default function Reports() {
   }
 
   return (
-    <div className="p-6">
+    <AccessControl requiredPermission="isOfficer">
+      <div className="p-6">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900">Reports & Analytics</h1>
         <p className="mt-2 text-sm text-gray-700">
@@ -223,12 +225,13 @@ export default function Reports() {
 
        Placeholder for future features 
       <div className="mt-8 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-        <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />
+        <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />   
         <h3 className="mt-2 text-sm font-medium text-gray-900">Advanced Analytics Coming Soon</h3>
         <p className="mt-1 text-sm text-gray-500">
           Future features may include detailed charts, user engagement metrics, organization performance analytics, and more.
         </p>
       </div>*/}
     </div>
+    </AccessControl>
   );
 }

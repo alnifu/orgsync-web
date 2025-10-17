@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { supabase } from '../../../lib/supabase';
 import type { Organization } from '../../../types/database.types';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import AccessControl from '../../components/AccessControl';
 
 type SortField = 'name' | 'org_code' | 'date_established' | 'org_type' | 'department';
 type SortDirection = 'asc' | 'desc';
@@ -55,7 +56,8 @@ export default function OrgTable() {
   };
 
   return (
-    <div className="p-6">
+    <AccessControl requiredPermission="isOfficer">
+      <div className="p-6">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Organizations</h1>
@@ -180,5 +182,6 @@ export default function OrgTable() {
         </div>
       )}
     </div>
+    </AccessControl>
   );
 }

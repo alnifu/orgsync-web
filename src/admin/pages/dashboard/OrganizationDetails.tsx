@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { getUserPermissions } from '../../../lib/permissions';
 import type { Organization, User } from '../../../types/database.types';
 import OrganizationOverview from '../../components/OrganizationOverview';
 import OrganizationMembers from '../../components/OrganizationMembers';
@@ -10,10 +12,13 @@ import OrganizationPosts from '../../components/OrganizationPosts';
 import SelectAdviser from '../../components/SelectAdviser';
 import EditOrganizationModal from '../../components/EditOrganizationModal';
 import DeleteOrganizationModal from '../../components/DeleteOrganizationModal';
+import AccessControl from '../../components/AccessControl';
 import { Pencil, Trash2, UserPlus2 } from 'lucide-react';
 
 export default function OrganizationDetails() {
   const { id } = useParams<{ id: string }>();
+  const { userRole, orgManagers } = useAuth();
+  const permissions = getUserPermissions(userRole, orgManagers);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -132,7 +137,11 @@ export default function OrganizationDetails() {
   );
 
   return (
-    <div className="p-6 space-y-6">
+    <AccessControl
+      requiredPermission="canManageOrg"
+      orgId={organization.id}
+    >
+      <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -140,20 +149,24 @@ export default function OrganizationDetails() {
           <p className="text-sm text-gray-500">{organization.org_code} • {organization.abbrev_name}</p>
         </div>
         <div className="flex space-x-2">
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </button>
-          <button
-            onClick={() => setIsDeleteModalOpen(true)}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </button>
+          {permissions.canEditOrg(organization.id) && (
+            <>
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </button>
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -187,6 +200,7 @@ export default function OrganizationDetails() {
                 <button
                   onClick={() => handleRemoveAdviser(adviser.id, organization.id)}
                   className="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-500"
+                  disabled={!permissions.canEditOrg(organization.id)}
                 >
                   Remove adviser
                 </button>
@@ -200,7 +214,8 @@ export default function OrganizationDetails() {
               <div className="mt-5">
                 <button
                   onClick={() => setIsSelectAdviserOpen(true)}
-                  className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+                  disabled={!permissions.canEditOrg(organization.id)}
+                  className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <UserPlus2 className="h-4 w-4 mr-2" />
                   Assign Adviser
@@ -285,5 +300,6 @@ export default function OrganizationDetails() {
         onError={handleError}
       />
     </div>
+    </AccessControl>
   );
 }
