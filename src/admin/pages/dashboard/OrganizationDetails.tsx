@@ -140,6 +140,7 @@ export default function OrganizationDetails() {
 
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
+    console.log('Error:', errorMessage);
   };
 
   // Check if user has access to this organization
