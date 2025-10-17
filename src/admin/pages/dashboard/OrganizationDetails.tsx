@@ -175,7 +175,7 @@ export default function OrganizationDetails() {
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                       <span className="text-green-700 font-medium text-sm">
-                        {adviser.first_name.charAt(0).toUpperCase()}{adviser.last_name.charAt(0).toUpperCase()}
+                        {(adviser.first_name ? adviser.first_name.charAt(0).toUpperCase() : '?')}{(adviser.last_name ? adviser.last_name.charAt(0).toUpperCase() : '?')}
                       </span>
                     </div>
                   )}

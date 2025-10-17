@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { supabase } from "../../lib/supabase";
-import { ArrowLeft, Heart, Share2, Eye, Calendar, User, Tag, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare } from "lucide-react";
-import type { Posts, PostType } from '../../types/database.types';
+import { ArrowLeft, Heart, Share2, Eye, Calendar, User, Tag, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare, Users, CheckCircle, Clock, XCircle, Vote, ChevronRight, Loader2 } from "lucide-react";
+import type { Posts, PostType, EventRsvp } from '../../types/database.types';
+import FormSubmission from '../components/FormSubmission';
 
 interface AuthUser {
   id: string;
@@ -21,6 +22,17 @@ export default function PostDetail() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [userRsvp, setUserRsvp] = useState<EventRsvp | null>(null);
+  const [rsvpStats, setRsvpStats] = useState({
+    attending: 0,
+    maybe: 0,
+    not_attending: 0
+  });
+  const [userVote, setUserVote] = useState<number | null>(null);
+  const [voteStats, setVoteStats] = useState<number[]>([]);
+  const [voting, setVoting] = useState(false);
+  const [userFormResponse, setUserFormResponse] = useState<any>(null);
+  const [formResponses, setFormResponses] = useState<any[]>([]);
 
   useEffect(() => {
     if (postId) {
@@ -30,6 +42,16 @@ export default function PostDetail() {
       incrementViewCount();
     }
   }, [postId]);
+
+  useEffect(() => {
+    if (currentUser && postId) {
+      fetchUserRsvp();
+      fetchRsvpStats();
+      fetchUserVote();
+      fetchVoteStats();
+      fetchUserFormResponse();
+    }
+  }, [currentUser, postId]);
 
   async function getCurrentUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -97,6 +119,216 @@ export default function PostDetail() {
     // Update local state
     if (post) {
       setPost({ ...post, view_count: (post.view_count || 0) + 1 });
+    }
+  }
+
+  async function fetchUserRsvp() {
+    if (!currentUser || !postId) return;
+
+    const { data, error } = await supabase
+      .from('rsvps')
+      .select('*')
+      .eq('post_id', postId)
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (data && !error) {
+      setUserRsvp(data);
+    }
+  }
+
+  async function fetchRsvpStats() {
+    if (!postId) return;
+
+    const { data, error } = await supabase
+      .from('rsvps')
+      .select('status')
+      .eq('post_id', postId);
+
+    if (data && !error) {
+      const stats = data.reduce((acc, rsvp) => {
+        acc[rsvp.status as keyof typeof acc] = (acc[rsvp.status as keyof typeof acc] || 0) + 1;
+        return acc;
+      }, { attending: 0, maybe: 0, not_attending: 0 });
+
+      setRsvpStats(stats);
+    }
+  }
+
+  async function handleRsvp(status: string) {
+    if (!currentUser || !postId) return;
+
+    if (userRsvp) {
+      // Update existing RSVP
+      const { error } = await supabase
+        .from('rsvps')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', userRsvp.id);
+
+      if (!error) {
+        setUserRsvp({ ...userRsvp, status });
+        fetchRsvpStats(); // Refresh stats
+      }
+    } else {
+      // Create new RSVP
+      const { data, error } = await supabase
+        .from('rsvps')
+        .insert({
+          post_id: postId,
+          user_id: currentUser.id,
+          status
+        })
+        .select()
+        .single();
+
+      if (data && !error) {
+        setUserRsvp(data);
+        fetchRsvpStats(); // Refresh stats
+      }
+    }
+  }
+
+  async function fetchUserVote() {
+    if (!currentUser || !postId) return;
+
+    const { data, error } = await supabase
+      .from('poll_votes')
+      .select('option_index')
+      .eq('post_id', postId)
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (data && !error) {
+      setUserVote(data.option_index);
+    }
+  }
+
+  async function fetchVoteStats() {
+    if (!postId) return;
+
+    const { data, error } = await supabase
+      .from('poll_votes')
+      .select('option_index')
+      .eq('post_id', postId);
+
+    if (data && !error) {
+      // Count votes for each option
+      const stats: { [key: number]: number } = {};
+      data.forEach(vote => {
+        stats[vote.option_index] = (stats[vote.option_index] || 0) + 1;
+      });
+      
+      // Convert to array format expected by the UI
+      const maxIndex = Math.max(...Object.keys(stats).map(Number), -1);
+      const statsArray: number[] = [];
+      for (let i = 0; i <= maxIndex; i++) {
+        statsArray[i] = stats[i] || 0;
+      }
+      
+      setVoteStats(statsArray);
+    }
+  }
+
+  async function handleVote(optionIndex: number) {
+    if (!currentUser || !postId || userVote !== null || voting) return;
+
+    setVoting(true);
+    try {
+      const { data, error } = await supabase
+        .from('poll_votes')
+        .insert({
+          post_id: postId,
+          user_id: currentUser.id,
+          option_index: optionIndex
+        })
+        .select()
+        .single();
+
+      if (data && !error) {
+        setUserVote(optionIndex);
+        fetchVoteStats(); // Refresh stats
+      }
+    } finally {
+      setVoting(false);
+    }
+  }
+
+  function getPollOptions(): string[] {
+    if (!post || post.post_type !== 'poll') return [];
+
+    try {
+      const content = JSON.parse(post.content);
+      return content.options || [];
+    } catch (error) {
+      console.error('Failed to parse poll content:', error);
+      return [];
+    }
+  }
+
+  function getPollQuestion(): string {
+    if (!post || post.post_type !== 'poll') return post?.content || '';
+
+    try {
+      const content = JSON.parse(post.content);
+      return content.question || content.description || post.content;
+    } catch (error) {
+      console.error('Failed to parse poll content:', error);
+      return post.content;
+    }
+  }
+
+  async function fetchUserFormResponse() {
+    if (!currentUser || !postId) return;
+
+    const { data, error } = await supabase
+      .from('form_responses')
+      .select('responses')
+      .eq('post_id', postId)
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (data && !error) {
+      setUserFormResponse(data.responses);
+    }
+  }
+
+  async function handleFormSubmit(formData: any) {
+    if (!currentUser || !postId) return;
+
+    const { data, error } = await supabase
+      .from('form_responses')
+      .insert({
+        post_id: postId,
+        user_id: currentUser.id,
+        responses: formData
+      })
+      .select()
+      .single();
+
+    if (data && !error) {
+      setUserFormResponse(formData);
+    }
+  }
+
+  function getFormFields(): any[] {
+    if (!post || post.post_type !== 'feedback') return [];
+
+    try {
+      const content = JSON.parse(post.content);
+      return content.fields || [];
+    } catch {
+      return [];
+    }
+  }
+
+  function getFormDescription(): string {
+    if (!post || post.post_type !== 'feedback') return post?.content || '';
+
+    try {
+      const content = JSON.parse(post.content);
+      return content.description || post.content;
+    } catch {
+      return post.content;
     }
   }
 
@@ -299,9 +531,277 @@ export default function PostDetail() {
             </div>
 
             {/* Post Content */}
-            <div className="prose prose-lg max-w-none mb-8">
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{post.content}</p>
-            </div>
+            {post.post_type !== 'feedback' && post.post_type !== 'poll' && (
+              <div className="prose prose-lg max-w-none mb-8">
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {post.content}
+                </p>
+              </div>
+            )}
+
+            {/* Event Details */}
+            {post.post_type === 'event' && (
+              <div className="bg-blue-50 rounded-lg p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <CalendarIcon size={20} />
+                  Event Details
+                </h3>
+                <div className="space-y-3">
+                  {post.event_date && (
+                    <div className="flex items-center gap-3">
+                      <CalendarIcon size={18} className="text-blue-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {new Date(post.event_date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {(post.start_time || post.end_time) && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">🕐</span>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {post.start_time && new Date(`2000-01-01T${post.start_time}`).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                          {post.end_time && ` - ${new Date(`2000-01-01T${post.end_time}`).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}`}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {post.location && (
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📍</span>
+                      <div>
+                        <div className="font-medium text-gray-900">{post.location}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Event RSVP Section */}
+            {post.post_type === 'event' && (
+              <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Users size={20} />
+                  Event Attendance
+                </h3>
+
+                {/* RSVP Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{rsvpStats.attending}</div>
+                    <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                      <CheckCircle size={14} />
+                      Attending
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600">{rsvpStats.maybe}</div>
+                    <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                      <Clock size={14} />
+                      Maybe
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">{rsvpStats.not_attending}</div>
+                    <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                      <XCircle size={14} />
+                      Not Attending
+                    </div>
+                  </div>
+                </div>
+
+                {/* RSVP Buttons */}
+                {currentUser && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleRsvp('attending')}
+                      className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                        userRsvp?.status === 'attending'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-white border border-green-600 text-green-600 hover:bg-green-50'
+                      }`}
+                    >
+                      <CheckCircle size={16} className="inline mr-2" />
+                      Attending
+                    </button>
+                    <button
+                      onClick={() => handleRsvp('maybe')}
+                      className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                        userRsvp?.status === 'maybe'
+                          ? 'bg-yellow-600 text-white'
+                          : 'bg-white border border-yellow-600 text-yellow-600 hover:bg-yellow-50'
+                      }`}
+                    >
+                      <Clock size={16} className="inline mr-2" />
+                      Maybe
+                    </button>
+                    <button
+                      onClick={() => handleRsvp('not_attending')}
+                      className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                        userRsvp?.status === 'not_attending'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-white border border-red-600 text-red-600 hover:bg-red-50'
+                      }`}
+                    >
+                      <XCircle size={16} className="inline mr-2" />
+                      Not Attending
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Poll Voting Section */}
+            {post.post_type === 'poll' && (
+              <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <BarChart3 size={20} />
+                  Poll
+                </h3>
+
+                <div className="mb-6">
+                  <p className="text-gray-700 font-medium mb-4">{getPollQuestion()}</p>
+
+                  {userVote !== null ? (
+                    <div className="space-y-4">
+                      <p className="text-sm text-gray-600 mb-4 flex items-center gap-2">
+                        <BarChart3 size={16} />
+                        Live Results:
+                      </p>
+                      {getPollOptions().map((option, index) => {
+                        const voteCount = voteStats[index] || 0;
+                        const totalVotes = voteStats.reduce((sum, count) => sum + (count || 0), 0);
+                        const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                        const isUserVote = userVote === index;
+
+                        return (
+                          <div key={index} className="relative">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <span className={`text-sm font-medium ${isUserVote ? 'text-purple-700' : 'text-gray-700'}`}>
+                                  {option}
+                                </span>
+                                {isUserVote && (
+                                  <div className="flex items-center gap-1 text-purple-600">
+                                    <CheckCircle size={14} />
+                                    <span className="text-xs font-medium">Your vote</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-500">
+                                  {voteCount} vote{voteCount !== 1 ? 's' : ''}
+                                </span>
+                                <span className="text-sm font-semibold text-gray-700 min-w-[3rem] text-right">
+                                  {percentage}%
+                                </span>
+                              </div>
+                            </div>
+                            <div className="relative">
+                              <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                                <div
+                                  className={`h-4 rounded-full transition-all duration-1000 ease-out ${
+                                    isUserVote ? 'bg-gradient-to-r from-purple-500 to-purple-600' : 'bg-gradient-to-r from-purple-400 to-purple-500'
+                                  }`}
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                              {/* Animated pulse for user's vote */}
+                              {isUserVote && (
+                                <div className="absolute inset-0 rounded-full bg-purple-400 animate-pulse opacity-20"></div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600 mb-3 flex items-center gap-2">
+                        <Vote size={16} />
+                        Cast your vote:
+                      </p>
+                      {getPollOptions().map((option, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleVote(index)}
+                          disabled={voting}
+                          className="w-full text-left p-4 border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-800 group-hover:text-purple-700 transition-colors">
+                              {option}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-gray-300 rounded-full group-hover:border-purple-400 transition-colors"></div>
+                              <ChevronRight size={16} className="text-gray-400 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      {voting && (
+                        <div className="text-center py-2">
+                          <div className="inline-flex items-center gap-2 text-purple-600">
+                            <Loader2 size={16} className="animate-spin" />
+                            <span className="text-sm">Recording your vote...</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Users size={16} />
+                    <span>Total votes: {voteStats.reduce((sum, count) => sum + (count || 0), 0)}</span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Updated live
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Form Submission Section */}
+            {post.post_type === 'feedback' && (
+              <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <MessageSquare size={20} />
+                  Feedback Form
+                </h3>
+
+                {userFormResponse ? (
+                  <div className="text-center py-8">
+                    <CheckCircle size={48} className="mx-auto text-green-600 mb-4" />
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Thank you for your response!</h4>
+                    <p className="text-gray-600">Your feedback has been submitted successfully.</p>
+                  </div>
+                ) : (
+                  <FormSubmission
+                    description={getFormDescription()}
+                    fields={getFormFields()}
+                    onSubmit={handleFormSubmit}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Media Display */}
             {post.media && post.media.length > 0 && (

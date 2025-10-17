@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";
 import { Plus, Search, Edit3, Loader2 } from "lucide-react";
-import type { Posts } from '../../../types/database.types';
+import type { Posts, PostType } from '../../../types/database.types';
 import CreatePostModal from '../../components/CreatePostModal';
 import EditPostModal from '../../components/EditPostModal';
 import DeletePostModal from '../../components/DeletePostModal';
+import ResponsesModal from '../../components/ResponsesModal';
 import PostCard from '../../components/PostCard';
 
 // Type for the user object from Supabase auth
@@ -30,7 +31,9 @@ export default function PostsComponent() {
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [responsesModalOpen, setResponsesModalOpen] = useState<boolean>(false);
   const [selectedPost, setSelectedPost] = useState<Posts | null>(null);
+  const [selectedPostType, setSelectedPostType] = useState<PostType>("general");
 
   // Get all unique tags from posts
   const allTags: string[] = [...new Set(posts.flatMap(post => post.tags || []))];
@@ -58,6 +61,7 @@ export default function PostsComponent() {
           id, title, content, created_at, updated_at, user_id, tags, 
           status, view_count, is_pinned, org_id, media, post_type
         `)
+        .or(`status.eq.published,status.eq.archived${currentUser ? `,status.eq.draft.and.user_id.eq.${currentUser.id}` : ''}`)
         .order("is_pinned", { ascending: false })
         .order("created_at", { ascending: false });
       
@@ -137,6 +141,11 @@ export default function PostsComponent() {
     return currentUser?.id === post.user_id;
   }
 
+  function handleViewResponses(post: Posts): void {
+    setSelectedPost(post);
+    setResponsesModalOpen(true);
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -147,13 +156,48 @@ export default function PostsComponent() {
               <h1 className="text-3xl font-bold text-gray-900">Posts</h1>
               <p className="text-gray-600 mt-1">Share your thoughts and ideas with the community</p>
             </div>
-            <button 
-              onClick={() => setCreateModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md"
-            >
-              <Plus size={20} />
-              Create Post
-            </button>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <button 
+                onClick={() => {
+                  setSelectedPostType("general");
+                  setCreateModalOpen(true);
+                }}
+                className="flex flex-col items-center gap-2 p-4 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+              >
+                <Plus size={24} />
+                <span className="text-sm font-medium">General Post</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedPostType("event");
+                  setCreateModalOpen(true);
+                }}
+                className="flex flex-col items-center gap-2 p-4 bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+              >
+                <Plus size={24} />
+                <span className="text-sm font-medium">Event</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedPostType("poll");
+                  setCreateModalOpen(true);
+                }}
+                className="flex flex-col items-center gap-2 p-4 bg-purple-600 text-white rounded-xl shadow-sm hover:bg-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+              >
+                <Plus size={24} />
+                <span className="text-sm font-medium">Poll</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedPostType("feedback");
+                  setCreateModalOpen(true);
+                }}
+                className="flex flex-col items-center gap-2 p-4 bg-orange-600 text-white rounded-xl shadow-sm hover:bg-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+              >
+                <Plus size={24} />
+                <span className="text-sm font-medium">Feedback Form</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -246,6 +290,7 @@ export default function PostsComponent() {
                 onDelete={handleDeletePost}
                 onPin={togglePin}
                 onTagClick={setSelectedTag}
+                onViewResponses={handleViewResponses}
                 isOwner={isPostOwner(post)}
               />
             ))
@@ -283,6 +328,7 @@ export default function PostsComponent() {
         onOpenChange={setCreateModalOpen}
         onPostCreated={fetchPosts}
         currentUser={currentUser}
+        defaultPostType={selectedPostType}
       />
       
       <EditPostModal
@@ -297,6 +343,12 @@ export default function PostsComponent() {
         open={deleteModalOpen}
         onOpenChange={setDeleteModalOpen}
         onPostDeleted={fetchPosts}
+      />
+
+      <ResponsesModal
+        open={responsesModalOpen}
+        onOpenChange={setResponsesModalOpen}
+        post={selectedPost}
       />
     </div>
   );

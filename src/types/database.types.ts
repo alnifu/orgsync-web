@@ -78,6 +78,10 @@ export interface Posts {
   updated_at: string | null;
   media?: MediaItem[] | null;
   post_type?: PostType;
+  event_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  location?: string | null;
 }
 
 export type PostType = 'general' | 'event' | 'poll' | 'feedback';
@@ -94,4 +98,29 @@ export interface PostLikes {
   post_id: string;
   user_id: string;
   created_at: string;
+}
+
+export interface EventRsvp {
+  id: string;
+  post_id: string;
+  user_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PollVote {
+  id: string;
+  post_id: string;
+  user_id: string;
+  option_index: number;
+  created_at: string;
+}
+
+export interface FormResponse {
+  id: string;
+  post_id: string;
+  user_id: string;
+  responses: any;
+  submitted_at: string;
 }

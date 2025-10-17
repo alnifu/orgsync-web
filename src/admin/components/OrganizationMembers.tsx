@@ -189,7 +189,7 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
                     <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-green-600">{m.users?.first_name.charAt(0)}</span>
+                      <span className="text-sm font-medium text-green-600">{m.users?.first_name ? m.users.first_name.charAt(0) : '?'}</span>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{m.users?.first_name} {m.users?.last_name}</p>

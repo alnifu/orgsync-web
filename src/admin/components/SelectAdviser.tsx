@@ -112,7 +112,7 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                       <span className="text-green-700 font-medium text-sm">
-                        {member.first_name.charAt(0).toUpperCase()}{member.last_name.charAt(0).toUpperCase()}
+                        {(member.first_name ? member.first_name.charAt(0).toUpperCase() : '?')}{(member.last_name ? member.last_name.charAt(0).toUpperCase() : '?')}
                       </span>
                     </div>
                   )}

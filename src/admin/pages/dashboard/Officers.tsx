@@ -413,7 +413,7 @@ export default function Officers() {
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           <span className="inline-flex items-center px-2.5 py-0.5 text-s font-medium text-green-800">
-                            {officer.manager_role.charAt(0).toUpperCase() + officer.manager_role.slice(1)}
+                            {officer.manager_role ? officer.manager_role.charAt(0).toUpperCase() + officer.manager_role.slice(1) : 'N/A'}
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">

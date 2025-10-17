@@ -269,7 +269,9 @@ export default function Members() {
                             />
                             ) : (
                               <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                <span className="text-sm font-medium text-green-600">{member.first_name.charAt(0)}</span>
+                                <span className="text-sm font-medium text-green-600">
+                                  {member.first_name ? member.first_name.charAt(0).toUpperCase() : '?'}
+                                </span>
                               </div>
                             )}
                             {member.first_name} {member.last_name}

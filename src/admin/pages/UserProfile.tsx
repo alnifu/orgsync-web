@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { supabase } from '../../lib/supabase';
 import type { User } from '../../types/database.types';
 import { ArrowLeft, Edit, Camera, Save, X, Shield } from 'lucide-react';
+import ImageCropModal from '../components/ImageCropModal';
 
 export default function AdminUserProfile() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,8 @@ export default function AdminUserProfile() {
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string>('');
 
   // Fetch user profile
   useEffect(() => {
@@ -73,8 +76,8 @@ export default function AdminUserProfile() {
 
       // Upload new avatar if selected
       if (avatarFile) {
-        const fileExt = avatarFile.name.split('.').pop();
-        const fileName = `${user.id}.${fileExt}`;
+        // Always use the same filename for each user to ensure replacement
+        const fileName = `${user.id}-avatar.jpg`;
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(fileName, avatarFile, { upsert: true });
@@ -124,49 +127,91 @@ export default function AdminUserProfile() {
       setAvatarFile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save changes');
+      console.log("Save error:", err);
+      console.log("Edit form data:", editForm);
+      if (avatarFile) {
+        console.log("Avatar file:", avatarFile.name, avatarFile.size, avatarFile.type);
+      }
     } finally {
-      setSaving(false);
+      setSaving(false); 
     }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCropImageSrc(reader.result as string);
+        setShowCropModal(true);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  // Check if a field should be editable based on user type
-  const canEditField = (fieldName: string) => {
-    if (!user) return false;
+  const handleCropComplete = async (croppedFile: File) => {
+    // set local state so preview updates immediately
+    setAvatarFile(croppedFile);
+    setShowCropModal(false);
+    setCropImageSrc('');
 
-    // Always allow editing basic info
-    if (['first_name', 'last_name', 'email'].includes(fieldName)) {
-      return true;
+    // If we already have the user loaded, upload immediately and replace the stored avatar
+    if (!user) return;
+
+    try {
+      const fileExt = (croppedFile.name.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '').toLowerCase();
+      const fileName = `${user.id}-avatar.${fileExt}`;
+
+      // Upload and replace (upsert)
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, croppedFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL and add cache-busting query so browsers/CDN don't serve the stale image
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      const avatarUrl = `${publicUrl}?v=${Date.now()}`;
+
+      // Persist avatar URL to user record
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Refresh user data to reflect the new avatar_url
+      const { data: updatedUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      setUser(updatedUser);
+      console.log('User updated with new avatar');
+
+      // Clear local avatarFile because we've already uploaded and updated DB
+      setAvatarFile(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload avatar');
+      console.error('Avatar upload error:', err);
     }
+  };
 
-    // Show fields based on the TARGET user's type, not the current user's permissions
-    if (user.user_type === 'student') {
-      // Students can only edit their own student-specific fields
-      return ['student_number', 'program', 'college', 'year_level'].includes(fieldName);
+  const handleCropCancel = () => {
+    setShowCropModal(false);
+    setCropImageSrc('');
+    // Clear the file input
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
     }
-
-    if (user.user_type === 'faculty') {
-      // Faculty can only edit their own faculty-specific fields
-      return ['employee_id', 'department', 'position'].includes(fieldName);
-    }
-
-    // Admin can edit everything
-    if (user.user_type === 'admin') {
-      return true;
-    }
-
-    // User type can always be edited by admin
-    if (fieldName === 'user_type') {
-      return true;
-    }
-
-    return false;
   };
 
   if (loading) {
@@ -197,7 +242,16 @@ export default function AdminUserProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      {/* Crop Modal */}
+      <ImageCropModal
+        isOpen={showCropModal}
+        imageSrc={cropImageSrc}
+        onCropComplete={handleCropComplete}
+        onCancel={handleCropCancel}
+      />
+
+      <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -249,7 +303,7 @@ export default function AdminUserProfile() {
                 ) : (
                   <div className="h-24 w-24 rounded-full bg-gray-300 border-4 border-white flex items-center justify-center">
                     <span className="text-2xl font-bold text-gray-600">
-                      {user.first_name.charAt(0)}{user.last_name.charAt(0)}
+                      {(user.first_name ? user.first_name.charAt(0) : '?')}{(user.last_name ? user.last_name.charAt(0) : '?')}
                     </span>
                   </div>
                 )}
@@ -324,24 +378,13 @@ export default function AdminUserProfile() {
                   <div>
                     <dt className="text-sm font-medium text-gray-500">User Type</dt>
                     <dd className="text-sm text-gray-900">
-                      {isEditing ? (
-                        <select
-                          value={editForm.user_type}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, user_type: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                        >
-                          <option value="">Select user type</option>
-                          <option value="student">Student</option>
-                          <option value="faculty">Faculty</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      ) : (
+                     
                         <span className="capitalize">{user.user_type || 'Not specified'}</span>
-                      )}
+
                     </dd>
                   </div>
 
-                  {canEditField('student_number') && (
+                  {user.user_type === 'student' && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Student Number</dt>
                       <dd className="text-sm text-gray-900">
@@ -359,7 +402,7 @@ export default function AdminUserProfile() {
                     </div>
                   )}
 
-                  {canEditField('year_level') && (
+                  {user.user_type === 'student' && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Year Level</dt>
                       <dd className="text-sm text-gray-900">
@@ -383,7 +426,7 @@ export default function AdminUserProfile() {
                     </div>
                   )}
 
-                  {canEditField('employee_id') && (
+                  {user.user_type === 'faculty' && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Employee ID</dt>
                       <dd className="text-sm text-gray-900">
@@ -401,7 +444,7 @@ export default function AdminUserProfile() {
                     </div>
                   )}
 
-                  {canEditField('position') && (
+                  {user.user_type === 'faculty' && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Position</dt>
                       <dd className="text-sm text-gray-900">
@@ -425,7 +468,7 @@ export default function AdminUserProfile() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Academic Information</h3>
                 <dl className="space-y-3">
-                  {canEditField('college') && (
+                  {user.user_type === 'student' && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">College</dt>
                       <dd className="text-sm text-gray-900">
@@ -443,7 +486,7 @@ export default function AdminUserProfile() {
                     </div>
                   )}
 
-                  {canEditField('department') && (
+                  {user.user_type === 'faculty' && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Department</dt>
                       <dd className="text-sm text-gray-900">
@@ -461,7 +504,7 @@ export default function AdminUserProfile() {
                     </div>
                   )}
 
-                  {canEditField('program') && (
+                  {user.user_type === 'student' && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Program</dt>
                       <dd className="text-sm text-gray-900">
@@ -539,5 +582,6 @@ export default function AdminUserProfile() {
         </div>
       </div>
     </div>
+    </>
   );
 }

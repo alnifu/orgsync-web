@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Plus, Upload, Image, Video } from "lucide-react";
+import { X, Plus, Upload, Image, Video, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare } from "lucide-react";
 import type { Posts, MediaItem, PostType } from '../../types/database.types';
 import { uploadFiles, validateFile } from '../../lib/media';
 
@@ -15,9 +15,10 @@ interface CreatePostModalProps {
   onOpenChange: (open: boolean) => void;
   onPostCreated: () => void;
   currentUser: AuthUser | null;
+  defaultPostType?: PostType;
 }
 
-export default function CreatePostModal({ open, onOpenChange, onPostCreated, currentUser }: CreatePostModalProps) {
+export default function CreatePostModal({ open, onOpenChange, onPostCreated, currentUser, defaultPostType = "general" }: CreatePostModalProps) {
   const [title, setTitle] = useState<string>("");
   const [content, setContent] = useState<string>("");
   const [tags, setTags] = useState<string>("");
@@ -27,6 +28,51 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [mediaPreviews, setMediaPreviews] = useState<MediaItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [formFields, setFormFields] = useState<Array<{type: string, question: string, required: boolean}>>([
+    {type: 'text', question: '', required: false}
+  ]);
+  const [eventDate, setEventDate] = useState<string>("");
+  const [startTime, setStartTime] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
+  const [eventLocation, setEventLocation] = useState<string>("");
+
+  // Sync postType with defaultPostType when modal opens or prop changes
+  useEffect(() => {
+    if (defaultPostType) {
+      setPostType(defaultPostType);
+    }
+  }, [defaultPostType]);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setTitle("");
+      setContent("");
+      setTags("");
+      setStatus("published");
+      setSelectedFiles([]);
+      setMediaPreviews([]);
+      setUploadProgress(0);
+      setPollOptions(["", ""]);
+      setFormFields([{type: 'text', question: '', required: false}]);
+      setEventDate("");
+      setStartTime("");
+      setEndTime("");
+      setEventLocation("");
+      // postType is set by the defaultPostType useEffect above
+    }
+  }, [open]);
+
+  const getFocusRingColor = () => {
+    switch (postType) {
+      case 'general': return 'focus:ring-green-500 focus:border-green-500';
+      case 'event': return 'focus:ring-blue-500 focus:border-blue-500';
+      case 'poll': return 'focus:ring-purple-500 focus:border-purple-500';
+      case 'feedback': return 'focus:ring-orange-500 focus:border-orange-500';
+      default: return 'focus:ring-green-500 focus:border-green-500';
+    }
+  };
 
   async function createPost(): Promise<void> {
     setLoading(true);
@@ -38,8 +84,54 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
       return;
     }
 
-    if (!title.trim() || !content.trim()) {
-      alert("Please fill in both title and content");
+    if (!title.trim()) {
+      alert("Please fill in the title");
+      setLoading(false);
+      return;
+    }
+
+    if (postType === 'poll') {
+      if (!content.trim()) {
+        alert("Please enter a poll question");
+        setLoading(false);
+        return;
+      }
+      const validOptions = pollOptions.filter(option => option.trim().length > 0);
+      if (validOptions.length < 2) {
+        alert("Please provide at least 2 poll options");
+        setLoading(false);
+        return;
+      }
+    } else if (postType === 'feedback') {
+      if (!content.trim()) {
+        alert("Please enter a form description");
+        setLoading(false);
+        return;
+      }
+      const validFields = formFields.filter(field => field.question.trim().length > 0);
+      if (validFields.length === 0) {
+        alert("Please add at least one form field");
+        setLoading(false);
+        return;
+      }
+    } else if (postType === 'event') {
+      if (!eventDate) {
+        alert("Please select an event date");
+        setLoading(false);
+        return;
+      }
+      if (!startTime) {
+        alert("Please set a start time");
+        setLoading(false);
+        return;
+      }
+      if (!eventLocation.trim()) {
+        alert("Please enter an event location");
+        setLoading(false);
+        return;
+      }
+    } else if (!content.trim()) {
+      alert("Please fill in the content");
       setLoading(false);
       return;
     }
@@ -64,15 +156,36 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
 
       const tagsArray: string[] = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
 
+      let postContent = content.trim();
+      if (postType === 'poll') {
+        const validOptions = pollOptions.filter(option => option.trim().length > 0);
+        postContent = JSON.stringify({
+          question: content.trim(),
+          options: validOptions
+        });
+      } else if (postType === 'feedback') {
+        const validFields = formFields.filter(field => field.question.trim().length > 0);
+        postContent = JSON.stringify({
+          description: content.trim(),
+          fields: validFields
+        });
+      }
+
       const newPost: Omit<Posts, 'id' | 'created_at' | 'updated_at' | 'view_count' | 'is_pinned'> = {
         title: title.trim(),
-        content: content.trim(),
+        content: postContent,
         user_id: currentUser.id,
         tags: tagsArray,
         status,
         org_id: null,
         post_type: postType,
         media: uploadedMedia.length > 0 ? uploadedMedia : null,
+        ...(postType === 'event' && {
+          event_date: eventDate,
+          start_time: startTime,
+          end_time: endTime || null,
+          location: eventLocation
+        })
       };
 
       const { error } = await supabase.from("posts").insert(newPost);
@@ -99,10 +212,12 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
     setContent("");
     setTags("");
     setStatus("published");
-    setPostType("general");
+    setPostType(defaultPostType);
     setSelectedFiles([]);
     setMediaPreviews([]);
     setUploadProgress(0);
+    setPollOptions(["", ""]);
+    setFormFields([{type: 'text', question: '', required: false}]);
   }
 
   function handleClose(): void {
@@ -170,11 +285,22 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
         <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl border border-gray-200 p-6 space-y-6 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Plus size={20} className="text-green-600" />
+              <div className={`p-2 rounded-lg ${
+                postType === 'general' ? 'bg-green-100' :
+                postType === 'event' ? 'bg-blue-100' :
+                postType === 'poll' ? 'bg-purple-100' :
+                'bg-orange-100'
+              }`}>
+                {postType === 'general' ? <FileText className="w-5 h-5 text-green-600" /> :
+                 postType === 'event' ? <CalendarIcon className="w-5 h-5 text-blue-600" /> :
+                 postType === 'poll' ? <BarChart3 className="w-5 h-5 text-purple-600" /> :
+                 <MessageSquare className="w-5 h-5 text-orange-600" />}
               </div>
               <Dialog.Title className="text-xl font-bold text-gray-900">
-                Create a New Post
+                Create {postType === 'general' ? 'General Post' : 
+                       postType === 'event' ? 'Event' : 
+                       postType === 'poll' ? 'Poll' : 
+                       'Feedback Form'}
               </Dialog.Title>
             </div>
             <Dialog.Close asChild>
@@ -192,20 +318,188 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
                 placeholder="Enter your post title..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                className={`w-full border border-gray-300 rounded-lg p-3 focus:ring-2 outline-none transition-all ${getFocusRingColor()}`}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Content</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {postType === 'poll' ? 'Poll Question' : 'Content'}
+              </label>
               <textarea
-                placeholder="Write your content here..."
+                placeholder={postType === 'poll' ? "Enter your poll question..." : "Write your content here..."}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"
-                rows={6}
+                className={`w-full border border-gray-300 rounded-lg p-3 focus:ring-2 outline-none transition-all resize-none ${getFocusRingColor()}`}
+                rows={postType === 'poll' ? 3 : 6}
               />
             </div>
+
+            {/* Poll Options */}
+            {postType === 'poll' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Poll Options</label>
+                <div className="space-y-2">
+                  {pollOptions.map((option, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={`Option ${index + 1}`}
+                        value={option}
+                        onChange={(e) => {
+                          const newOptions = [...pollOptions];
+                          newOptions[index] = e.target.value;
+                          setPollOptions(newOptions);
+                        }}
+                        className="flex-1 border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+                      />
+                      {pollOptions.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newOptions = pollOptions.filter((_, i) => i !== index);
+                            setPollOptions(newOptions);
+                          }}
+                          className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setPollOptions([...pollOptions, ""])}
+                    className="flex items-center gap-2 px-3 py-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+                  >
+                    <Plus size={16} />
+                    Add Option
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Form Fields */}
+            {postType === 'feedback' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Form Fields</label>
+                <div className="space-y-3">
+                  {formFields.map((field, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex gap-2 mb-3">
+                        <select
+                          value={field.type}
+                          onChange={(e) => {
+                            const newFields = [...formFields];
+                            newFields[index].type = e.target.value;
+                            setFormFields(newFields);
+                          }}
+                          className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                        >
+                          <option value="text">Short Text</option>
+                          <option value="textarea">Long Text</option>
+                          <option value="email">Email</option>
+                          <option value="number">Number</option>
+                        </select>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={field.required}
+                            onChange={(e) => {
+                              const newFields = [...formFields];
+                              newFields[index].required = e.target.checked;
+                              setFormFields(newFields);
+                            }}
+                          />
+                          <span className="text-sm">Required</span>
+                        </label>
+                        {formFields.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newFields = formFields.filter((_, i) => i !== index);
+                              setFormFields(newFields);
+                            }}
+                            className="ml-auto p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X size={16} />
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Enter your question..."
+                        value={field.question}
+                        onChange={(e) => {
+                          const newFields = [...formFields];
+                          newFields[index].question = e.target.value;
+                          setFormFields(newFields);
+                        }}
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                      />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setFormFields([...formFields, {type: 'text', question: '', required: false}])}
+                    className="flex items-center gap-2 px-3 py-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-colors"
+                  >
+                    <Plus size={16} />
+                    Add Field
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Event Details */}
+            {postType === 'event' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Event Date</label>
+                    <input
+                      type="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                    <input
+                      type="text"
+                      placeholder="Enter event location"
+                      value={eventLocation}
+                      onChange={(e) => setEventLocation(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Time (Optional)</label>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
@@ -214,7 +508,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
                 placeholder="Enter tags separated by commas (e.g., tech, programming, tips)"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                className={`w-full border border-gray-300 rounded-lg p-3 focus:ring-2 outline-none transition-all ${getFocusRingColor()}`}
               />
             </div>
 
@@ -223,24 +517,10 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                className={`w-full border border-gray-300 rounded-lg p-3 focus:ring-2 outline-none transition-all ${getFocusRingColor()}`}
               >
                 <option value="published">Published</option>
                 <option value="draft">Draft</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Post Type</label>
-              <select
-                value={postType}
-                onChange={(e) => setPostType(e.target.value as PostType)}
-                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
-              >
-                <option value="general">General Post</option>
-                <option value="event">Event</option>
-                <option value="poll">Poll</option>
-                <option value="feedback">Feedback Form</option>
               </select>
             </div>
 

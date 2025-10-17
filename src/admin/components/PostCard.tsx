@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pin, Tag, Eye, Calendar, User, Edit3, Trash2, MoreVertical, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare } from "lucide-react";
+import { Pin, Tag, Eye, Calendar, User, Edit3, Trash2, MoreVertical, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare, Users } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { Posts, PostType } from '../../types/database.types';
 
@@ -10,6 +10,7 @@ interface PostCardProps {
   onDelete?: (post: Posts) => void;
   onPin?: (postId: string, currentPinned: boolean) => void;
   onTagClick?: (tag: string) => void;
+  onViewResponses?: (post: Posts) => void;
   isOwner?: boolean;
 }
 
@@ -20,6 +21,7 @@ export default function PostCard({
   onDelete,
   onPin,
   onTagClick,
+  onViewResponses,
   isOwner = false
 }: PostCardProps) {
   const [imageError, setImageError] = useState<{[key: number]: boolean}>({});
@@ -70,6 +72,29 @@ export default function PostCard({
         return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPollQuestion = (): string => {
+    if (!post || post.post_type !== 'poll') return post?.content || '';
+
+    try {
+      const content = JSON.parse(post.content);
+      return content.question || content.description || post.content;
+    } catch (error) {
+      console.error('Failed to parse poll content:', error);
+      return post.content;
+    }
+  };
+
+  const getFormDescription = (): string => {
+    if (!post || post.post_type !== 'feedback') return post?.content || '';
+
+    try {
+      const content = JSON.parse(post.content);
+      return content.description || post.content;
+    } catch {
+      return post.content;
     }
   };
 
@@ -199,6 +224,19 @@ export default function PostCard({
                     className="min-w-[160px] bg-white rounded-lg shadow-lg border border-gray-200 p-1 z-50"
                     sideOffset={5}
                   >
+                    {onViewResponses && (post.post_type === 'event' || post.post_type === 'poll' || post.post_type === 'feedback') && (
+                      <DropdownMenu.Item
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewResponses(post);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md cursor-pointer outline-none"
+                      >
+                        <Eye size={14} />
+                        View Responses
+                      </DropdownMenu.Item>
+                    )}
+                    {onViewResponses && onEdit && (post.post_type === 'event' || post.post_type === 'poll' || post.post_type === 'feedback') && <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />}
                     {onEdit && (
                       <DropdownMenu.Item
                         onClick={(e) => {
@@ -233,8 +271,142 @@ export default function PostCard({
 
         {/* Post Content Preview */}
         <p className="text-gray-600 leading-relaxed line-clamp-3 mb-3">
-          {post.content}
+          {post.post_type === 'poll' ? getPollQuestion() :
+           post.post_type === 'feedback' ? getFormDescription() :
+           post.content}
         </p>
+
+        {/* Event Details */}
+        {post.post_type === 'event' && (
+          <div className="bg-blue-50 rounded-lg p-3 mb-3">
+            <div className="space-y-2">
+              {post.event_date && (
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <CalendarIcon size={16} />
+                  <span>{new Date(post.event_date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}</span>
+                </div>
+              )}
+              {(post.start_time || post.end_time) && (
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <span>🕐</span>
+                  <span>
+                    {post.start_time && new Date(`2000-01-01T${post.start_time}`).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                    {post.end_time && ` - ${new Date(`2000-01-01T${post.end_time}`).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    })}`}
+                  </span>
+                </div>
+              )}
+              {post.location && (
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <span>📍</span>
+                  <span>{post.location}</span>
+                </div>
+              )}
+              <div className="space-y-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView?.(post.id);
+                  }}
+                  className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <CalendarIcon size={16} />
+                  RSVP Now
+                </button>
+                {onViewResponses && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewResponses(post);
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Users size={16} />
+                    View RSVPs
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Poll Preview */}
+        {post.post_type === 'poll' && (
+          <div className="bg-purple-50 rounded-lg p-3 mb-3">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-purple-700 font-medium">Poll</span>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView?.(post.id);
+                }}
+                className="w-full px-3 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <BarChart3 size={16} />
+                Vote Now
+              </button>
+              {onViewResponses && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewResponses(post);
+                  }}
+                  className="w-full px-3 py-2 bg-white border border-purple-600 text-purple-600 text-sm font-medium rounded-lg hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  <BarChart3 size={16} />
+                  View Results
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Form Preview */}
+        {post.post_type === 'feedback' && (
+          <div className="bg-orange-50 rounded-lg p-3 mb-3">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-orange-700 font-medium">Feedback Form</span>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView?.(post.id);
+                }}
+                className="w-full px-3 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <MessageSquare size={16} />
+                Submit Response
+              </button>
+              {onViewResponses && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewResponses(post);
+                  }}
+                  className="w-full px-3 py-2 bg-white border border-orange-600 text-orange-600 text-sm font-medium rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  <MessageSquare size={16} />
+                  View Responses
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Media Preview */}
         {post.media && post.media.length > 0 && (
