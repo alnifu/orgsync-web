@@ -179,8 +179,28 @@ export default function NewsFeed() {
           organizations (name, abbrev_name, org_pic),
           post_likes(user_id)
         `)
+        .eq('status', 'published')
         .order("created_at", { ascending: false });
-      if (postsError) throw postsError;
+      // Fetch user's organization memberships for visibility filtering
+      const { data: membershipsData, error: membershipsError } = await supabase
+        .from("org_members")
+        .select("org_id")
+        .eq("user_id", userId)
+        .eq("is_active", true);
+      if (membershipsError) throw membershipsError;
+
+      const userOrgIds = new Set(membershipsData?.map(m => m.org_id) || []);
+
+      // Filter posts based on visibility
+      const filteredPosts = postsData?.filter(post => {
+        if (post.visibility === 'public') {
+          return true; // Public posts visible to everyone
+        }
+        if (post.visibility === 'private' && post.org_id) {
+          return userOrgIds.has(post.org_id); // Private posts only for org members
+        }
+        return false; // Unknown visibility or private posts without org_id
+      }) || [];
 
       // Fetch RSVPs
       const { data: rsvpData, error: rsvpError } = await supabase
@@ -210,7 +230,7 @@ export default function NewsFeed() {
       });
 
       const newPollVotes: { [key: string]: boolean } = {};
-      (postsData ?? []).forEach((post: any) => {
+      (filteredPosts ?? []).forEach((post: any) => {
         const postIdStr = post.id.toString();
         newPollVotes[postIdStr] = newPollUserVotes[postIdStr] != null;
       });
@@ -221,7 +241,7 @@ export default function NewsFeed() {
       const feedbackResponsesState: { [key: string]: string } = {};
       const feedbackSubmittedState: { [key: string]: boolean } = {};
 
-      (postsData ?? []).forEach((post: any) => {
+      (filteredPosts ?? []).forEach((post: any) => {
         const postIdStr = post.id.toString();
 
         // RSVPs
@@ -242,8 +262,8 @@ export default function NewsFeed() {
       });
 
       // Update component state
-      setPosts(postsData ?? []);
-      setFilteredPosts(postsData ?? []);
+      setPosts(filteredPosts ?? []);
+      setFilteredPosts(filteredPosts ?? []);
       setRsvp(rsvpState);
       setLiked(likedState);
       setPollUserVotes(newPollUserVotes);
@@ -633,7 +653,7 @@ export default function NewsFeed() {
                 {post.organizations?.org_pic ? (
                   <img
                     src={post.organizations.org_pic}
-                    alt={post.organizations.name}
+                    alt={post.organizations.abbrev_name || post.organizations.name}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -641,7 +661,7 @@ export default function NewsFeed() {
                 )}
               </div>
               <div className="flex flex-col">
-                <h3 className="font-semibold text-gray-900">{post.organizations?.name ?? "Organization"}</h3>
+                <h3 className="font-semibold text-gray-900">{post.organizations?.abbrev_name || post.organizations?.name || "Organization"}</h3>
                 <p className="text-sm text-gray-500">Posted on {formatDate(post.created_at)}</p>
                 {Array.isArray(post.tags) && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-1">

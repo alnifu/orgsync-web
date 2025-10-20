@@ -51,6 +51,7 @@ export type Organization = {
   name: string;
   abbrev_name: string;
   org_pic: string | null;
+  banner_pic: string | null;
   email: string;
   description: string | null;
   department: string;
@@ -61,6 +62,7 @@ export type Organization = {
   updated_at: string;
   adviser_id: string | null;
   adviser?: User;
+  media?: MediaItem[] | null;
 };
 
 export interface Posts {
@@ -81,6 +83,7 @@ export interface Posts {
   start_time?: string | null;
   end_time?: string | null;
   location?: string | null;
+  visibility?: 'public' | 'private';
 }
 
 export type PostType = 'general' | 'event' | 'poll' | 'feedback';
@@ -122,4 +125,33 @@ export interface FormResponse {
   user_id: string;
   responses: any;
   submitted_at: string;
+}
+
+export interface EventEvaluation {
+  id: string;
+  post_id: string;
+  user_id: string;
+  design: number;
+  speakers: number;
+  facilities: number;
+  participation: number;
+  overall: number;
+  benefits: string;
+  problems: string;
+  comments: string;
+  created_at: string;
+}
+
+export interface EventRegistration {
+  id: string;
+  post_id: string;
+  user_id: string;
+  first_name: string;
+  middle_initial: string;
+  last_name: string;
+  email: string;
+  college: string;
+  program: string;
+  section: string;
+  created_at: string;
 }

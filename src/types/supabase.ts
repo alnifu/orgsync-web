@@ -412,6 +412,7 @@ export type Database = {
         Row: {
           abbrev_name: string
           adviser_id: string | null
+          banner_pic: string | null
           created_at: string
           date_established: string
           department: string | null
@@ -428,6 +429,7 @@ export type Database = {
         Insert: {
           abbrev_name: string
           adviser_id?: string | null
+          banner_pic?: string | null
           created_at?: string
           date_established: string
           department?: string | null
@@ -444,6 +446,7 @@ export type Database = {
         Update: {
           abbrev_name?: string
           adviser_id?: string | null
+          banner_pic?: string | null
           created_at?: string
           date_established?: string
           department?: string | null
@@ -541,6 +544,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           view_count: number | null
+          visibility: string | null
         }
         Insert: {
           content: string
@@ -562,6 +566,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           view_count?: number | null
+          visibility?: string | null
         }
         Update: {
           content?: string
@@ -583,6 +588,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           view_count?: number | null
+          visibility?: string | null
         }
         Relationships: [
           {

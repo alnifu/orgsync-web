@@ -42,6 +42,8 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
 
   // Get user roles
   const { isAdmin, loading: rolesLoading } = useUserRoles(currentUser?.id);
+  const [isAdviser, setIsAdviser] = useState(false);
+  const [isOfficer, setIsOfficer] = useState(false);
 
   // Get all unique tags from posts
   const allTags: string[] = [...new Set(posts.flatMap(post => post.tags || []))];
@@ -59,8 +61,28 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     try {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
+      
+      if (user) {
+        // Fetch all manager roles for this user in the organization
+        const { data: managerRoles, error } = await supabase
+          .from('org_managers')
+          .select('manager_role')
+          .eq('user_id', user.id)
+          .eq('org_id', organizationId);
+        
+        if (!error && managerRoles) {
+          const roles = managerRoles.map(role => role.manager_role);
+          setIsAdviser(roles.includes('adviser'));
+          setIsOfficer(roles.includes('officer'));
+        } else {
+          setIsAdviser(false);
+          setIsOfficer(false);
+        }
+      }
     } catch (err) {
       console.error('Failed to get current user:', err);
+      setIsAdviser(false);
+      setIsOfficer(false);
     }
   }
 
@@ -71,7 +93,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
         .from("posts")
         .select(`
           id, title, content, created_at, updated_at, user_id, tags, 
-          status, view_count, is_pinned, org_id, media, post_type
+          status, view_count, is_pinned, org_id, media, post_type, visibility
         `)
         .eq('org_id', organizationId)
         .order("is_pinned", { ascending: false })
@@ -84,9 +106,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     } finally {
       setLoading(false);
     }
-  }
-
-  function filterAndSortPosts(): void {
+  }  function filterAndSortPosts(): void {
     let filtered: Posts[] = [...posts];
 
     // Search filter
@@ -126,15 +146,6 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     });
 
     setFilteredPosts(filtered);
-  }
-
-  async function incrementViewCount(postId: string): Promise<void> {
-    try {
-      await supabase.rpc('increment_view_count', { post_id: postId });
-      fetchPosts();
-    } catch (err) {
-      console.error('Failed to increment view count:', err);
-    }
   }
 
   async function togglePin(postId: string, currentPinned: boolean): Promise<void> {
@@ -191,46 +202,50 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
             <p className="text-gray-600 text-sm mt-1">Share updates, announcements, and news with your organization</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <button 
-              onClick={() => {
-                setSelectedPostType("general");
-                setCreateModalOpen(true);
-              }}
-              className="flex flex-col items-center gap-2 p-4 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md hover:scale-105"
-            >
-              <Plus size={24} />
-              <span className="text-sm font-medium">General Post</span>
-            </button>
-            <button 
-              onClick={() => {
-                setSelectedPostType("event");
-                setCreateModalOpen(true);
-              }}
-              className="flex flex-col items-center gap-2 p-4 bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
-            >
-              <Plus size={24} />
-              <span className="text-sm font-medium">Event</span>
-            </button>
-            <button 
-              onClick={() => {
-                setSelectedPostType("poll");
-                setCreateModalOpen(true);
-              }}
-              className="flex flex-col items-center gap-2 p-4 bg-purple-600 text-white rounded-xl shadow-sm hover:bg-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
-            >
-              <Plus size={24} />
-              <span className="text-sm font-medium">Poll</span>
-            </button>
-            <button 
-              onClick={() => {
-                setSelectedPostType("feedback");
-                setCreateModalOpen(true);
-              }}
-              className="flex flex-col items-center gap-2 p-4 bg-orange-600 text-white rounded-xl shadow-sm hover:bg-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
-            >
-              <Plus size={24} />
-              <span className="text-sm font-medium">Feedback Form</span>
-            </button>
+            { (isAdmin() || isOfficer) && (
+              <>
+                <button 
+                  onClick={() => {
+                    setSelectedPostType("general");
+                    setCreateModalOpen(true);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-medium">General Post</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedPostType("event");
+                    setCreateModalOpen(true);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-medium">Event</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedPostType("poll");
+                    setCreateModalOpen(true);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-purple-600 text-white rounded-xl shadow-sm hover:bg-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-medium">Poll</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedPostType("feedback");
+                    setCreateModalOpen(true);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-orange-600 text-white rounded-xl shadow-sm hover:bg-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-medium">Feedback Form</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -310,7 +325,9 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
             <p className="text-gray-400 text-sm mt-2">
               {searchTerm || selectedTag || statusFilter !== "all" 
                 ? "Try adjusting your search or filters"
-                : "Be the first to share something with your organization!"
+                : isAdviser
+                  ? "Contact an administrator to create posts for your organization"
+                  : "Be the first to share something with your organization!"
               }
             </p>
           </div>
@@ -328,35 +345,13 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
               onTagClick={setSelectedTag}
               onViewResponses={handleViewResponses}
               isOwner={isPostOwner(post)}
-              isAdmin={isAdmin()}
+              isAdmin={isAdmin() || isOfficer}
+              showOrgInfo={false}
+              poster={(post as any).users}
             />
           ))
         )}
       </div>
-
-      {/* Stats */}
-      {!loading && posts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{posts.length}</div>
-              <div className="text-sm text-gray-500">Total Posts</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{posts.filter(p => p.status === 'published').length}</div>
-              <div className="text-sm text-gray-500">Published</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{allTags.length}</div>
-              <div className="text-sm text-gray-500">Unique Tags</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{posts.reduce((sum, p) => sum + (p.view_count || 0), 0)}</div>
-              <div className="text-sm text-gray-500">Total Views</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modals */}
       <CreatePostModal

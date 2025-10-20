@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
 import { supabase } from '../../lib/supabase';
+import { uploadFile, validateFile } from '../../lib/media';
 import type { Organization } from '../../types/database.types';
 
 type EditOrganizationProps = {
@@ -26,15 +27,44 @@ export default function EditOrganization({
     date_established: organization.date_established.split('T')[0], // Format date for input
   });
 
+  const [orgPicFile, setOrgPicFile] = useState<File | null>(null);
+  const [bannerPicFile, setBannerPicFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      let orgPicUrl = organization.org_pic;
+      let bannerPicUrl = organization.banner_pic;
+
+      // Upload organization picture if selected
+      if (orgPicFile) {
+        const uploadResult = await uploadFile(orgPicFile, 'org-admin');
+        if (uploadResult.success && uploadResult.mediaItem) {
+          orgPicUrl = uploadResult.mediaItem.url;
+        } else {
+          throw new Error(uploadResult.error || 'Failed to upload organization picture');
+        }
+      }
+
+      // Upload banner picture if selected
+      if (bannerPicFile) {
+        const uploadResult = await uploadFile(bannerPicFile, 'org-admin');
+        if (uploadResult.success && uploadResult.mediaItem) {
+          bannerPicUrl = uploadResult.mediaItem.url;
+        } else {
+          throw new Error(uploadResult.error || 'Failed to upload banner picture');
+        }
+      }
+
       const { error } = await supabase
         .from('organizations')
-        .update(formData)
+        .update({
+          ...formData,
+          org_pic: orgPicUrl,
+          banner_pic: bannerPicUrl
+        })
         .eq('id', organization.id);
 
       if (error) throw error;
@@ -158,10 +188,64 @@ export default function EditOrganization({
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
                   required
                 >
-                  <option value="Prof">Professional</option>
+                  <option value="PROF">Professional</option>
                   <option value="SPIN">Special Interest</option>
-                  <option value="Socio-Civic">Socio-Civic</option>
+                  <option value="SCRO">Socio-Civic</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="org_pic" className="block text-sm font-medium text-gray-700">
+                  Organization Picture
+                </label>
+                <input
+                  type="file"
+                  id="org_pic"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const validation = validateFile(file);
+                      if (!validation.valid) {
+                        onError?.(validation.error || 'Invalid file');
+                        return;
+                      }
+                      setOrgPicFile(file);
+                    }
+                  }}
+                  className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                />
+                {organization.org_pic && (
+                  <p className="mt-1 text-xs text-gray-500">Current: {organization.org_pic.split('/').pop()}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="banner_pic" className="block text-sm font-medium text-gray-700">
+                  Banner Picture
+                </label>
+                <input
+                  type="file"
+                  id="banner_pic"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const validation = validateFile(file);
+                      if (!validation.valid) {
+                        onError?.(validation.error || 'Invalid file');
+                        return;
+                      }
+                      setBannerPicFile(file);
+                    }
+                  }}
+                  className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                />
+                {organization.banner_pic && (
+                  <p className="mt-1 text-xs text-gray-500">Current: {organization.banner_pic.split('/').pop()}</p>
+                )}
               </div>
             </div>
           </div>

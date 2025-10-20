@@ -37,6 +37,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [eventLocation, setEventLocation] = useState<string>("");
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
 
   // Sync postType with defaultPostType when modal opens or prop changes
   useEffect(() => {
@@ -61,6 +62,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
       setStartTime("");
       setEndTime("");
       setEventLocation("");
+      setVisibility('public');
       // postType is set by the defaultPostType useEffect above
     }
   }, [open]);
@@ -181,6 +183,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
         org_id: organizationId || null,
         post_type: postType,
         media: uploadedMedia.length > 0 ? uploadedMedia : null,
+        visibility,
         ...(postType === 'event' && {
           event_date: eventDate,
           start_time: startTime,
@@ -522,6 +525,18 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
               >
                 <option value="published">Published</option>
                 <option value="draft">Draft</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Visibility</label>
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value as 'public' | 'private')}
+                className={`w-full border border-gray-300 rounded-lg p-3 focus:ring-2 outline-none transition-all ${getFocusRingColor()}`}
+              >
+                <option value="public">Public</option>
+                <option value="private">Private (Organization members only)</option>
               </select>
             </div>
 

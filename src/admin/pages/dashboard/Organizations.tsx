@@ -187,9 +187,9 @@ export default function Organizations() {
           className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
         >
           <option value="">All Types</option>
-          <option value="Prof">Professional</option>
+          <option value="PROF">Professional</option>
           <option value="SPIN">Special Interest</option>
-          <option value="Socio-Civic">Socio-Civic</option>
+          <option value="SCRO">Socio-Civic</option>
         </select>
 
         <select
@@ -228,10 +228,10 @@ export default function Organizations() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {org.name}
+                      {org.abbrev_name || org.name}
                     </h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      {org.org_code} • {org.abbrev_name}
+                      {org.org_code} • {org.name}
                     </p>
                   </div>
                   <span className={

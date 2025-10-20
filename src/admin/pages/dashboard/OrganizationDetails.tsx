@@ -88,7 +88,7 @@ export default function OrganizationDetails() {
         console.log('Adviser data:', data, 'Error:', error);     
         if (error) throw error;
         if (data) {
-          setAdviser(data.users);
+          setAdviser(data.users as unknown as User);
         } else {
           setAdviser(null);
         }
@@ -172,30 +172,59 @@ export default function OrganizationDetails() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{organization.name}</h1>
-          <p className="text-sm text-gray-500">{organization.org_code} • {organization.abbrev_name}</p>
-        </div>
-        <div className="flex space-x-2">
-          {isAdmin() && (
-            <>
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </button>
-            </>
-          )}
+      <div className="space-y-4">
+        {/* Banner Picture */}
+        {organization.banner_pic && (
+          <div className="w-full h-90 bg-gray-100 rounded-lg overflow-hidden">
+            <img
+              src={organization.banner_pic}
+              alt={`${organization.name} banner`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-4">
+            {/* Organization Picture */}
+            {organization.org_pic ? (
+              <img
+                src={organization.org_pic}
+                alt={`${organization.name} logo`}
+                className="h-16 w-16 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="h-16 w-16 rounded-lg bg-green-100 flex items-center justify-center">
+                <span className="text-green-700 font-bold text-xl">
+                  {organization.abbrev_name?.charAt(0)?.toUpperCase() || organization.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">{organization.name}</h1>
+              <p className="text-sm text-gray-500">{organization.org_code} • {organization.abbrev_name}</p>
+            </div>
+          </div>
+          <div className="flex space-x-2">
+            {isAdmin() && (
+              <>
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

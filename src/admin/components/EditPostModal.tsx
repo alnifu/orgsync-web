@@ -17,6 +17,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
   const [content, setContent] = useState<string>("");
   const [tags, setTags] = useState<string>("");
   const [status, setStatus] = useState<string>("published");
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [postType, setPostType] = useState<PostType>("general");
   const [loading, setLoading] = useState<boolean>(false);
   const [existingMedia, setExistingMedia] = useState<MediaItem[]>([]);
@@ -31,6 +32,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
       setContent(post.content);
       setTags(post.tags ? post.tags.join(', ') : '');
       setStatus(post.status || 'published');
+      setVisibility(post.visibility || 'public');
       setPostType(post.post_type || 'general');
       setExistingMedia(post.media || []);
       setSelectedFiles([]);
@@ -75,6 +77,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
         content: content.trim(),
         tags: tagsArray,
         status,
+        visibility,
         post_type: postType,
         updated_at: new Date().toISOString(),
         media: finalMedia.length > 0 ? finalMedia : null,
@@ -246,6 +249,18 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
                 <option value="published">Published</option>
                 <option value="draft">Draft</option>
                 <option value="archived">Archived</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Visibility</label>
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value as 'public' | 'private')}
+                className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              >
+                <option value="public">Public</option>
+                <option value="private">Private (Organization members only)</option>
               </select>
             </div>
 

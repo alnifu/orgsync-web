@@ -146,7 +146,7 @@ export default function DashboardHome() {
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
             <p className="font-medium text-gray-900">My Virtual Room</p>
             <Link
-              to="/room-game"
+              to="room-game"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
             >
               Play
@@ -155,7 +155,7 @@ export default function DashboardHome() {
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
             <p className="font-medium text-gray-900">Quiz Games</p>
             <Link
-              to="/quiz-selection"
+              to="quiz-selection"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
             >
               Play

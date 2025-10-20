@@ -126,3 +126,16 @@ export function getFilePathFromUrl(publicUrl: string): string | null {
     return null;
   }
 }
+
+/**
+ * Get the first image from organization's media array
+ */
+export function getOrganizationImage(media: MediaItem[] | null | undefined): string | null {
+  if (!media || !Array.isArray(media)) {
+    return null;
+  }
+  
+  // Find the first image in the media array
+  const imageItem = media.find(item => item.type === 'image');
+  return imageItem ? imageItem.url : null;
+}

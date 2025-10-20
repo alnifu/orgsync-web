@@ -438,16 +438,10 @@ export default function Officers() {
                           {officer.position || 'N/A'}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          <div className="font-medium">{officer.organization?.name}</div>
-                          <div className="text-xs text-gray-400">
-                            {officer.organization?.abbrev_name}
-                          </div>
+                          <div className="font-medium">{officer.organizations?.abbrev_name || officer.organizations?.name}</div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {officer.users?.department}
-                          <div className="text-xs text-gray-400">
-                            {officer.users?.year_level} - {officer.users?.program}
-                          </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {new Date(officer.assigned_at).toLocaleDateString('en-US', {

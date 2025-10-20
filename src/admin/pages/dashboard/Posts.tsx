@@ -63,7 +63,7 @@ export default function PostsComponent() {
         .from("posts")
         .select(`
           id, title, content, created_at, updated_at, user_id, tags, 
-          status, view_count, is_pinned, org_id, media, post_type
+          status, view_count, is_pinned, org_id, media, post_type, visibility
         `)
         .or(`status.eq.published,status.eq.archived${currentUser ? `,status.eq.draft.and.user_id.eq.${currentUser.id}` : ''}`)
         .order("is_pinned", { ascending: false })
@@ -75,9 +75,7 @@ export default function PostsComponent() {
     } finally {
       setIsLoading(false);
     }
-  }
-
-  function filterAndSortPosts(): void {
+  }  function filterAndSortPosts(): void {
     let filtered: Posts[] = [...posts];
 
     // Search filter
@@ -297,6 +295,9 @@ export default function PostsComponent() {
                 onViewResponses={handleViewResponses}
                 isOwner={isPostOwner(post)}
                 isAdmin={isAdmin()}
+                showOrgInfo={true}
+                organization={(post as any).organizations}
+                poster={(post as any).users}
               />
             ))
           )}

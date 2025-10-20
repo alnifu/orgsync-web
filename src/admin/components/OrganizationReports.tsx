@@ -38,6 +38,7 @@ export default function OrganizationReports({ organizationId, onError }: Organiz
   const fetchOrganizationStats = async () => {
     try {
       setLoading(true);
+      console.log('Fetching stats for organization:', organizationId);
 
       // Fetch organization stats in parallel
       const [
@@ -49,7 +50,7 @@ export default function OrganizationReports({ organizationId, onError }: Organiz
         // Total members in organization
         supabase
           .from('org_members')
-          .select('id', { count: 'exact', head: true })
+          .select('user_id', { count: 'exact', head: true })
           .eq('org_id', organizationId),
 
         // Total posts by organization
@@ -72,10 +73,27 @@ export default function OrganizationReports({ organizationId, onError }: Organiz
           .eq('org_id', organizationId)
       ]);
 
-      if (membersResult.error) throw membersResult.error;
-      if (postsResult.error) throw postsResult.error;
-      if (recentPostsResult.error) throw recentPostsResult.error;
-      if (postTypesResult.error) throw postTypesResult.error;
+      console.log('Members result:', membersResult);
+      console.log('Posts result:', postsResult);
+      console.log('Recent posts result:', recentPostsResult);
+      console.log('Post types result:', postTypesResult);
+
+      if (membersResult.error) {
+        console.error('Members error:', membersResult.error);
+        throw membersResult.error;
+      }
+      if (postsResult.error) {
+        console.error('Posts error:', postsResult.error);
+        throw postsResult.error;
+      }
+      if (recentPostsResult.error) {
+        console.error('Recent posts error:', recentPostsResult.error);
+        throw recentPostsResult.error;
+      }
+      if (postTypesResult.error) {
+        console.error('Post types error:', postTypesResult.error);
+        throw postTypesResult.error;
+      }
 
       // Count post types
       const postTypes = postTypesResult.data as PostTypeData[] || [];
@@ -103,6 +121,18 @@ export default function OrganizationReports({ organizationId, onError }: Organiz
     return (
       <div className="flex justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  // Check if all stats are empty
+  const isEmpty = stats.totalMembers === 0 && stats.totalPosts === 0 && stats.recentPosts === 0 && 
+                  stats.eventCount === 0 && stats.pollCount === 0 && stats.feedbackCount === 0;
+
+  if (isEmpty) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No reports available for this organization yet.</p>
       </div>
     );
   }

@@ -86,9 +86,9 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
 
   // Filter members based on search query
   const filteredMembers = members.filter(member =>
-    member.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (member.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (member.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (member.email?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
   );
 
   return (
@@ -136,13 +136,13 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                       <span className="text-green-700 font-medium text-sm">
-                        {(member.first_name ? member.first_name.charAt(0).toUpperCase() : '?')}{(member.last_name ? member.last_name.charAt(0).toUpperCase() : '?')}
+                        {((member.first_name && member.first_name.length > 0) ? member.first_name.charAt(0).toUpperCase() : 'U')}{((member.last_name && member.last_name.length > 0) ? member.last_name.charAt(0).toUpperCase() : 'U')}
                       </span>
                     </div>
                   )}
                   <div>
-                    <div className="font-medium text-gray-900">{member.first_name} {member.last_name}</div>
-                    <div className="text-sm text-gray-500">{member.email}</div>
+                    <div className="font-medium text-gray-900">{member.first_name || 'Unknown'} {member.last_name || 'User'}</div>
+                    <div className="text-sm text-gray-500">{member.email || 'No email'}</div>
                   </div>
                 </button>
               ))}

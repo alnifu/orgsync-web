@@ -49,7 +49,7 @@ export default function Organizations() {
             {org.org_pic ? (
               <img
                 src={org.org_pic}
-                alt={org.name}
+                alt={org.abbrev_name || org.name}
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (
@@ -58,11 +58,11 @@ export default function Organizations() {
               </div>
             )}
             <div>
-              <p className="text-gray-800 font-medium">{org.name}</p>
+              <p className="text-gray-800 font-medium">{org.abbrev_name || org.name}</p>
 
-              {/* Show department if it exists, otherwise show type */}
+              {/* Show department and type if department exists, otherwise show type */}
               <p className="text-sm text-gray-500">
-                {org.department ? org.department : org.org_type}
+                {org.department ? `${org.department} - ${org.org_type.toUpperCase()}` : org.org_type.toUpperCase()}
               </p>
             </div>
           </div>
@@ -88,7 +88,7 @@ export default function Organizations() {
             {selectedOrg.org_pic && (
               <img
                 src={selectedOrg.org_pic}
-                alt={selectedOrg.name}
+                alt={selectedOrg.abbrev_name || selectedOrg.name}
                 className="w-full h-40 object-cover rounded-md mb-4"
               />
             )}
@@ -108,7 +108,7 @@ export default function Organizations() {
               )}
 
               <p>
-                <strong>Type:</strong> {selectedOrg.org_type}
+                <strong>Type:</strong> {selectedOrg.org_type.toUpperCase()}
               </p>
 
               <p>

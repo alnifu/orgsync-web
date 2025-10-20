@@ -131,8 +131,8 @@ export default function OrgTable() {
                   <tr key={org.id}>
                     <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm">
                       <div>
-                        <div className="font-medium text-gray-900">{org.name}</div>
-                        <div className="text-gray-500">{org.org_code} • {org.abbrev_name}</div>
+                        <div className="font-medium text-gray-900">{org.abbrev_name || org.name}</div>
+                        <div className="text-gray-500">{org.org_code} • {org.name}</div>
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">

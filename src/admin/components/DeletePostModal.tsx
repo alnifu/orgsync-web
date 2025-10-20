@@ -25,7 +25,7 @@ export default function DeletePostModal({ post, open, onOpenChange, onPostDelete
       if (post.post_type === 'event') {
         // Delete all RSVPs for this event
         const { error: rsvpError } = await supabase
-          .from("event_rsvps")
+          .from("rsvps")
           .delete()
           .eq('post_id', post.id);
         

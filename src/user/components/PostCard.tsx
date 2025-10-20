@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { Pin, Tag, Eye, Calendar, User as UserIcon, Edit3, Trash2, MoreVertical, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare, Users } from "lucide-react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Tag, Eye, Calendar, User as UserIcon, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare, Users } from "lucide-react";
 import type { Posts, PostType, Organization, User } from '../../types/database.types';
 
 interface PostCardProps {
   post: Posts;
   onView?: (postId: string) => void;
-  onEdit?: (post: Posts) => void;
-  onDelete?: (post: Posts) => void;
-  onPin?: (postId: string, currentPinned: boolean) => void;
   onTagClick?: (tag: string) => void;
   onViewResponses?: (post: Posts) => void;
-  isOwner?: boolean;
-  isAdmin?: boolean;
   showOrgInfo?: boolean; // Whether to show organization info (for general posts page)
   organization?: Organization | null; // Organization data
   poster?: User | null; // Poster user data
@@ -21,13 +15,8 @@ interface PostCardProps {
 export default function PostCard({
   post,
   onView,
-  onEdit,
-  onDelete,
-  onPin,
   onTagClick,
   onViewResponses,
-  isOwner = false,
-  isAdmin = false,
   showOrgInfo = false,
   organization,
   poster
@@ -192,7 +181,7 @@ export default function PostCard({
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               {post.is_pinned && (
-                <Pin size={16} className="text-green-600 fill-current flex-shrink-0" />
+                <span className="text-green-600 text-xs font-medium">📌 Pinned</span>
               )}
               <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getPostTypeColor(post.post_type)}`}>
                 {getPostTypeIcon(post.post_type)}
@@ -240,70 +229,6 @@ export default function PostCard({
                 </span>
               )}
             </div>
-          </div>
-
-          {/* Actions Menu */}
-          <div className="flex items-center gap-1 ml-4">
-            {isOwner && onPin && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPin(post.id, post.is_pinned || false);
-                }}
-                className={`p-2 rounded-lg transition-colors ${
-                  post.is_pinned ? 'text-green-600 hover:bg-green-100' : 'text-gray-400 hover:bg-gray-100'
-                }`}
-                title={post.is_pinned ? 'Unpin post' : 'Pin post'}
-              >
-                <Pin size={16} className={post.is_pinned ? 'fill-current' : ''} />
-              </button>
-            )}
-
-            {(isOwner || isAdmin) && (onEdit || onDelete) && (
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <button
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
-                    title="More actions"
-                  >
-                    <MoreVertical size={16} />
-                  </button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content
-                    className="min-w-[160px] bg-white rounded-lg shadow-lg border border-gray-200 p-1 z-50"
-                    sideOffset={5}
-                  >
-                    {onEdit && (
-                      <DropdownMenu.Item
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(post);
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md cursor-pointer outline-none"
-                      >
-                        <Edit3 size={14} />
-                        Edit Post
-                      </DropdownMenu.Item>
-                    )}
-                    {onEdit && onDelete && <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />}
-                    {onDelete && (
-                      <DropdownMenu.Item
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(post);
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md cursor-pointer outline-none"
-                      >
-                        <Trash2 size={14} />
-                        Delete Post
-                      </DropdownMenu.Item>
-                    )}
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
-            )}
           </div>
         </div>
 
@@ -353,7 +278,7 @@ export default function PostCard({
                 </div>
               )}
               <div className="space-y-2">
-                {/*<button
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onView?.(post.id);
@@ -362,7 +287,7 @@ export default function PostCard({
                 >
                   <CalendarIcon size={16} />
                   RSVP Now
-                </button>*/}
+                </button>
                 {onViewResponses && (
                   <button
                     onClick={(e) => {
@@ -387,7 +312,7 @@ export default function PostCard({
               <span className="text-purple-700 font-medium">Poll</span>
             </div>
             <div className="space-y-2">
-             {/* <button
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onView?.(post.id);
@@ -396,7 +321,7 @@ export default function PostCard({
               >
                 <BarChart3 size={16} />
                 Vote Now
-              </button>*/}
+              </button>
               {onViewResponses && (
                 <button
                   onClick={(e) => {
@@ -420,7 +345,7 @@ export default function PostCard({
               <span className="text-orange-700 font-medium">Feedback Form</span>
             </div>
             <div className="space-y-2">
-             {/*  <button
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onView?.(post.id);
@@ -429,7 +354,7 @@ export default function PostCard({
               >
                 <MessageSquare size={16} />
                 Submit Response
-              </button>*/}
+              </button>
               {onViewResponses && (
                 <button
                   onClick={(e) => {
@@ -592,32 +517,9 @@ export default function PostCard({
       <div className="px-6 pb-4">
         <div className="flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center space-x-4">
-            {showOrgInfo && organization && (
-              <div className="flex items-center gap-2">
-                {organization.org_pic ? (
-                  <img
-                    src={organization.org_pic}
-                    alt={organization.abbrev_name || organization.name}
-                    className="w-4 h-4 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center">
-                    <span className="text-xs font-medium text-gray-600">
-                      {organization.abbrev_name?.charAt(0) || organization.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                <span className="text-xs font-medium text-gray-700">
-                  {organization.abbrev_name || organization.name}
-                </span>
-                <span className="text-gray-400">•</span>
-              </div>
-            )}
             <div className="flex items-center gap-1">
               <UserIcon size={14} />
-              <span>
-                {poster ? `${poster.first_name} ${poster.last_name}` : post.user_id.slice(0, 8) + '...'}
-              </span>
+              <span>{post.user_id.slice(0, 8)}...</span>
             </div>
             <div className="flex items-center gap-1">
               <Calendar size={14} />
