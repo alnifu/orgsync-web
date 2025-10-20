@@ -22,7 +22,6 @@ export default function AdminUserProfile() {
     student_number: '',
     employee_id: '',
     position: '',
-    college: '',
     user_type: ''
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -54,7 +53,6 @@ export default function AdminUserProfile() {
           student_number: data.student_number || '',
           employee_id: data.employee_id || '',
           position: data.position || '',
-          college: data.college || '',
           user_type: data.user_type || ''
         });
       } catch (err) {
@@ -104,7 +102,6 @@ export default function AdminUserProfile() {
           student_number: editForm.student_number,
           employee_id: editForm.employee_id,
           position: editForm.position,
-          college: editForm.college,
           user_type: editForm.user_type,
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString()
@@ -251,15 +248,15 @@ export default function AdminUserProfile() {
         onCancel={handleCropCancel}
       />
 
-      <div className="min-h-screen bg-gray-50">
+     <div className="min-h-screen bg-white rounded-lg">
       {/* Header */}
-      <div className="bg-white shadow">
+      <div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate(-1)}
-                className="mr-4 p-2 rounded-full hover:bg-gray-100"
+                className="mr-4 p-2 rounded-full hover:bg-green-200"
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
@@ -468,25 +465,7 @@ export default function AdminUserProfile() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Academic Information</h3>
                 <dl className="space-y-3">
-                  {user.user_type === 'student' && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">College</dt>
-                      <dd className="text-sm text-gray-900">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editForm.college}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, college: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
-                        ) : (
-                          user.college || 'Not specified'
-                        )}
-                      </dd>
-                    </div>
-                  )}
-
-                  {user.user_type === 'faculty' && (
+                  
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Department</dt>
                       <dd className="text-sm text-gray-900">
@@ -502,8 +481,6 @@ export default function AdminUserProfile() {
                         )}
                       </dd>
                     </div>
-                  )}
-
                   {user.user_type === 'student' && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Program</dt>
@@ -559,7 +536,6 @@ export default function AdminUserProfile() {
                       student_number: user.student_number || '',
                       employee_id: user.employee_id || '',
                       position: user.position || '',
-                      college: user.college || '',
                       user_type: user.user_type || ''
                     });
                   }}

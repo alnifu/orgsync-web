@@ -23,10 +23,12 @@ import UserDashboard from "./user/pages/Dashboard";
 import UserNewsFeed from "./user/pages/dashboard/NewsFeed";
 import UserEvents from "./user/pages/dashboard/Events";
 import UserOrganizations from "./user/pages/dashboard/Organizations";
-import UserProfile from "./user/pages/UserProfile";
+import UserProfile from "./user/pages/dashboard/Profile";
 import UserGames from "./user/pages/dashboard/Games";
 import UserDashboardHome from "./user/pages/dashboard/DashboardHome";
-import UnityGame from "./user/pages/dashboard/UnityGame";
+import QuizGame from "./user/pages/dashboard/QuizGame";
+import RoomGame from "./user/pages/dashboard/RoomGame";
+import QuizSelection from "./user/pages/dashboard/QuizSelection";
 
 // Auth Pages
 import Signin from "./pages/Signin";
@@ -107,13 +109,13 @@ const router = createBrowserRouter([
         path: "org-table",
         element: <AdminOrgTable />
       },
-      { 
-        path: "organizations", 
+      {
+        path: "organizations",
         children: [
           { index: true, element: <AdminOrganizations /> },
           { path: "new", element: <AdminNewOrganization /> },
           { path: ":id", element: <AdminOrganizationDetails /> }
-        ] 
+        ]
       },
       { path: "officers", element: <AdminOfficers /> },
       { path: "members", element: <AdminMembers /> },
@@ -156,14 +158,14 @@ const router = createBrowserRouter([
         path: "games",
         element: <UserGames />
       },
-      {
-        path: "unity-game",
-        element: <UnityGame />
-      },
+       { path: "quiz-games", element: <QuizGame /> },
+      { path: "room-game", element: <RoomGame /> },
+      { path: "quiz-selection", element: <QuizSelection /> },
       {
         path: "posts/:postId",
         element: <PostDetail />
       }
+     
     ]
   }
 ]);

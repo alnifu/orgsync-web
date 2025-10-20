@@ -31,8 +31,8 @@ export default function Dashboard() {
 
         {/* Main content */}
         <div className="flex-1 overflow-auto">
-          {/* Top nav with burger */}
-          <header className="flex items-center bg-white shadow px-4 py-3 md:hidden">
+          {/* Sticky Top nav for mobile */}
+          <header className="sticky top-0 z-40 flex items-center bg-white shadow px-4 py-3 md:hidden">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="text-gray-700 focus:outline-none"
@@ -43,7 +43,7 @@ export default function Dashboard() {
           </header>
 
           <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-              <Outlet />
+            <Outlet />
           </main>
         </div>
       </div>

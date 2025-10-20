@@ -5,39 +5,72 @@ import { supabase } from "../../../lib/supabase";
 import { X } from "lucide-react";
 import { Link } from "react-router";
 
-// Type for event posts
+// Type for event posts (from posts table)
 type EventPost = {
   id: string;
   title: string;
   content?: string;
-  events: {
-    event_date: string;
-    event_time: string;
-    location: string;
-  } | null; // one-to-one relation
+  event_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
 };
 
-// Utility: format date+time nicely
-function formatReadableDateTime(dateString: string, timeString?: string) {
+// 🕓 Utility: format date+time nicely
+function formatReadableDateTime(
+  dateString?: string,
+  startTime?: string,
+  endTime?: string
+) {
+  if (!dateString) return "No date provided";
+
   try {
-    if (timeString) {
-      const dateTime = new Date(`${dateString}T${timeString}`);
-      return dateTime.toLocaleString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
+    const date = new Date(dateString);
+
+    // Add day of week + full readable date
+    const formattedDate = date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // Helper to format times cleanly
+    const formatTime = (time?: string) => {
+      if (!time) return "";
+      const [h, m] = time.split(":");
+      const t = new Date();
+      t.setHours(Number(h), Number(m));
+      return t.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
       });
+    };
+
+    if (startTime && endTime) {
+      return (
+        <>
+          <span>{formattedDate}</span>
+          <br />
+          <span className="text-gray-600">
+            {formatTime(startTime)} – {formatTime(endTime)}
+          </span>
+        </>
+      );
+    } else if (startTime) {
+      return (
+        <>
+          <span>{formattedDate}</span>
+          <br />
+          <span className="text-gray-600">{formatTime(startTime)}</span>
+        </>
+      );
     }
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+
+    return <span>{formattedDate}</span>;
   } catch {
-    return dateString;
+    return <span>{dateString}</span>;
   }
 }
 
@@ -51,35 +84,18 @@ export default function DashboardHome() {
 
       const { data, error } = await supabase
         .from("posts")
-        .select(
-          `
-          id,
-          title,
-          content,
-          events (
-            event_date,
-            event_time,
-            location
-          )
-        `
-        )
-        .eq("type", "event")
-        .gte("events.event_date", today)
-        .order("event_date", { foreignTable: "events", ascending: true })
+        .select("id, title, content, event_date, start_time, end_time, location")
+        .eq("post_type", "event")
+        .gte("event_date", today)
+        .order("event_date", { ascending: true })
         .limit(3);
 
       if (error) {
         console.error("Error fetching events:", error.message);
-      } else {
-        setEvents(
-          (data ?? []).map((post: any) => ({
-            id: post.id,
-            title: post.title,
-            content: post.content,
-            events: post.events ?? null,
-          }))
-        );
+        return;
       }
+
+      setEvents(data ?? []);
     }
 
     fetchEvents();
@@ -107,21 +123,14 @@ export default function DashboardHome() {
                 onClick={() => setSelectedEvent(event)}
               >
                 <p className="font-medium text-gray-900">{event.title}</p>
-                {event.events ? (
-                  <>
-                    <p className="text-sm text-gray-600">
-                      {formatReadableDateTime(
-                        event.events.event_date,
-                        event.events.event_time
-                      )}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {event.events.location}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-gray-400">No event details</p>
-                )}
+                <p className="text-sm text-gray-700">
+                  {formatReadableDateTime(
+                    event.event_date,
+                    event.start_time,
+                    event.end_time
+                  )}
+                </p>
+                <p className="text-sm text-gray-600">{event.location}</p>
               </div>
             ))
           ) : (
@@ -136,14 +145,17 @@ export default function DashboardHome() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
             <p className="font-medium text-gray-900">My Virtual Room</p>
-            <button className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition">
+            <Link
+              to="/room-game"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
+            >
               Play
-            </button>
+            </Link>
           </div>
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
             <p className="font-medium text-gray-900">Quiz Games</p>
             <Link
-              to="/unity-game"
+              to="/quiz-selection"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
             >
               Play
@@ -167,20 +179,24 @@ export default function DashboardHome() {
               {selectedEvent.title}
             </h2>
 
-            {selectedEvent.events && (
-              <div className="mb-4 text-gray-700">
+            <div className="mb-4 text-gray-700">
+              {selectedEvent.event_date && (
                 <p>
-                  <strong>Date & Time:</strong>{" "}
+                  <strong>Date & Time:</strong>
+                  <br />
                   {formatReadableDateTime(
-                    selectedEvent.events.event_date,
-                    selectedEvent.events.event_time
+                    selectedEvent.event_date,
+                    selectedEvent.start_time,
+                    selectedEvent.end_time
                   )}
                 </p>
-                <p>
-                  <strong>Location:</strong> {selectedEvent.events.location}
+              )}
+              {selectedEvent.location && (
+                <p className="mt-2">
+                  <strong>Location:</strong> {selectedEvent.location}
                 </p>
-              </div>
-            )}
+              )}
+            </div>
 
             {selectedEvent.content && (
               <div className="text-gray-700">

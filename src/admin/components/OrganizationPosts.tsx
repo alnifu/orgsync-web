@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { Plus, Search, Loader2, Edit3 } from "lucide-react";
 import type { Posts, PostType } from '../../types/database.types';
+import { useUserRoles } from '../../utils/roles';
 import CreatePostModal from './CreatePostModal';
 import EditPostModal from './EditPostModal';
 import DeletePostModal from './DeletePostModal';
@@ -38,6 +39,9 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
   const [responsesModalOpen, setResponsesModalOpen] = useState<boolean>(false);
   const [selectedPost, setSelectedPost] = useState<Posts | null>(null);
   const [selectedPostType, setSelectedPostType] = useState<PostType>("general");
+
+  // Get user roles
+  const { isAdmin, loading: rolesLoading } = useUserRoles(currentUser?.id);
 
   // Get all unique tags from posts
   const allTags: string[] = [...new Set(posts.flatMap(post => post.tags || []))];
@@ -324,6 +328,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
               onTagClick={setSelectedTag}
               onViewResponses={handleViewResponses}
               isOwner={isPostOwner(post)}
+              isAdmin={isAdmin()}
             />
           ))
         )}

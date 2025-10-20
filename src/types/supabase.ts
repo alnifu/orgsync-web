@@ -703,6 +703,51 @@ export type Database = {
           },
         ]
       }
+      scores: {
+        Row: {
+          created_at: string | null
+          id: string
+          org_id: string | null
+          quiz_id: number | null
+          score: number | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          org_id?: string | null
+          quiz_id?: number | null
+          score?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          org_id?: string | null
+          quiz_id?: number | null
+          score?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scores_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scores_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           granted_at: string

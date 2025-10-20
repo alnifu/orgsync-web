@@ -74,7 +74,6 @@ export default function OrganizationDetails() {
               updated_at,
               student_number,
               program,
-              college,
               year_level,
               employee_id,
               department,

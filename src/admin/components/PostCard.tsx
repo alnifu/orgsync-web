@@ -12,6 +12,7 @@ interface PostCardProps {
   onTagClick?: (tag: string) => void;
   onViewResponses?: (post: Posts) => void;
   isOwner?: boolean;
+  isAdmin?: boolean;
 }
 
 export default function PostCard({
@@ -22,7 +23,8 @@ export default function PostCard({
   onPin,
   onTagClick,
   onViewResponses,
-  isOwner = false
+  isOwner = false,
+  isAdmin = false
 }: PostCardProps) {
   const [imageError, setImageError] = useState<{[key: number]: boolean}>({});
   const [currentMediaIndex, setCurrentMediaIndex] = useState<number>(0);
@@ -208,7 +210,7 @@ export default function PostCard({
               </button>
             )}
 
-            {isOwner && (onEdit || onDelete) && (
+            {(isOwner || isAdmin) && (onEdit || onDelete) && (
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger asChild>
                   <button
@@ -224,19 +226,6 @@ export default function PostCard({
                     className="min-w-[160px] bg-white rounded-lg shadow-lg border border-gray-200 p-1 z-50"
                     sideOffset={5}
                   >
-                    {onViewResponses && (post.post_type === 'event' || post.post_type === 'poll' || post.post_type === 'feedback') && (
-                      <DropdownMenu.Item
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewResponses(post);
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md cursor-pointer outline-none"
-                      >
-                        <Eye size={14} />
-                        View Responses
-                      </DropdownMenu.Item>
-                    )}
-                    {onViewResponses && onEdit && (post.post_type === 'event' || post.post_type === 'poll' || post.post_type === 'feedback') && <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />}
                     {onEdit && (
                       <DropdownMenu.Item
                         onClick={(e) => {

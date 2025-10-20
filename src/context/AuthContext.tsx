@@ -55,9 +55,8 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
         p_student_number: formData.studentNumber || null,
         p_year_level: formData.yearLevel || null,
         p_program: formData.program || null,
-        p_college: formData.college || null,
-        p_employee_id: formData.employeeId || null,
         p_department: formData.department || null,
+        p_employee_id: formData.employeeId || null,
         p_position: formData.position || null
       });
 

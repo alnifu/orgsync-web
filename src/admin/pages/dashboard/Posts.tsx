@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";
 import { Plus, Search, Edit3, Loader2 } from "lucide-react";
 import type { Posts, PostType } from '../../../types/database.types';
+import { useUserRoles } from '../../../utils/roles';
 import CreatePostModal from '../../components/CreatePostModal';
 import EditPostModal from '../../components/EditPostModal';
 import DeletePostModal from '../../components/DeletePostModal';
@@ -34,6 +35,9 @@ export default function PostsComponent() {
   const [responsesModalOpen, setResponsesModalOpen] = useState<boolean>(false);
   const [selectedPost, setSelectedPost] = useState<Posts | null>(null);
   const [selectedPostType, setSelectedPostType] = useState<PostType>("general");
+
+  // Get user roles
+  const { isAdmin } = useUserRoles(currentUser?.id);
 
   // Get all unique tags from posts
   const allTags: string[] = [...new Set(posts.flatMap(post => post.tags || []))];
@@ -292,6 +296,7 @@ export default function PostsComponent() {
                 onTagClick={setSelectedTag}
                 onViewResponses={handleViewResponses}
                 isOwner={isPostOwner(post)}
+                isAdmin={isAdmin()}
               />
             ))
           )}

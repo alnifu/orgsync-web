@@ -21,7 +21,6 @@ export default function Sidebar({ onLinkClick }: { onLinkClick?: () => void }) {
     { to: "organizations", label: "Organizations", icon: Users },
     { to: "profile", label: "Profile", icon: User },
     { to: "games", label: "Games", icon: Gamepad2 },
-    { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }
   ];
 
   const handleSignOut = async () => {

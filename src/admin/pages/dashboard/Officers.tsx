@@ -101,7 +101,7 @@ export default function Officers() {
       // Fetch users
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select('id, first_name, last_name, avatar_url, points, preferences, created_at, updated_at, student_number, program, college, year_level, employee_id, department, position, user_type, email')
+        .select('id, first_name, last_name, avatar_url, points, preferences, created_at, updated_at, student_number, program, department, year_level, employee_id, position, user_type, email')
         .in('id', userIds);
 
       if (usersError) {

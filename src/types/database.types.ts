@@ -11,10 +11,9 @@ export type User = {
   updated_at: string;
   student_number: string | null; // student
   program: string | null; // student
-  college: string | null; // student
   year_level: string | null; // student
   employee_id: string | null; // faculty
-  department: string | null; // faculty
+  department: string | null; // faculty and student
   position: string | null; // faculty
   user_type: string | null; // e.g., 'student', 'faculty'
   email: string;

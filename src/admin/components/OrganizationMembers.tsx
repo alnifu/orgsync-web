@@ -108,10 +108,10 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   // Filter available members by search
   const filteredAvailableMembers = availableMembers.filter(
     m =>
-      m.first_name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-      m.last_name.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-      m.email.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
-      (m.department?.toLowerCase().includes(memberSearchQuery.toLowerCase()))
+      (m.first_name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
+      (m.last_name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
+      (m.email?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
+      (m.college?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false)
   );
 
   return (
@@ -137,7 +137,7 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
         >
           <option value="">Select a member</option>
           {filteredAvailableMembers.map(m => (
-            <option key={m.id} value={m.id}>{m.first_name} {m.last_name} - {m.department} ({m.year_level})</option>
+            <option key={m.id} value={m.id}>{m.first_name || 'Unknown'} {m.last_name || 'User'} - {m.college || 'N/A'} ({m.year_level || 'N/A'})</option>
           ))}
         </select>
 
@@ -192,13 +192,13 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
                       <span className="text-sm font-medium text-green-600">{m.users?.first_name ? m.users.first_name.charAt(0) : '?'}</span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{m.users?.first_name} {m.users?.last_name}</p>
+                      <p className="text-sm font-medium text-gray-900">{m.users?.first_name || 'Unknown'} {m.users?.last_name || 'User'}</p>
                       <p className="text-xs text-gray-500 flex items-center">
-                        <Mail className="h-3 w-3 mr-1" />{m.users?.email}
+                        <Mail className="h-3 w-3 mr-1" />{m.users?.email || 'N/A'}
                       </p>
                       <p className="text-xs text-gray-500 flex items-center">
                         <GraduationCap className="h-3 w-3 mr-1" />
-                        {m.users?.department} - {m.users?.program} ({m.users?.year_level})
+                        {m.users?.college || 'N/A'} - {m.users?.program || 'N/A'} ({m.users?.year_level || 'N/A'})
                       </p>
                     </div>
                   </div>

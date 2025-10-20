@@ -18,9 +18,8 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
     studentNumber: "",
     yearLevel: undefined,
     program: "",
-    college: "",
-    employeeId: "",
     department: "",
+    employeeId: "",
     position: "",
   });
   const [error, setError] = useState<string | null>(null);

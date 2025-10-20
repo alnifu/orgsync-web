@@ -1,61 +1,72 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../../lib/supabase";
 import { X } from "lucide-react";
 
-type OrgKey = "jpcs" | "musikalista";
+interface Organization {
+  id: string;
+  name: string;
+  abbrev_name: string;
+  org_pic: string | null;
+  email: string;
+  description: string;
+  department: string | null;
+  status: string;
+  date_established: string;
+  org_type: string;
+}
 
 export default function Organizations() {
-  const [selectedOrg, setSelectedOrg] = useState<OrgKey | null>(null);
+  const [orgs, setOrgs] = useState<Organization[]>([]);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
 
-  const orgs: Record<OrgKey, { name: string; desc: string; objectives: string[] }> = {
-    jpcs: {
-      name: "Junior Philippine Computers' Society (JPCS)",
-      desc: `JPCS is the organization of students taking up Bachelor of Science in Computer Science (BSCS), Bachelor of Science in Information Technology (BSIT), and Associate in Computer Technology (ACT) programs in De La Salle Lipa.`,
-      objectives: [
-        "To promote enthusiasts' understanding and usage of Information Technology",
-        "To encourage the development of higher standards of Computer Education among chapter Schools.",
-        "To provide an organization for information exchange among its members, promoting and improving IT in the country",
-        "To prepare the students for the technical, leadership and ethical challenges as a future IT professional",
-      ],
-    },
-    musikalista: {
-      name: "Musikalista",
-      desc: `Musikalista is the official group to recognize all existing bands and musicians to perform at De La Salle Lipa College and the official organization to discharge its responsibility more effectively in elevating and improving the Music community in De La Salle Lipa.`,
-      objectives: [
-        "The organization is established to develop leadership skills, nurture its members on their talents, and provide an opportunity to share these nurtured talents in the community.",
-        "The organization shall establish camaraderie among its members, thereby creating a community to embody Lasallian values through service to one another.",
-        "The organization shall promote and enhance the abilities of every member of Musikalista. It shall also conversely train members to be appropriately integrated with a new member or in joining with another group as a “sessionist” and be assisted for whatever purpose that would favor the member and the organization.",
-      ],
-    },
-  };
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select(
+          "id, name, abbrev_name, org_pic, email, description, department, status, date_established, org_type"
+        );
+
+      if (error) {
+        console.error("Error fetching orgs:", error);
+      } else {
+        setOrgs(data || []);
+      }
+    };
+
+    fetchOrgs();
+  }, []);
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      {/* Joined Section */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Joined</h2>
-        <div
-          onClick={() => setSelectedOrg("jpcs")}
-          className="flex items-center space-x-3 bg-white shadow rounded-lg p-4 cursor-pointer hover:bg-gray-50"
-        >
-          <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold">
-            J
-          </div>
-          <p className="text-gray-800 font-medium">{orgs.jpcs.name}</p>
-        </div>
-      </div>
+    <div className="p-3 max-w-2xl mx-auto">
+      <div className="space-y-3">
+        {orgs.map((org) => (
+          <div
+            key={org.id}
+            onClick={() => setSelectedOrg(org)}
+            className="flex items-center space-x-3 bg-white shadow rounded-lg p-4 cursor-pointer hover:bg-gray-50"
+          >
+            {org.org_pic ? (
+              <img
+                src={org.org_pic}
+                alt={org.name}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold">
+                {org.abbrev_name?.charAt(0) || org.name.charAt(0)}
+              </div>
+            )}
+            <div>
+              <p className="text-gray-800 font-medium">{org.name}</p>
 
-      {/* Others Section */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Others</h2>
-        <div
-          onClick={() => setSelectedOrg("musikalista")}
-          className="flex items-center space-x-3 bg-white shadow rounded-lg p-4 cursor-pointer hover:bg-gray-50"
-        >
-          <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold">
-            M
+              {/* Show department if it exists, otherwise show type */}
+              <p className="text-sm text-gray-500">
+                {org.department ? org.department : org.org_type}
+              </p>
+            </div>
           </div>
-          <p className="text-gray-800 font-medium">{orgs.musikalista.name}</p>
-        </div>
+        ))}
       </div>
 
       {/* Modal */}
@@ -64,7 +75,7 @@ export default function Organizations() {
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-gray-800">
-                {orgs[selectedOrg].name}
+                {selectedOrg.name}
               </h2>
               <button
                 onClick={() => setSelectedOrg(null)}
@@ -73,17 +84,48 @@ export default function Organizations() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="text-gray-700 mb-4">{orgs[selectedOrg].desc}</p>
-            <h3 className="font-semibold text-gray-800 mb-2">Objectives:</h3>
-            <ul className="list-disc list-inside text-gray-700 space-y-1">
-              {orgs[selectedOrg].objectives.map((obj, i) => (
-                <li key={i}>{obj}</li>
-              ))}
-            </ul>
+
+            {selectedOrg.org_pic && (
+              <img
+                src={selectedOrg.org_pic}
+                alt={selectedOrg.name}
+                className="w-full h-40 object-cover rounded-md mb-4"
+              />
+            )}
+
+            <p className="text-gray-700 mb-4">{selectedOrg.description}</p>
+
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>
+                <strong>Email:</strong> {selectedOrg.email}
+              </p>
+
+              {/* Show Department only if it exists */}
+              {selectedOrg.department && (
+                <p>
+                  <strong>Department:</strong> {selectedOrg.department}
+                </p>
+              )}
+
+              <p>
+                <strong>Type:</strong> {selectedOrg.org_type}
+              </p>
+
+              <p>
+                <strong>Established:</strong>{" "}
+                {new Date(selectedOrg.date_established).toLocaleDateString(
+                  "en-US",
+                  {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  }
+                )}
+              </p>
+            </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
