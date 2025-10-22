@@ -34,6 +34,7 @@ import LeaderboardPage from "./user/pages/dashboard/LeaderboardPage";
 // Auth Pages
 import Signin from "./pages/Signin";
 import Signup from "./pages/Signup";
+import ProfileSetup from "./pages/ProfileSetup";
 
 const DashboardRedirect = () => {
   const { user } = useAuth();
@@ -96,6 +97,10 @@ const router = createBrowserRouter([
   {
     path: "/signup",
     element: <Signup />
+  },
+  {
+    path: "/profile-setup",
+    element: <ProfileSetup />
   },
   {
     path: "/dashboard",
@@ -169,6 +174,37 @@ const router = createBrowserRouter([
       }
      
     ]
+  },
+  // 404 Catch-all route
+  {
+    path: "*",
+    element: (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <div className="space-y-4">
+            <h1 className="text-4xl font-bold text-gray-900">404</h1>
+            <h2 className="text-xl font-semibold text-gray-700">Page Not Found</h2>
+            <p className="text-gray-600">
+              The page you're looking for doesn't exist or has been moved.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <button
+              onClick={() => window.history.back()}
+              className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Go Back
+            </button>
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 ]);
 

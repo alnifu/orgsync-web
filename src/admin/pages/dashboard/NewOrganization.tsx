@@ -184,12 +184,12 @@ export default function NewOrganization() {
               className="mt-1 p-1  block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
             >
               <option value="">Select a department</option>
-              <option value="CITE">CITE</option>
-              <option value="CBEAM">CBEAM</option>
-              <option value="COL">COL</option>
-              <option value="CON">CON</option>
-              <option value="CEAS">CEAS</option>
-              <option value="OTHERS">OTHERS</option>
+              <option value="CBEAM">CBEAM - College of Business, Economics, Accountancy and Management</option>
+              <option value="CEAS">CEAS - College of Education, Arts and Sciences</option>
+              <option value="CIHTM">CIHTM - College of International Hospitality and Tourism Management</option>
+              <option value="CITE">CITE - College of Information Technology and Engineering</option>
+              <option value="CON">CON - College of Nursing</option>
+              <option value="COL">COL - College of Law</option>
             </select>
           </div>
 

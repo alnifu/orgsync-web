@@ -39,8 +39,8 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
       if (onSignupSuccess) {
         onSignupSuccess(data.user);
       }
-      // Redirect to sign in after successful signup
-      navigate("/signin");
+      // Redirect to profile setup after successful signup
+      navigate("/profile-setup");
     }
   };
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 
 type SigninProps = {
     onSigninSuccess?: (user: any) => void;
@@ -29,9 +30,29 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
             if (onSigninSuccess) {
                 onSigninSuccess(data.user);
             }
-            // Redirect to dashboard after successful sign in
-            console.log("Signin successful, navigating to dashboard");
-            navigate("/dashboard");
+
+            // Check if user profile is complete
+            const { data: userProfile, error: profileError } = await supabase
+                .from('users')
+                .select('first_name, last_name, department')
+                .eq('id', data.user.id)
+                .single();
+
+            if (profileError) {
+                console.error('Error fetching user profile:', profileError);
+                // If there's an error fetching profile, redirect to profile setup
+                navigate("/profile-setup");
+                return;
+            }
+
+            // If profile is incomplete, redirect to profile setup
+            if (!userProfile.first_name || !userProfile.last_name || !userProfile.department) {
+                navigate("/profile-setup");
+            } else {
+                // Redirect to dashboard after successful sign in
+                console.log("Signin successful, navigating to dashboard");
+                navigate("/dashboard");
+            }
         }
     };
 

@@ -5,6 +5,51 @@ import type { User } from '../../../types/database.types';
 import { ArrowLeft, Edit, Camera, Save, X, Coins } from 'lucide-react';
 import ImageCropModal from '../../components/ImageCropModal';
 
+// Mapping of programs to their corresponding department codes
+const programToDepartmentMap: Record<string, string> = {
+  // CBEAM - College of Business, Economics, Accountancy and Management
+  "BS Accountancy": "CBEAM",
+  "BS Accounting Information System": "CBEAM",
+  "BS Legal Management": "CBEAM",
+  "BS Entrepreneurship": "CBEAM",
+  "BS Management Technology": "CBEAM",
+  "BSBA Financial Management": "CBEAM",
+  "BSBA Marketing Management": "CBEAM",
+  "Certificate in Entrepreneurship": "CBEAM",
+
+  // CEAS - College of Education, Arts and Sciences
+  "Bachelor of Elementary Education": "CEAS",
+  "Bachelor of Secondary Education": "CEAS",
+  "AB Communication": "CEAS",
+  "Bachelor of Multimedia Arts": "CEAS",
+  "BS Biology": "CEAS",
+  "BS Forensic Science": "CEAS",
+  "BS Mathematics": "CEAS",
+  "BS Psychology": "CEAS",
+
+  // CIHTM - College of International Hospitality and Tourism Management
+  "BS Hospitality Management": "CIHTM",
+  "BS Tourism Management": "CIHTM",
+  "Certificate in Culinary Arts": "CIHTM",
+
+  // CITE - College of Information Technology and Engineering
+  "BS Architecture": "CITE",
+  "BS Computer Engineering": "CITE",
+  "BS Computer Science": "CITE",
+  "BS Electrical Engineering": "CITE",
+  "BS Electronics Engineering": "CITE",
+  "BS Entertainment and Multimedia Computing": "CITE",
+  "BS Industrial Engineering": "CITE",
+  "BS Information Technology": "CITE",
+  "Associate in Computer Technology": "CITE",
+
+  // CON - College of Nursing
+  "BS Nursing": "CON",
+
+  // COL - College of Law
+  "Juris Doctor": "COL",
+};
+
 export default function UserProfile() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -522,14 +567,27 @@ export default function UserProfile() {
                       <dt className="text-sm font-medium text-gray-500">Department</dt>
                       <dd className="text-sm text-gray-900">
                         {isEditing ? (
-                          <input
-                            type="text"
-                            value={editForm.department}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, department: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
+                          <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                            {editForm.department ? (
+                              editForm.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                              editForm.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                              editForm.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                              editForm.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                              editForm.department === "CON" ? "CON - College of Nursing" :
+                              editForm.department === "COL" ? "COL - College of Law" :
+                              editForm.department
+                            ) : "Select a program to auto-populate department"}
+                          </div>
                         ) : (
-                          user.department || 'Not specified'
+                          user.department ? (
+                            user.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                            user.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                            user.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                            user.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                            user.department === "CON" ? "CON - College of Nursing" :
+                            user.department === "COL" ? "COL - College of Law" :
+                            user.department
+                          ) : 'Not specified'
                         )}
                       </dd>
                     </div>
@@ -540,14 +598,29 @@ export default function UserProfile() {
                       <dt className="text-sm font-medium text-gray-500">Department</dt>
                       <dd className="text-sm text-gray-900">
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <select
                             value={editForm.department}
                             onChange={(e) => setEditForm(prev => ({ ...prev, department: e.target.value }))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
+                          >
+                            <option value="">Select department</option>
+                            <option value="CBEAM">CBEAM - College of Business, Economics, Accountancy and Management</option>
+                            <option value="CEAS">CEAS - College of Education, Arts and Sciences</option>
+                            <option value="CIHTM">CIHTM - College of International Hospitality and Tourism Management</option>
+                            <option value="CITE">CITE - College of Information Technology and Engineering</option>
+                            <option value="CON">CON - College of Nursing</option>
+                            <option value="COL">COL - College of Law</option>
+                          </select>
                         ) : (
-                          user.department || 'Not specified'
+                          user.department ? (
+                            user.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                            user.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                            user.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                            user.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                            user.department === "CON" ? "CON - College of Nursing" :
+                            user.department === "COL" ? "COL - College of Law" :
+                            user.department
+                          ) : 'Not specified'
                         )}
                       </dd>
                     </div>
@@ -558,12 +631,74 @@ export default function UserProfile() {
                       <dt className="text-sm font-medium text-gray-500">Program</dt>
                       <dd className="text-sm text-gray-900">
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <select
                             value={editForm.program}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, program: e.target.value }))}
+                            onChange={(e) => {
+                              const selectedProgram = e.target.value;
+                              setEditForm(prev => {
+                                const newForm = { ...prev, program: selectedProgram };
+                                // Auto-set department when program is selected
+                                if (selectedProgram) {
+                                  const department = programToDepartmentMap[selectedProgram];
+                                  if (department) {
+                                    newForm.department = department;
+                                  }
+                                }
+                                return newForm;
+                              });
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
+                          >
+                            <option value="">Select program</option>
+
+                            <optgroup label="College of Business, Economics, Accountancy and Management">
+                              <option value="BS Accountancy">BS Accountancy</option>
+                              <option value="BS Accounting Information System">BS Accounting Information System</option>
+                              <option value="BS Legal Management">BS Legal Management</option>
+                              <option value="BS Entrepreneurship">BS Entrepreneurship</option>
+                              <option value="BS Management Technology">BS Management Technology</option>
+                              <option value="BSBA Financial Management">BSBA Financial Management</option>
+                              <option value="BSBA Marketing Management">BSBA Marketing Management</option>
+                              <option value="Certificate in Entrepreneurship">Certificate in Entrepreneurship</option>
+                            </optgroup>
+
+                            <optgroup label="College of Education, Arts and Sciences">
+                              <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
+                              <option value="Bachelor of Secondary Education">Bachelor of Secondary Education</option>
+                              <option value="AB Communication">AB Communication</option>
+                              <option value="Bachelor of Multimedia Arts">Bachelor of Multimedia Arts</option>
+                              <option value="BS Biology">BS Biology</option>
+                              <option value="BS Forensic Science">BS Forensic Science</option>
+                              <option value="BS Mathematics">BS Mathematics</option>
+                              <option value="BS Psychology">BS Psychology</option>
+                            </optgroup>
+
+                            <optgroup label="College of International Hospitality and Tourism Management">
+                              <option value="BS Hospitality Management">BS Hospitality Management</option>
+                              <option value="BS Tourism Management">BS Tourism Management</option>
+                              <option value="Certificate in Culinary Arts">Certificate in Culinary Arts</option>
+                            </optgroup>
+
+                            <optgroup label="College of Information Technology and Engineering">
+                              <option value="BS Architecture">BS Architecture</option>
+                              <option value="BS Computer Engineering">BS Computer Engineering</option>
+                              <option value="BS Computer Science">BS Computer Science</option>
+                              <option value="BS Electrical Engineering">BS Electrical Engineering</option>
+                              <option value="BS Electronics Engineering">BS Electronics Engineering</option>
+                              <option value="BS Entertainment and Multimedia Computing">BS Entertainment and Multimedia Computing</option>
+                              <option value="BS Industrial Engineering">BS Industrial Engineering</option>
+                              <option value="BS Information Technology">BS Information Technology</option>
+                              <option value="Associate in Computer Technology">Associate in Computer Technology</option>
+                            </optgroup>
+
+                            <optgroup label="College of Nursing">
+                              <option value="BS Nursing">BS Nursing</option>
+                            </optgroup>
+
+                            <optgroup label="College of Law">
+                              <option value="Juris Doctor">Juris Doctor</option>
+                            </optgroup>
+                          </select>
                         ) : (
                           user.program || 'Not specified'
                         )}

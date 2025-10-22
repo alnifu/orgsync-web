@@ -5,6 +5,50 @@ import type { User } from '../../types/database.types';
 import { ArrowLeft, Edit, Camera, Save, X, Shield, Coins } from 'lucide-react';
 import ImageCropModal from '../components/ImageCropModal';
 
+// Mapping of programs to their corresponding department codes
+const programToDepartmentMap: Record<string, string> = {
+  // CAS - College of Arts and Sciences (maps to CEAS)
+  "Bachelor of Arts in Communication": "CEAS",
+  "Bachelor of Arts in English": "CEAS",
+  "Bachelor of Arts in Filipino": "CEAS",
+  "Bachelor of Arts in History": "CEAS",
+  "Bachelor of Arts in Political Science": "CEAS",
+  "Bachelor of Science in Biology": "CEAS",
+  "Bachelor of Science in Chemistry": "CEAS",
+  "Bachelor of Science in Mathematics": "CEAS",
+  "Bachelor of Science in Physics": "CEAS",
+  "Bachelor of Science in Psychology": "CEAS",
+
+  // CBA - College of Business Administration (maps to CBEAM)
+  "Bachelor of Science in Accountancy": "CBEAM",
+  "Bachelor of Science in Business Administration": "CBEAM",
+  "Bachelor of Science in Entrepreneurship": "CBEAM",
+  "Bachelor of Science in Hospitality Management": "CBEAM",
+  "Bachelor of Science in Tourism Management": "CBEAM",
+
+  // CCS - College of Computer Studies (maps to CITE)
+  "Bachelor of Science in Computer Science": "CITE",
+  "Bachelor of Science in Information Technology": "CITE",
+  "Bachelor of Science in Information Systems": "CITE",
+  "Associate in Computer Technology": "CITE",
+
+  // COED - College of Education (maps to CEAS)
+  "Bachelor of Elementary Education": "CEAS",
+  "Bachelor of Secondary Education": "CEAS",
+  "Bachelor of Physical Education": "CEAS",
+  "Bachelor of Special Needs Education": "CEAS",
+
+  // COE - College of Engineering (maps to CITE)
+  "Bachelor of Science in Civil Engineering": "CITE",
+  "Bachelor of Science in Computer Engineering": "CITE",
+  "Bachelor of Science in Electrical Engineering": "CITE",
+  "Bachelor of Science in Electronics Engineering": "CITE",
+  "Bachelor of Science in Mechanical Engineering": "CITE",
+
+  // CN - College of Nursing (maps to CON)
+  "Bachelor of Science in Nursing": "CON",
+};
+
 export default function AdminUserProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -506,14 +550,29 @@ export default function AdminUserProfile() {
                       <dt className="text-sm font-medium text-gray-500">Department</dt>
                       <dd className="text-sm text-gray-900">
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <select
                             value={editForm.department}
                             onChange={(e) => setEditForm(prev => ({ ...prev, department: e.target.value }))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
+                          >
+                            <option value="">Select department</option>
+                            <option value="CBEAM">CBEAM - College of Business, Economics, Accountancy and Management</option>
+                            <option value="CEAS">CEAS - College of Education, Arts and Sciences</option>
+                            <option value="CIHTM">CIHTM - College of International Hospitality and Tourism Management</option>
+                            <option value="CITE">CITE - College of Information Technology and Engineering</option>
+                            <option value="CON">CON - College of Nursing</option>
+                            <option value="COL">COL - College of Law</option>
+                          </select>
                         ) : (
-                          user.department || 'Not specified'
+                          user.department ? (
+                            user.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                            user.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                            user.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                            user.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                            user.department === "CON" ? "CON - College of Nursing" :
+                            user.department === "COL" ? "COL - College of Law" :
+                            user.department
+                          ) : 'Not specified'
                         )}
                       </dd>
                     </div>
@@ -522,12 +581,67 @@ export default function AdminUserProfile() {
                       <dt className="text-sm font-medium text-gray-500">Program</dt>
                       <dd className="text-sm text-gray-900">
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <select
                             value={editForm.program}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, program: e.target.value }))}
+                            onChange={(e) => {
+                              const selectedProgram = e.target.value;
+                              setEditForm(prev => {
+                                const newForm = { ...prev, program: selectedProgram };
+                                // Auto-set department when program is selected
+                                if (selectedProgram) {
+                                  const department = programToDepartmentMap[selectedProgram];
+                                  if (department) {
+                                    newForm.department = department;
+                                  }
+                                }
+                                return newForm;
+                              });
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
+                          >
+                            <option value="">Select Program</option>
+                            <optgroup label="College of Arts and Sciences (CAS)">
+                              <option value="Bachelor of Arts in Communication">Bachelor of Arts in Communication</option>
+                              <option value="Bachelor of Arts in English">Bachelor of Arts in English</option>
+                              <option value="Bachelor of Arts in Filipino">Bachelor of Arts in Filipino</option>
+                              <option value="Bachelor of Arts in History">Bachelor of Arts in History</option>
+                              <option value="Bachelor of Arts in Political Science">Bachelor of Arts in Political Science</option>
+                              <option value="Bachelor of Science in Biology">Bachelor of Science in Biology</option>
+                              <option value="Bachelor of Science in Chemistry">Bachelor of Science in Chemistry</option>
+                              <option value="Bachelor of Science in Mathematics">Bachelor of Science in Mathematics</option>
+                              <option value="Bachelor of Science in Physics">Bachelor of Science in Physics</option>
+                              <option value="Bachelor of Science in Psychology">Bachelor of Science in Psychology</option>
+                            </optgroup>
+                            <optgroup label="College of Business Administration (CBA)">
+                              <option value="Bachelor of Science in Accountancy">Bachelor of Science in Accountancy</option>
+                              <option value="Bachelor of Science in Business Administration">Bachelor of Science in Business Administration</option>
+                              <option value="Bachelor of Science in Entrepreneurship">Bachelor of Science in Entrepreneurship</option>
+                              <option value="Bachelor of Science in Hospitality Management">Bachelor of Science in Hospitality Management</option>
+                              <option value="Bachelor of Science in Tourism Management">Bachelor of Science in Tourism Management</option>
+                            </optgroup>
+                            <optgroup label="College of Computer Studies (CCS)">
+                              <option value="Bachelor of Science in Computer Science">Bachelor of Science in Computer Science</option>
+                              <option value="Bachelor of Science in Information Technology">Bachelor of Science in Information Technology</option>
+                              <option value="Bachelor of Science in Information Systems">Bachelor of Science in Information Systems</option>
+                              <option value="Associate in Computer Technology">Associate in Computer Technology</option>
+                            </optgroup>
+                            <optgroup label="College of Education (COED)">
+                              <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
+                              <option value="Bachelor of Secondary Education">Bachelor of Secondary Education</option>
+                              <option value="Bachelor of Physical Education">Bachelor of Physical Education</option>
+                              <option value="Bachelor of Special Needs Education">Bachelor of Special Needs Education</option>
+                            </optgroup>
+                            <optgroup label="College of Engineering (COE)">
+                              <option value="Bachelor of Science in Civil Engineering">Bachelor of Science in Civil Engineering</option>
+                              <option value="Bachelor of Science in Computer Engineering">Bachelor of Science in Computer Engineering</option>
+                              <option value="Bachelor of Science in Electrical Engineering">Bachelor of Science in Electrical Engineering</option>
+                              <option value="Bachelor of Science in Electronics Engineering">Bachelor of Science in Electronics Engineering</option>
+                              <option value="Bachelor of Science in Mechanical Engineering">Bachelor of Science in Mechanical Engineering</option>
+                            </optgroup>
+                            <optgroup label="College of Nursing (CN)">
+                              <option value="Bachelor of Science in Nursing">Bachelor of Science in Nursing</option>
+                            </optgroup>
+                          </select>
                         ) : (
                           user.program || 'Not specified'
                         )}
