@@ -14,8 +14,8 @@ import OrganizationReports from '../../components/OrganizationReports';
 import SelectAdviser from '../../components/SelectAdviser';
 import EditOrganizationModal from '../../components/EditOrganizationModal';
 import DeleteOrganizationModal from '../../components/DeleteOrganizationModal';
-import CreateQuiz from '../CreateQuiz';
 import OrganizationLeaderboard from '../../components/OrganizationLeaderboard';
+import OrganizationQuizzes from '../../components/OrganizationQuizzes';
 import { Pencil, Trash2, UserPlus2 } from 'lucide-react';
 
 export default function OrganizationDetails() {
@@ -360,7 +360,7 @@ export default function OrganizationDetails() {
 
         {/* Quizzes Tab */}
         <TabsContent value="quizzes" className="space-y-4">
-          <CreateQuiz orgId={id} />
+          <OrganizationQuizzes organizationId={id!} />
         </TabsContent>
 
         {/* Leaderboard Tab */}

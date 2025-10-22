@@ -114,6 +114,17 @@ export default function PostCard({
     }
   };
 
+  const getGeneralContent = (): string => {
+    if (!post || post.post_type !== 'general') return post?.content || '';
+
+    try {
+      const content = JSON.parse(post.content);
+      return content.description || post.content;
+    } catch {
+      return post.content;
+    }
+  };
+
   // Swipe handling functions
   const minSwipeDistance = 50;
 
@@ -311,6 +322,7 @@ export default function PostCard({
         <p className="text-gray-600 leading-relaxed line-clamp-3 mb-3">
           {post.post_type === 'poll' ? getPollQuestion() :
            post.post_type === 'feedback' ? getFormDescription() :
+           post.post_type === 'general' ? getGeneralContent() :
            post.content}
         </p>
 

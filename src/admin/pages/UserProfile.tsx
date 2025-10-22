@@ -535,13 +535,13 @@ export default function AdminUserProfile() {
                     </div>
                   )}
 
-                  <div>
+                  {/* <div>
                     <dt className="text-sm font-medium text-gray-500">Coins</dt>
                     <dd className="text-sm text-gray-900 flex items-center">
                       <Coins className="w-4 h-4 mr-1 text-orange-500" />
                       {coins}
                     </dd>
-                  </div>
+                  </div> */}
 
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Member Since</dt>

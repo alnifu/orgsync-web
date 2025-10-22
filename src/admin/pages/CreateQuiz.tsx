@@ -12,20 +12,32 @@ interface Question {
   answers: Answer[];
 }
 
-interface CreateQuizProps {
-  orgId?: string;
+interface Quiz {
+  id: number;
+  title: string;
+  data: any;
+  org_id: string;
+  open_at?: string | null;
+  close_at?: string | null;
+  created_at: string;
 }
 
-export default function CreateQuiz({ orgId }: CreateQuizProps) {
-  const [quizName, setQuizName] = useState("");
-  const [timeLimit, setTimeLimit] = useState(30);
-  const [points, setPoints] = useState(10);
-  const [questions, setQuestions] = useState<Question[]>([]);
+interface CreateQuizProps {
+  orgId?: string;
+  existingQuiz?: Quiz | null;
+  onClose?: () => void;
+}
+
+export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizProps) {
+  const [quizName, setQuizName] = useState(existingQuiz?.title || "");
+  const [timeLimit, setTimeLimit] = useState(existingQuiz?.data?.timeLimitInSeconds || 30);
+  const [points, setPoints] = useState(existingQuiz?.data?.pointsAddedForCorrectAnswer || 10);
+  const [questions, setQuestions] = useState<Question[]>(existingQuiz?.data?.questions || []);
   const [errors, setErrors] = useState<string[]>([]);
 
-  const [hasTimeSpan, setHasTimeSpan] = useState(false);
-  const [openAt, setOpenAt] = useState("");
-  const [closeAt, setCloseAt] = useState("");
+  const [hasTimeSpan, setHasTimeSpan] = useState(!!(existingQuiz?.open_at || existingQuiz?.close_at));
+  const [openAt, setOpenAt] = useState(existingQuiz?.open_at ? new Date(existingQuiz.open_at).toISOString().slice(0, 16) : "");
+  const [closeAt, setCloseAt] = useState(existingQuiz?.close_at ? new Date(existingQuiz.close_at).toISOString().slice(0, 16) : "");
 
   const addQuestion = () => {
     setQuestions([
@@ -82,72 +94,91 @@ export default function CreateQuiz({ orgId }: CreateQuizProps) {
   };
 
   const saveToSupabase = async () => {
-  if (!validateQuiz()) return;
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    toast.error("You must be logged in to save a quiz.");
-    return;
-  }
-
-  let organizationId = orgId;
-
-  if (!organizationId) {
-    // find organization linked to this user
-    const { data: orgManager, error: orgError } = await supabase
-      .from("org_managers")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (orgError || !orgManager) {
-      toast.error("Could not find your organization. Please check your access.");
-      console.error("Error finding organization:", orgError?.message);
+    if (!validateQuiz()) {
       return;
     }
-    organizationId = orgManager.org_id;
-  }
 
-  const quizData = {
-    timeLimitInSeconds: timeLimit,
-    pointsAddedForCorrectAnswer: points,
-    questions,
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      toast.error("You must be logged in to save a quiz.");
+      return;
+    }
+
+    let organizationId = orgId;
+
+    if (!organizationId) {
+      // find organization linked to this user
+      const { data: orgManager, error: orgError } = await supabase
+        .from("org_managers")
+        .select("org_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (orgError || !orgManager) {
+        toast.error("Could not find your organization. Please check your access.");
+        console.error("Error finding organization:", orgError?.message);
+        return;
+      }
+      organizationId = orgManager.org_id;
+    }
+
+    const quizData = {
+      timeLimitInSeconds: timeLimit,
+      pointsAddedForCorrectAnswer: points,
+      questions,
+    };
+
+    const quizInsertData: any = {
+      title: quizName,
+      data: quizData,
+      org_id: organizationId,
+    };
+
+    // only include time span if toggle is on
+    if (hasTimeSpan) {
+      quizInsertData.open_at = openAt ? new Date(openAt).toISOString() : null;
+      quizInsertData.close_at = closeAt ? new Date(closeAt).toISOString() : null;
+    } else {
+      quizInsertData.open_at = null;
+      quizInsertData.close_at = null;
+    }
+
+    try {
+      if (existingQuiz) {
+        // Update existing quiz
+        const { error } = await supabase
+          .from("quizzes")
+          .update(quizInsertData)
+          .eq("id", existingQuiz.id);
+
+        if (error) throw error;
+        toast.success("Quiz updated successfully!");
+      } else {
+        // Create new quiz
+        const { error } = await supabase.from("quizzes").insert([quizInsertData]);
+        if (error) throw error;
+        toast.success("Quiz saved successfully!");
+      }
+
+      // Reset form
+      setQuestions([]);
+      setQuizName("");
+      setHasTimeSpan(false);
+      setOpenAt("");
+      setCloseAt("");
+
+      if (onClose) {
+        onClose();
+      }
+    } catch (error: any) {
+      toast.error(existingQuiz ? "Failed to update quiz. Please try again." : "Failed to save quiz. Please try again.");
+      console.error("Error saving quiz:", error.message);
+    }
   };
-
-  // prepare data for insert
-  const quizInsertData: any = {
-    title: quizName,
-    data: quizData,
-    org_id: organizationId,
-  };
-
-  // only include time span if toggle is on
-  if (hasTimeSpan) {
-    quizInsertData.open_at = openAt ? new Date(openAt).toISOString() : null;
-    quizInsertData.close_at = closeAt ? new Date(closeAt).toISOString() : null;
-  } else {
-    quizInsertData.open_at = null;
-    quizInsertData.close_at = null;
-  }
-
-  const { error } = await supabase.from("quizzes").insert([quizInsertData]);
-
-  if (error) {
-    toast.error("Failed to save quiz. Please try again.");
-    console.error("Error saving quiz:", error.message);
-  } else {
-    toast.success("Quiz saved successfully!");
-    setQuestions([]);
-    setQuizName("");
-    setHasTimeSpan(false);
-    setOpenAt("");
-    setCloseAt("");
-  }
-};
 
   return (
     <div className="min-h-screen flex justify-center items-start px-4 py-4 bg-gray-50">
@@ -303,12 +334,22 @@ export default function CreateQuiz({ orgId }: CreateQuizProps) {
           </div>
         ))}
 
-        <button
-          onClick={saveToSupabase}
-          className="w-full mt-6 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-lg transition"
-        >
-          💾 Save Quiz
-        </button>
+        <div className="flex justify-end space-x-3">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={saveToSupabase}
+            className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white font-semibold rounded-lg transition"
+          >
+            💾 {existingQuiz ? "Update Quiz" : "Save Quiz"}
+          </button>
+        </div>
       </div>
     </div>
   );
