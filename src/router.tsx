@@ -29,6 +29,7 @@ import UserDashboardHome from "./user/pages/dashboard/DashboardHome";
 import QuizGame from "./user/pages/dashboard/QuizGame";
 import RoomGame from "./user/pages/dashboard/RoomGame";
 import QuizSelection from "./user/pages/dashboard/QuizSelection";
+import LeaderboardPage from "./user/pages/dashboard/LeaderboardPage";
 
 // Auth Pages
 import Signin from "./pages/Signin";
@@ -161,6 +162,7 @@ const router = createBrowserRouter([
        { path: "quiz-games", element: <QuizGame /> },
       { path: "room-game", element: <RoomGame /> },
       { path: "quiz-selection", element: <QuizSelection /> },
+      { path: "leaderboard", element: <LeaderboardPage /> },
       {
         path: "posts/:postId",
         element: <PostDetail />

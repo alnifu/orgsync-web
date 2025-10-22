@@ -64,7 +64,7 @@ const QuizGame: React.FC = () => {
   }, [isLoaded, user, quizId, orgId, selectedQuizData, sendMessage]);
 
   return (
-    <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", display: "flex", flexDirection: "column", background: "#000" }}>
+    <div style={{ position: "fixed", top: 0, left: 64, width: "100vw", height: "100vh", display: "flex", flexDirection: "column", background: "#000" }}>
       <div style={{ padding: "10px", background: "rgba(0,0,0,0.7)", textAlign: "left" }}>
         <button
           onClick={() => navigate(-1)}

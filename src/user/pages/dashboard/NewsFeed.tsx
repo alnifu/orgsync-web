@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabase";
-import { Heart, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 import RSVPModal from "../../components/RSVPModal";
@@ -157,12 +157,14 @@ export default function NewsFeed() {
 
   const [feedbackResponses, setFeedbackResponses] = useState<{ [key: string]: string }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: string]: boolean }>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchPosts();
   }, []);
 
   async function fetchPosts() {
+        setLoading(true);
     try {
       const {
         data: { user },
@@ -274,6 +276,9 @@ export default function NewsFeed() {
     } catch (err) {
       console.error("Error fetching posts:", err);
       toast.error("Failed to load posts. Please try again.");
+    }
+    finally {
+      setLoading(false);
     }
   }
 
@@ -642,7 +647,12 @@ export default function NewsFeed() {
         />
       </div>
 
-      {filteredPosts.length === 0 ? (
+       {loading ? (
+        <div className="flex justify-center items-center mt-10">
+          <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
+          <p className="ml-2 text-gray-600">Loading posts...</p>
+        </div>
+      ) : filteredPosts.length === 0 ? (
         <p className="text-center text-gray-500 mt-6">No posts found.</p>
       ) : (
         filteredPosts.map((post) => (

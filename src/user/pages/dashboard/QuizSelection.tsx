@@ -8,6 +8,8 @@ interface Quiz {
   title: string;
   data: any;
   org_id: string;
+  open_at?: string | null;
+  close_at?: string | null;
 }
 
 const QuizSelection: React.FC = () => {
@@ -42,11 +44,22 @@ const QuizSelection: React.FC = () => {
         const orgIds = memberships.map((m) => m.org_id);
         const { data: quizzesData, error: quizError } = await supabase
           .from("quizzes")
-          .select("id, title, data, org_id")
+          .select("id, title, data, org_id, open_at, close_at")
           .in("org_id", orgIds);
         if (quizError) throw quizError;
 
-        setQuizzes(quizzesData || []);
+        const now = new Date();
+
+        const availableQuizzes = (quizzesData || []).filter((quiz) => {
+          const openAt = quiz.open_at ? new Date(quiz.open_at) : null;
+          const closeAt = quiz.close_at ? new Date(quiz.close_at) : null;
+          return (
+            (!openAt || now >= openAt) &&
+            (!closeAt || now <= closeAt)
+          );
+        });
+
+        setQuizzes(availableQuizzes);
         setError(null);
       } catch (err: any) {
         console.error("❌ Error fetching quizzes:", err.message);
@@ -83,7 +96,7 @@ const QuizSelection: React.FC = () => {
       {/* Quiz Buttons */}
       {quizzes.length === 0 ? (
         <p className="text-gray-500 text-center">
-          No quizzes available for your organization(s).
+          No available quizzes right now.
         </p>
       ) : (
         <div className="flex flex-col items-center space-y-3 w-full">
@@ -101,7 +114,7 @@ const QuizSelection: React.FC = () => {
                   quizId: quiz.id,
                   orgId: quiz.org_id,
                 });
-                navigate("/quiz-games");
+                navigate("/user/dashboard/quiz-games");
               }}
               className="w-full sm:w-64 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors text-center"
             >

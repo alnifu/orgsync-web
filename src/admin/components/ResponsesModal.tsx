@@ -241,7 +241,7 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
                   </TabsList>
 
                   <TabsContent value="rsvps" className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4 mb-6">
+                  {/*}  <div className="grid grid-cols-3 gap-4 mb-6">
                       <div className="text-center p-4 bg-green-50 rounded-lg">
                         <div className="text-2xl font-bold text-green-600">{rsvps.filter(r => r.status === 'attending').length}</div>
                         <div className="text-sm text-green-700">Attending</div>
@@ -254,7 +254,7 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
                         <div className="text-2xl font-bold text-red-600">{rsvps.filter(r => r.status === 'not_attending').length}</div>
                         <div className="text-sm text-red-700">Not Attending</div>
                       </div>
-                    </div>
+                    </div>*/}
                     <div className="space-y-2">
                       {rsvps.map((rsvp) => (
                         <div key={rsvp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

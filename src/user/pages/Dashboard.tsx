@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const location = useLocation();
 
   // Map pathnames to page titles
@@ -17,6 +18,10 @@ export default function Dashboard() {
     return "Dashboard";
   }, [location.pathname]);
 
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => !prev);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex h-screen">
@@ -26,7 +31,11 @@ export default function Dashboard() {
             md:static md:translate-x-0 
             ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
         >
-          <Sidebar onLinkClick={() => setSidebarOpen(false)} />
+          <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            onToggle={toggleSidebar}
+            onLinkClick={() => setSidebarOpen(false)} 
+          />
         </div>
 
         {/* Main content */}
@@ -34,7 +43,10 @@ export default function Dashboard() {
           {/* Sticky Top nav for mobile */}
           <header className="sticky top-0 z-40 flex items-center bg-white shadow px-4 py-3 md:hidden">
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              onClick={() => {
+                setSidebarOpen(!sidebarOpen);
+                if (!sidebarOpen) setIsSidebarCollapsed(false); // Open sidebar if it's collapsed
+              }}
               className="text-gray-700 focus:outline-none"
             >
               <Menu className="h-6 w-6" />
@@ -48,11 +60,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/10 backdrop-blur-sm md:hidden"
-          onClick={() => setSidebarOpen(false)}
+      {/* Mobile overlay backdrop */}
+      {!isSidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={toggleSidebar}
         />
       )}
     </div>

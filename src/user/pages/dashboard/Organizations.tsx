@@ -7,6 +7,7 @@ interface Organization {
   name: string;
   abbrev_name: string;
   org_pic: string | null;
+  banner_pic: string | null;
   email: string;
   description: string;
   department: string | null;
@@ -24,7 +25,7 @@ export default function Organizations() {
       const { data, error } = await supabase
         .from("organizations")
         .select(
-          "id, name, abbrev_name, org_pic, email, description, department, status, date_established, org_type"
+          "id, name, abbrev_name, org_pic, banner_pic, email, description, department, status, date_established, org_type"
         );
 
       if (error) {
@@ -62,7 +63,7 @@ export default function Organizations() {
 
               {/* Show department and type if department exists, otherwise show type */}
               <p className="text-sm text-gray-500">
-                {org.department ? `${org.department} - ${org.org_type.toUpperCase()}` : org.org_type.toUpperCase()}
+                {org.department !== 'OTHERS' ? org.department : org.org_type}
               </p>
             </div>
           </div>
@@ -85,9 +86,9 @@ export default function Organizations() {
               </button>
             </div>
 
-            {selectedOrg.org_pic && (
+            {selectedOrg.banner_pic && (
               <img
-                src={selectedOrg.org_pic}
+                src={selectedOrg.banner_pic}
                 alt={selectedOrg.abbrev_name || selectedOrg.name}
                 className="w-full h-40 object-cover rounded-md mb-4"
               />
@@ -101,11 +102,9 @@ export default function Organizations() {
               </p>
 
               {/* Show Department only if it exists */}
-              {selectedOrg.department && (
-                <p>
-                  <strong>Department:</strong> {selectedOrg.department}
-                </p>
-              )}
+               <p>
+                <strong>Department:</strong> {selectedOrg.department}
+              </p>
 
               <p>
                 <strong>Type:</strong> {selectedOrg.org_type.toUpperCase()}

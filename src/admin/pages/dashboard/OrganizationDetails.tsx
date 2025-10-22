@@ -14,6 +14,8 @@ import OrganizationReports from '../../components/OrganizationReports';
 import SelectAdviser from '../../components/SelectAdviser';
 import EditOrganizationModal from '../../components/EditOrganizationModal';
 import DeleteOrganizationModal from '../../components/DeleteOrganizationModal';
+import CreateQuiz from '../CreateQuiz';
+import OrganizationLeaderboard from '../../components/OrganizationLeaderboard';
 import { Pencil, Trash2, UserPlus2 } from 'lucide-react';
 
 export default function OrganizationDetails() {
@@ -313,6 +315,18 @@ export default function OrganizationDetails() {
           >
             Reports
           </TabsTrigger>
+          <TabsTrigger
+            value="quizzes"
+            className="px-4 py-2 -mb-px transition transform active:scale-95 hover:bg-gray-100 focus:outline-none rounded-md"
+          >
+            Quizzes
+          </TabsTrigger>
+          <TabsTrigger
+            value="leaderboard"
+            className="px-4 py-2 -mb-px transition transform active:scale-95 hover:bg-gray-100 focus:outline-none rounded-md"
+          >
+            Leaderboard
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -342,6 +356,16 @@ export default function OrganizationDetails() {
             organizationId={id!} 
             onError={handleError}
           />
+        </TabsContent>
+
+        {/* Quizzes Tab */}
+        <TabsContent value="quizzes" className="space-y-4">
+          <CreateQuiz orgId={id} />
+        </TabsContent>
+
+        {/* Leaderboard Tab */}
+        <TabsContent value="leaderboard" className="space-y-4">
+          <OrganizationLeaderboard organizationId={id!} />
         </TabsContent>
       </Tabs>
 

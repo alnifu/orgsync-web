@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { supabase } from '../../lib/supabase';
 import type { User } from '../../types/database.types';
-import { ArrowLeft, Edit, Camera, Save, X, Shield } from 'lucide-react';
+import { ArrowLeft, Edit, Camera, Save, X, Shield, Coins } from 'lucide-react';
 import ImageCropModal from '../components/ImageCropModal';
 
 export default function AdminUserProfile() {
@@ -28,6 +28,7 @@ export default function AdminUserProfile() {
   const [saving, setSaving] = useState(false);
   const [showCropModal, setShowCropModal] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string>('');
+  const [coins, setCoins] = useState<number>(0);
 
   // Fetch user profile
   useEffect(() => {
@@ -55,6 +56,19 @@ export default function AdminUserProfile() {
           position: data.position || '',
           user_type: data.user_type || ''
         });
+
+        // Fetch initial coins
+        const { data: coinData, error: coinError } = await supabase
+          .from("game_rooms")
+          .select("coins")
+          .eq("user_id", id)
+          .single();
+
+        if (coinError) {
+          console.error("Error fetching coins:", coinError);
+        } else {
+          setCoins(coinData?.coins ?? 0);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load user profile');
       } finally {
@@ -63,6 +77,28 @@ export default function AdminUserProfile() {
     };
 
     fetchUser();
+  }, [id]);
+
+  // Realtime subscription for coins
+  useEffect(() => {
+    if (!id) return;
+
+    const subscription = supabase
+      .channel("coins-updates")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "game_rooms", filter: `user_id=eq.${id}` },
+        (payload) => {
+          if (payload.new.coins !== undefined) {
+            setCoins(payload.new.coins);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [id]);
 
   const handleSave = async () => {
@@ -500,8 +536,11 @@ export default function AdminUserProfile() {
                   )}
 
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Points</dt>
-                    <dd className="text-sm text-gray-900">{user.points || 0}</dd>
+                    <dt className="text-sm font-medium text-gray-500">Coins</dt>
+                    <dd className="text-sm text-gray-900 flex items-center">
+                      <Coins className="w-4 h-4 mr-1 text-orange-500" />
+                      {coins}
+                    </dd>
                   </div>
 
                   <div>
