@@ -6,7 +6,8 @@ import type { User, OrgMember } from '../../types/database.types';
 type OrgMemberWithUser = OrgMember & {
   users: User;
 };
-import { UserPlus, Users, X, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { UserPlus, Users, X, Search, Filter, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 interface OrganizationMembersProps {
   organizationId: string;
@@ -27,6 +28,8 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   const [yearLevelFilter, setYearLevelFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showAddMembers, setShowAddMembers] = useState(false);
+
+  const navigate = useNavigate();
 
   // Fetch organization members
   const fetchOrganizationMembers = async () => {
@@ -93,6 +96,11 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Failed to remove member');
     }
+  };
+
+  // View member profile
+  const viewProfile = (userId: string) => {
+    navigate(`/admin/dashboard/profile/${userId}`);
   };
 
   // Get unique values for filters
@@ -388,13 +396,22 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
                       {new Date(m.joined_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => removeMember(m.user_id)}
-                        className="text-red-600 hover:text-red-900 p-1"
-                        title="Remove member"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => viewProfile(m.user_id)}
+                          className="text-blue-600 hover:text-blue-900 p-1"
+                          title="View profile"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => removeMember(m.user_id)}
+                          className="text-red-600 hover:text-red-900 p-1"
+                          title="Remove member"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

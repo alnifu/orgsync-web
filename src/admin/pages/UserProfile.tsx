@@ -341,8 +341,7 @@ export default function AdminUserProfile() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="flex items-center">
-                <Shield className="h-5 w-5 text-blue-600 mr-2" />
-                <h1 className="text-xl font-semibold text-gray-900">Admin - User Profile</h1>
+                <h1 className="text-xl font-semibold text-gray-900">User Profile</h1>
               </div>
             </div>
             {!isEditing && (
