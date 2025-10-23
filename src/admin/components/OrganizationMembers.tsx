@@ -175,19 +175,21 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
     <div className="padding-4 space-y-6">
       {/* Add Member */}
       <div className="bg-white shadow rounded-lg p-6 space-y-4">
-        <button
-          onClick={toggleAddMembers}
-          className="w-full flex items-center justify-between text-left hover:bg-gray-50 -m-6 p-6 rounded-lg transition-colors"
-        >
+        <div className="flex items-center justify-between">
           <h4 className="text-md font-medium text-gray-900 flex items-center">
             <UserPlus className="h-5 w-5 mr-2" />Add Members
           </h4>
-          {showAddMembers ? (
-            <ChevronUp className="h-5 w-5 text-gray-500" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-gray-500" />
-          )}
-        </button>
+          <button
+            onClick={toggleAddMembers}
+            className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100 transition-colors"
+          >
+            {showAddMembers ? (
+              <ChevronUp className="h-4 w-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-500" />
+            )}
+          </button>
+        </div>
 
         {showAddMembers && (
           <>
