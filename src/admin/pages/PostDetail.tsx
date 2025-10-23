@@ -65,7 +65,8 @@ export default function PostDetail() {
         .from("posts")
         .select(`
           id, title, content, created_at, updated_at, user_id, tags,
-          status, view_count, is_pinned, org_id, media, post_type
+          status, view_count, is_pinned, org_id, media, post_type,
+          event_date, start_time, end_time, location
         `)
         .eq('id', postId)
         .single();
@@ -547,6 +548,17 @@ export default function PostDetail() {
                   Event Details
                 </h3>
                 <div className="space-y-3">
+                  {(() => {
+                    console.log('Event Details Debug:', {
+                      postType: post.post_type,
+                      eventDate: post.event_date,
+                      startTime: post.start_time,
+                      endTime: post.end_time,
+                      location: post.location,
+                      fullPost: post
+                    });
+                    return null;
+                  })()}
                   {post.event_date && (
                     <div className="flex items-center gap-3">
                       <CalendarIcon size={18} className="text-blue-600" />
@@ -593,8 +605,8 @@ export default function PostDetail() {
               </div>
             )}
 
-            {/* Event RSVP Section */}
-            {post.post_type === 'event' && (
+            {/* Event RSVP Section - Commented out */}
+            {false && (
               <div className="bg-gray-50 rounded-lg p-6 mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Users size={20} />

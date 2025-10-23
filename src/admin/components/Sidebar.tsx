@@ -12,7 +12,9 @@ import {
   LogOut,
   LayoutDashboard,
   BarChart3
-} from "lucide-react";export default function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
+} from "lucide-react";
+
+export default function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
   const { signOut, user } = useAuth();
   const { isAdmin, isOfficer, isAdviser } = useUserRoles(user?.id);
 

@@ -11,12 +11,13 @@ export type User = {
   updated_at: string;
   student_number: string | null; // student
   program: string | null; // student
-  year_level: string | null; // student
+  year_level: number | null; // student
   employee_id: string | null; // faculty
   department: string | null; // faculty and student
   position: string | null; // faculty
   user_type: string | null; // e.g., 'student', 'faculty'
-  email: string;
+  email: string | null;
+  college: string | null; // student
 };
 
 export type OrgManager = {

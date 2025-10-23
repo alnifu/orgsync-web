@@ -6,7 +6,7 @@ import type { User, OrgMember } from '../../types/database.types';
 type OrgMemberWithUser = OrgMember & {
   users: User;
 };
-import { UserPlus, Users, X, Mail, GraduationCap } from 'lucide-react';
+import { UserPlus, Users, X, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface OrganizationMembersProps {
   organizationId: string;
@@ -17,13 +17,16 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   const [organizationMembers, setOrganizationMembers] = useState<OrgMemberWithUser[]>([]);
   const [availableMembers, setAvailableMembers] = useState<User[]>([]);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
-  const [selectedMemberId, setSelectedMemberId] = useState('');
-  const [memberPosition, setMemberPosition] = useState('');
   const [addingMember, setAddingMember] = useState(false);
 
-  const PRESET_POSITIONS = [
-    'Member'
-  ] as const;
+  // New state for enhanced member management
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [currentMemberSearch, setCurrentMemberSearch] = useState('');
+  const [collegeFilter, setCollegeFilter] = useState('');
+  const [programFilter, setProgramFilter] = useState('');
+  const [yearLevelFilter, setYearLevelFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showAddMembers, setShowAddMembers] = useState(false);
 
   // Fetch organization members
   const fetchOrganizationMembers = async () => {
@@ -65,29 +68,16 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
     fetchOrganizationMembers();
   }, [organizationId]);
 
-  // Refetch available members when organization members change
+  // Refetch available members when organization members change and add members section is open
   useEffect(() => {
-    fetchAvailableMembers();
-  }, [organizationMembers]);
-
-  // Add member to organization
-  const addMember = async () => {
-    if (!selectedMemberId) return;
-    try {
-      setAddingMember(true);
-      const { error } = await supabase.from('org_members').insert({
-        user_id: selectedMemberId,
-        org_id: organizationId
-      });
-      if (error) throw error;
-      setSelectedMemberId('');
-      setMemberPosition('');
-      fetchOrganizationMembers();
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to add member');
-    } finally {
-      setAddingMember(false);
+    if (showAddMembers) {
+      fetchAvailableMembers();
     }
+  }, [organizationMembers, showAddMembers]);
+
+  // Toggle add members section
+  const toggleAddMembers = () => {
+    setShowAddMembers(!showAddMembers);
   };
 
   // Remove member
@@ -105,115 +95,312 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
     }
   };
 
-  // Filter available members by search
-  const filteredAvailableMembers = availableMembers.filter(
-    m =>
+  // Get unique values for filters
+  const colleges = [...new Set(availableMembers.map(m => m.college).filter(Boolean))].sort() as string[];
+  const programs = [...new Set(availableMembers.map(m => m.program).filter(Boolean))].sort() as string[];
+  const yearLevels = [...new Set(availableMembers.map(m => m.year_level).filter(Boolean))].sort() as number[];
+
+  // Filter available members with search and filters
+  const filteredAvailableMembers = availableMembers.filter(m => {
+    const matchesSearch = !memberSearchQuery ||
       (m.first_name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
       (m.last_name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
       (m.email?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
-      (m.college?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false)
-  );
+      (m.college?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
+      (m.program?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false);
+
+    const matchesCollege = !collegeFilter || m.college === collegeFilter;
+    const matchesProgram = !programFilter || m.program === programFilter;
+    const matchesYearLevel = !yearLevelFilter || m.year_level?.toString() === yearLevelFilter;
+
+    return matchesSearch && matchesCollege && matchesProgram && matchesYearLevel;
+  });
+
+  // Filter current members
+  const filteredCurrentMembers = organizationMembers.filter(m => {
+    const matchesSearch = !currentMemberSearch ||
+      (m.users?.first_name?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
+      (m.users?.last_name?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
+      (m.users?.email?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
+      (m.users?.college?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
+      (m.users?.program?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false);
+
+    return matchesSearch;
+  });
+
+  // Handle member selection
+  const toggleMemberSelection = (memberId: string) => {
+    setSelectedMembers(prev =>
+      prev.includes(memberId)
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    );
+  };
+
+  // Add selected members
+  const addSelectedMembers = async () => {
+    if (selectedMembers.length === 0) return;
+
+    try {
+      setAddingMember(true);
+      const membersToAdd = selectedMembers.map(userId => ({
+        user_id: userId,
+        org_id: organizationId
+      }));
+
+      const { error } = await supabase
+        .from('org_members')
+        .insert(membersToAdd);
+
+      if (error) throw error;
+
+      setSelectedMembers([]);
+      fetchOrganizationMembers();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to add members');
+    } finally {
+      setAddingMember(false);
+    }
+  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="padding-4 space-y-6">
       {/* Add Member */}
       <div className="bg-white shadow rounded-lg p-6 space-y-4">
-        <h4 className="text-md font-medium text-gray-900 flex items-center">
-          <UserPlus className="h-5 w-5 mr-2" />Add Member
-        </h4>
-
-        <input
-          type="text"
-          placeholder="Search members..."
-          value={memberSearchQuery}
-          onChange={e => setMemberSearchQuery(e.target.value)}
-          className="block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-green-600 sm:text-sm"
-        />
-
-        <select
-          value={selectedMemberId}
-          onChange={e => setSelectedMemberId(e.target.value)}
-          className="block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
-        >
-          <option value="">Select a member</option>
-          {filteredAvailableMembers.map(m => (
-            <option key={m.id} value={m.id}>{m.first_name || 'Unknown'} {m.last_name || 'User'} - {m.college || 'N/A'} ({m.year_level || 'N/A'})</option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          placeholder="Position"
-          value={memberPosition}
-          onChange={e => setMemberPosition(e.target.value)}
-          className="block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
-        />
-
-        {/* Quick Select Buttons */}
-        <div className="flex flex-wrap gap-2">
-          {PRESET_POSITIONS.map((pos) => (
-            <button
-              key={pos}
-              type="button"
-              onClick={() => setMemberPosition(pos)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${memberPosition === pos
-                ? 'bg-green-100 text-green-800 ring-1 ring-green-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-            >
-              {pos}
-            </button>
-          ))}
-        </div>
-
         <button
-          onClick={addMember}
-          disabled={!selectedMemberId || addingMember}
-          className="w-full flex items-center justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={toggleAddMembers}
+          className="w-full flex items-center justify-between text-left hover:bg-gray-50 -m-6 p-6 rounded-lg transition-colors"
         >
-          {addingMember ? 'Adding...' : 'Add Member'}
+          <h4 className="text-md font-medium text-gray-900 flex items-center">
+            <UserPlus className="h-5 w-5 mr-2" />Add Members
+          </h4>
+          {showAddMembers ? (
+            <ChevronUp className="h-5 w-5 text-gray-500" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-500" />
+          )}
         </button>
+
+        {showAddMembers && (
+          <>
+            {/* Search and Filters */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 relative">
+                  <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, college, or program..."
+                    value={memberSearchQuery}
+                    onChange={e => setMemberSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                  {showFilters ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+                </button>
+              </div>
+
+              {showFilters && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-md">
+                  <select
+                    value={collegeFilter}
+                    onChange={e => setCollegeFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  >
+                    <option value="">All Colleges</option>
+                    {colleges.map(college => (
+                      <option key={college} value={college}>{college}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={programFilter}
+                    onChange={e => setProgramFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  >
+                    <option value="">All Programs</option>
+                    {programs.map(program => (
+                      <option key={program} value={program}>{program}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={yearLevelFilter}
+                    onChange={e => setYearLevelFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  >
+                    <option value="">All Year Levels</option>
+                    {yearLevels.map(level => (
+                      <option key={level} value={level.toString()}>{level}st Year</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Member Selection */}
+            <div className="border border-gray-200 rounded-md max-h-64 overflow-y-auto">
+              {filteredAvailableMembers.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  {availableMembers.length === 0 ? 'No available members' : 'No members match your search'}
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {filteredAvailableMembers.map(member => (
+                    <div
+                      key={member.id}
+                      className="flex items-center p-3 hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedMembers.includes(member.id)}
+                        onChange={() => toggleMemberSelection(member.id)}
+                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      />
+                      <div className="ml-3 flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-gray-900">
+                            {member.first_name || 'Unknown'} {member.last_name || 'User'}
+                          </p>
+                          <span className="text-xs text-gray-500">
+                            {member.year_level ? `${member.year_level}st Year` : ''}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500">{member.email}</p>
+                        <p className="text-xs text-gray-500">
+                          {member.college} - {member.program}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selection Summary and Add Button */}
+            {selectedMembers.length > 0 && (
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-md">
+                <span className="text-sm text-green-700">
+                  {selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected
+                </span>
+                <button
+                  onClick={addSelectedMembers}
+                  disabled={addingMember}
+                  className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50"
+                >
+                  {addingMember ? 'Adding...' : 'Add Selected Members'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Current Members */}
       <div className="bg-white shadow rounded-lg p-6 space-y-4">
-        <h4 className="text-md font-medium text-gray-900 flex items-center">
-          <Users className="h-5 w-5 mr-2" />Current Members ({organizationMembers.length})
-        </h4>
-        <div className="max-h-96 overflow-y-auto space-y-2">
-          {organizationMembers.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No members yet</p>
-          ) : (
-            organizationMembers.map(m => (
-              <div key={m.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-green-600">{m.users?.first_name ? m.users.first_name.charAt(0) : '?'}</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{m.users?.first_name || 'Unknown'} {m.users?.last_name || 'User'}</p>
-                      <p className="text-xs text-gray-500 flex items-center">
-                        <Mail className="h-3 w-3 mr-1" />{m.users?.email || 'N/A'}
-                      </p>
-                      <p className="text-xs text-gray-500 flex items-center">
-                        <GraduationCap className="h-3 w-3 mr-1" />
-                        {m.users?.college || 'N/A'} - {m.users?.program || 'N/A'} ({m.users?.year_level || 'N/A'})
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-green-600 font-medium mt-1">Member</p>
-                  <p className="text-xs text-gray-400">Joined: {new Date(m.joined_at).toLocaleDateString()}</p>
-                </div>
-                <button
-                  onClick={() => removeMember(m.user_id)}
-                  className="text-red-600 hover:text-red-700 p-1"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))
-          )}
+        <div className="flex items-center justify-between">
+          <h4 className="text-md font-medium text-gray-900 flex items-center">
+            <Users className="h-5 w-5 mr-2" />Current Members ({organizationMembers.length})
+          </h4>
+          <div className="relative">
+            <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search members..."
+              value={currentMemberSearch}
+              onChange={e => setCurrentMemberSearch(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Member
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  College
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Program
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Year
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Joined
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredCurrentMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                    {organizationMembers.length === 0 ? 'No members yet' : 'No members match your search'}
+                  </td>
+                </tr>
+              ) : (
+                filteredCurrentMembers.map(m => (
+                  <tr key={m.user_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-green-600">
+                            {m.users?.first_name ? m.users.first_name.charAt(0) : '?'}
+                          </span>
+                        </div>
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">
+                            {m.users?.first_name || 'Unknown'} {m.users?.last_name || 'User'}
+                          </div>
+                          <div className="text-sm text-gray-500">Member</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {m.users?.email || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {m.users?.college || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {m.users?.program || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {m.users?.year_level ? `${m.users.year_level}st Year` : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(m.joined_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => removeMember(m.user_id)}
+                        className="text-red-600 hover:text-red-900 p-1"
+                        title="Remove member"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

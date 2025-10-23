@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { Pencil, Trash2, Plus, Search } from "lucide-react";
+import { Pencil, Trash2, Plus, Search, Users } from "lucide-react";
 import CreateQuiz from "../pages/CreateQuiz";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -11,6 +11,14 @@ interface Quiz {
   org_id: string;
   open_at?: string | null;
   close_at?: string | null;
+  created_at: string;
+}
+
+interface QuizScore {
+  id: string;
+  user_id: string;
+  username: string;
+  score: number;
   created_at: string;
 }
 
@@ -25,6 +33,10 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
+  const [showScoresModal, setShowScoresModal] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
+  const [quizScores, setQuizScores] = useState<QuizScore[]>([]);
+  const [scoresLoading, setScoresLoading] = useState(false);
 
   // Fetch quizzes
   const fetchQuizzes = async () => {
@@ -63,7 +75,7 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
     }
   }, [searchTerm, quizzes]);
 
-  const handleDeleteQuiz = async (quizId: string) => {
+  const handleDeleteQuiz = async (quizId: number) => {
     if (!confirm("Are you sure you want to delete this quiz? This action cannot be undone.")) {
       return;
     }
@@ -92,6 +104,35 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
     setShowCreateModal(false);
     setEditingQuiz(null);
     fetchQuizzes(); // Refresh after creating/editing
+  };
+
+  const handleViewScores = async (quiz: Quiz) => {
+    setSelectedQuiz(quiz);
+    setShowScoresModal(true);
+    setScoresLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("scores")
+        .select("*")
+        .eq("quiz_id", quiz.id)
+        .eq("org_id", organizationId)
+        .order("score", { ascending: false });
+
+      if (error) throw error;
+      setQuizScores(data || []);
+    } catch (err: any) {
+      console.error("Error fetching quiz scores:", err);
+      toast.error("Failed to load quiz scores");
+    } finally {
+      setScoresLoading(false);
+    }
+  };
+
+  const handleCloseScoresModal = () => {
+    setShowScoresModal(false);
+    setSelectedQuiz(null);
+    setQuizScores([]);
   };
 
   const formatDate = (dateString: string) => {
@@ -163,6 +204,13 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
                 </div>
                 <div className="flex space-x-2 ml-4">
                   <button
+                    onClick={() => handleViewScores(quiz)}
+                    className="inline-flex items-center px-3 py-1 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-white hover:bg-blue-50"
+                  >
+                    <Users className="h-4 w-4 mr-1" />
+                    View Scores
+                  </button>
+                  <button
                     onClick={() => handleEditQuiz(quiz)}
                     className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                   >
@@ -204,6 +252,85 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
                 existingQuiz={editingQuiz}
                 onClose={handleCloseModal}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scores Modal */}
+      {showScoresModal && selectedQuiz && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Quiz Results: {selectedQuiz.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Total Responses: {quizScores.length}
+                  </p>
+                </div>
+                <button
+                  onClick={handleCloseScoresModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {scoresLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                </div>
+              ) : quizScores.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No one has taken this quiz yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Rank
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Username
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Score
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Submitted At
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {quizScores.map((score, index) => {
+                        const totalQuestions = selectedQuiz.data?.questions?.length || 1;
+                        
+                        return (
+                          <tr key={score.id} className={index < 3 ? "bg-yellow-50" : ""}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {index + 1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {score.username}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {score.score}/{totalQuestions}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(score.created_at).toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>

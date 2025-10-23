@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      community_goals: {
+        Row: {
+          created_at: string | null
+          current_progress: number | null
+          goal_target: number
+          goal_type: string
+          id: string
+          is_completed: boolean | null
+          org_id: string
+          quiz_id: number
+          reward_coins: number
+        }
+        Insert: {
+          created_at?: string | null
+          current_progress?: number | null
+          goal_target: number
+          goal_type: string
+          id?: string
+          is_completed?: boolean | null
+          org_id: string
+          quiz_id: number
+          reward_coins: number
+        }
+        Update: {
+          created_at?: string | null
+          current_progress?: number | null
+          goal_target?: number
+          goal_type?: string
+          id?: string
+          is_completed?: boolean | null
+          org_id?: string
+          quiz_id?: number
+          reward_coins?: number
+        }
+        Relationships: []
+      }
+      contest_submissions: {
+        Row: {
+          contest_id: string | null
+          id: string
+          image_url: string
+          org_id: string | null
+          submitted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          contest_id?: string | null
+          id?: string
+          image_url: string
+          org_id?: string | null
+          submitted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          contest_id?: string | null
+          id?: string
+          image_url?: string
+          org_id?: string | null
+          submitted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contest_submissions_contest_id_fkey"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "room_contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contest_submissions_contest_id_fkey2"
+            columns: ["contest_id"]
+            isOneToOne: false
+            referencedRelation: "room_contests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contest_submissions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contest_submissions_user_id_fkey2"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_attendance: {
+        Row: {
+          actual_attendance: number
+          id: string
+          post_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_attendance: number
+          id?: string
+          post_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_attendance?: number
+          id?: string
+          post_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_attendance_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: true
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_evaluations: {
         Row: {
           benefits: string
@@ -419,6 +540,7 @@ export type Database = {
           description: string | null
           email: string | null
           id: string
+          media: Json | null
           name: string
           org_code: string
           org_pic: string | null
@@ -436,6 +558,7 @@ export type Database = {
           description?: string | null
           email?: string | null
           id?: string
+          media?: Json | null
           name: string
           org_code: string
           org_pic?: string | null
@@ -453,6 +576,7 @@ export type Database = {
           description?: string | null
           email?: string | null
           id?: string
+          media?: Json | null
           name?: string
           org_code?: string
           org_pic?: string | null
@@ -600,25 +724,82 @@ export type Database = {
           },
         ]
       }
+      quiz_challenges: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          id: number
+          org_id: string | null
+          quiz_id: number | null
+          require_max_score: boolean | null
+          require_time_limit: boolean | null
+          reward_points: number
+          start_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          id?: number
+          org_id?: string | null
+          quiz_id?: number | null
+          require_max_score?: boolean | null
+          require_time_limit?: boolean | null
+          reward_points?: number
+          start_date: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          id?: number
+          org_id?: string | null
+          quiz_id?: number | null
+          require_max_score?: boolean | null
+          require_time_limit?: boolean | null
+          reward_points?: number
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_challenges_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_challenges_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quizzes: {
         Row: {
+          close_at: string | null
           created_at: string
           data: Json | null
           id: number
+          open_at: string | null
           org_id: string | null
           title: string | null
         }
         Insert: {
+          close_at?: string | null
           created_at?: string
           data?: Json | null
           id?: number
+          open_at?: string | null
           org_id?: string | null
           title?: string | null
         }
         Update: {
+          close_at?: string | null
           created_at?: string
           data?: Json | null
           id?: number
+          open_at?: string | null
           org_id?: string | null
           title?: string | null
         }
@@ -670,6 +851,50 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_contests: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          org_id: string | null
+          start_date: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          org_id?: string | null
+          start_date?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          org_id?: string | null
+          start_date?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_contests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -750,6 +975,45 @@ export type Database = {
             columns: ["quiz_id"]
             isOneToOne: false
             referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "your_constraint_name"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_rewards: {
+        Row: {
+          challenge_id: number
+          coins_awarded: number
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: number
+          coins_awarded: number
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: number
+          coins_awarded?: number
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_rewards_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_challenges"
             referencedColumns: ["id"]
           },
         ]
@@ -853,17 +1117,17 @@ export type Database = {
         Args: { p_post_id: string; p_user_id: string }
         Returns: undefined
       }
-      award_user_coins_once: {
-        Args:
-          | {
+      award_user_coins_once:
+        | {
+            Args: {
               p_action?: string
               p_points?: number
               p_post_id: string
               p_user_id: string
             }
-          | { p_post_id: string; p_user_id: string }
-        Returns: number
-      }
+            Returns: number
+          }
+        | { Args: { p_post_id: string; p_user_id: string }; Returns: number }
       complete_user_profile: {
         Args: {
           p_college?: string
@@ -888,10 +1152,7 @@ export type Database = {
         Args: { officer_id: string; organization_id?: string }
         Returns: undefined
       }
-      increment_view_count: {
-        Args: { post_id: string }
-        Returns: undefined
-      }
+      increment_view_count: { Args: { post_id: string }; Returns: undefined }
       is_officer: {
         Args: { member_id: string; organization_id?: string }
         Returns: boolean
@@ -908,6 +1169,7 @@ export type Database = {
         Args: { m_id: string; o_id: string }
         Returns: undefined
       }
+      update_quiz_challenge_status: { Args: never; Returns: undefined }
     }
     Enums: {
       user_role: "Member" | "Officer" | "Admin"

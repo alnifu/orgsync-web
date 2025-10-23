@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 
 export default function Dashboard() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(prev => !prev);
