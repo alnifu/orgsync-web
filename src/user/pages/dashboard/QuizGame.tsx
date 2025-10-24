@@ -64,22 +64,83 @@ const QuizGame: React.FC = () => {
   }, [isLoaded, user, quizId, orgId, selectedQuizData, sendMessage]);
 
   return (
-    <div style={{ position: "fixed", top: 0, left: 64, width: "100vw", height: "100vh", display: "flex", flexDirection: "column", background: "#000" }}>
-      <div style={{ padding: "10px", background: "rgba(0,0,0,0.7)", textAlign: "left" }}>
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        background: "#000",
+      }}
+    >
+      {/* 🔹 Top bar with back button */}
+      <div
+        style={{
+          padding: "10px",
+          background: "rgba(0,0,0,0.7)",
+          textAlign: "left",
+          flexShrink: 0,
+          zIndex: 10,
+        }}
+      >
         <button
           onClick={() => navigate(-1)}
-          style={{ padding: "8px 16px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}
+          style={{
+            padding: "8px 16px",
+            background: "#16a34a",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+          }}
         >
           ← Back
         </button>
       </div>
 
-      <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
-        {!isLoaded && <p style={{ color: "#fff", marginBottom: "1rem" }}>Loading Unity... {Math.round(loadingProgression * 100)}%</p>}
-        <Unity
-          unityProvider={unityProvider}
-          style={{ width: "100%", height: "100%", maxWidth: "960px", maxHeight: "600px", background: "#000" }}
-        />
+      {/* 🔸 Unity Game (Responsive 16:9 with spacing below header) */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          overflow: "hidden",
+          background: "#000",
+          paddingTop: "8px", // ✅ space below the buttons
+        }}
+      >
+        {!isLoaded && (
+          <p style={{ color: "#fff", marginBottom: "1rem" }}>
+            Loading Unity... {Math.round(loadingProgression * 100)}%
+          </p>
+        )}
+
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: "100vw",
+            aspectRatio: "16 / 9", // ✅ maintain perfect 16:9 ratio
+            background: "#000",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Unity
+            unityProvider={unityProvider}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "contain", // ✅ prevents stretching
+              background: "#000",
+            }}
+          />
+        </div>
       </div>
     </div>
   );

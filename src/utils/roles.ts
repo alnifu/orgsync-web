@@ -15,109 +15,74 @@ export interface OrgManager {
   assigned_at: string;
 }
 
-// Context-based caching - More secure than module variables
-// Data is scoped to React component tree and cleared on navigation
-let contextCache: {
-  data: { roles: UserRoles | null; orgManagers: OrgManager[] } | null;
-  timestamp: number;
-  userId: string;
-} | null = null;
-
-// Cache for 5 minutes (300,000 ms) - balances performance with security
-const CACHE_DURATION = 5 * 60 * 1000;
-// let rolesCache: UserRoles | null = null;
-// let orgManagersCache: OrgManager[] | null = null;
+// TODO: Improve security by implementing proper RLS policies and role validation
+// Current implementation relies on client-side checks which can be bypassed
 
 export const useUserRoles = (userId: string | undefined) => {
   const [roles, setRoles] = useState<UserRoles | null>(null);
   const [orgManagers, setOrgManagers] = useState<OrgManager[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
-      console.log('useUserRoles: No userId provided');
       setLoading(false);
       return;
     }
 
-    // Check context cache with time validation
-    const now = Date.now();
-    if (contextCache &&
-        contextCache.userId === userId &&
-        contextCache.data &&
-        (now - contextCache.timestamp) < CACHE_DURATION) {
-      console.log('useUserRoles: Using context cache (age:', Math.round((now - contextCache.timestamp) / 1000), 's, expires in:', Math.round((CACHE_DURATION - (now - contextCache.timestamp)) / 1000), 's)');
-      setRoles(contextCache.data.roles);
-      setOrgManagers(contextCache.data.orgManagers);
-      setLoading(false);
-      return;
-    }
-
-    console.log('useUserRoles: Fetching fresh role data for userId:', userId);
-    const fetchRoles = async () => {
+    const fetchUserRoles = async () => {
       try {
-        // Fetch user role
+        setLoading(true);
+        setError(null);
+
+        // Fetch user role from user_roles table
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
-          .select('*')
+          .select('role, granted_at')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
 
-        if (roleError && roleError.code !== 'PGRST116') { // PGRST116 is "not found"
-          console.error('useUserRoles: Error fetching user role:', roleError);
-        } else {
-          console.log('useUserRoles: User role data:', roleData);
+        if (roleError) {
+          console.error('Error fetching user role:', roleError);
+          setError('Failed to fetch user role');
         }
 
-        // Fetch organization managers
+        // Fetch organization management roles
         const { data: managersData, error: managersError } = await supabase
           .from('org_managers')
-          .select('*')
+          .select('org_id, manager_role, position, assigned_at')
           .eq('user_id', userId);
 
         if (managersError) {
-          console.error('useUserRoles: Error fetching org managers:', managersError);
-        } else {
-          console.log('useUserRoles: Org managers data:', managersData);
+          console.error('Error fetching org managers:', managersError);
+          setError('Failed to fetch organization roles');
         }
 
+        // Set the data
         const userRoles = roleData ? {
           role: roleData.role as UserRole,
           granted_at: roleData.granted_at
         } : null;
 
-        const orgManagers = managersData || [];
-
-        // Cache the results with timestamp and user validation
-        contextCache = {
-          data: { roles: userRoles, orgManagers },
-          timestamp: now,
-          userId
-        };
-
-        console.log('useUserRoles: Setting state with:', { userRoles, orgManagers });
         setRoles(userRoles);
-        setOrgManagers(orgManagers);
-      } catch (error) {
-        console.error('useUserRoles: Error fetching user roles:', error);
+        setOrgManagers(managersData || []);
+
+      } catch (err) {
+        console.error('Error in fetchUserRoles:', err);
+        setError('Failed to load user roles');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRoles();
+    fetchUserRoles();
   }, [userId]);
-
-  const clearCache = () => {
-    contextCache = null;
-    console.log('useUserRoles: Cache cleared');
-  };
 
   return {
     roles,
     orgManagers,
     loading,
-    clearCache,
+    error,
     // Helper functions
     isAdmin: () => roles?.role === 'admin',
     isOfficer: () => roles?.role === 'officer',

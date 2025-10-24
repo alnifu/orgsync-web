@@ -4,7 +4,7 @@ import { useParams } from 'react-router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
-import { useUserRoles, canManageOrg } from '../../../utils/roles';
+import { useUserRoles, canManageOrg, canEditOrg } from '../../../utils/roles';
 import AccessDenied from '../../../components/AccessDenied';
 import type { Organization, User } from '../../../types/database.types';
 import OrganizationOverview from '../../components/OrganizationOverview';
@@ -16,17 +16,20 @@ import EditOrganizationModal from '../../components/EditOrganizationModal';
 import DeleteOrganizationModal from '../../components/DeleteOrganizationModal';
 import OrganizationLeaderboard from '../../components/OrganizationLeaderboard';
 import OrganizationQuizzes from '../../components/OrganizationQuizzes';
+import SelectOfficer from '../../components/SelectOfficer';
 import { Pencil, Trash2, UserPlus2 } from 'lucide-react';
 
 export default function OrganizationDetails() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { roles, orgManagers, loading: rolesLoading, isAdmin } = useUserRoles(user?.id);
+  const { roles, orgManagers, loading: rolesLoading } = useUserRoles(user?.id);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [adviser, setAdviser] = useState<User | null>(null);
+  const [officers, setOfficers] = useState<User[]>([]);
   const [isSelectAdviserOpen, setIsSelectAdviserOpen] = useState(false);
+  const [isSelectOfficerOpen, setIsSelectOfficerOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -40,7 +43,7 @@ export default function OrganizationDetails() {
           .select('*')
           .eq('id', id)
           .single();
-        
+
         if (error) throw error;
         setOrganization(data);
       } catch (err) {
@@ -87,7 +90,7 @@ export default function OrganizationDetails() {
           .eq('org_id', id)
           .eq('manager_role', 'adviser')
           .maybeSingle();
-        console.log('Adviser data:', data, 'Error:', error);     
+        console.log('Adviser data:', data, 'Error:', error);
         if (error) throw error;
         if (data) {
           setAdviser(data.users as unknown as User);
@@ -102,6 +105,97 @@ export default function OrganizationDetails() {
 
     fetchAdviser();
   }, [id]);
+
+  // Fetch officers details
+  useEffect(() => {
+    const fetchOfficers = async () => {
+      if (!id) return;
+      try {
+        const { data, error } = await supabase
+          .from('org_managers')
+          .select(`
+            user_id,
+            org_id,
+            manager_role,
+            assigned_at,
+            users (
+              id,
+              first_name,
+              last_name,
+              avatar_url,
+              points,
+              preferences,
+              created_at,
+              updated_at,
+              student_number,
+              program,
+              year_level,
+              employee_id,
+              department,
+              position,
+              user_type,
+              email
+            )
+          `)
+          .eq('org_id', id)
+          .eq('manager_role', 'officer');
+        console.log('Officers data:', data, 'Error:', error);
+        if (error) throw error;
+        if (data) {
+          setOfficers(data.map(item => item.users as unknown as User));
+        } else {
+          setOfficers([]);
+        }
+      } catch (err) {
+        console.error('Error fetching officers:', err);
+        setOfficers([]);
+      }
+    };
+
+    fetchOfficers();
+  }, [id]);
+
+  const refetchOfficers = async () => {
+    if (!id) return;
+    try {
+      const { data, error } = await supabase
+        .from('org_managers')
+        .select(`
+          user_id,
+          org_id,
+          manager_role,
+          assigned_at,
+          users (
+            id,
+            first_name,
+            last_name,
+            avatar_url,
+            points,
+            preferences,
+            created_at,
+            updated_at,
+            student_number,
+            program,
+            year_level,
+            employee_id,
+            department,
+            position,
+            user_type,
+            email
+          )
+        `)
+        .eq('org_id', id)
+        .eq('manager_role', 'officer');
+      if (error) throw error;
+      if (data) {
+        setOfficers(data.map(item => item.users as unknown as User));
+      } else {
+        setOfficers([]);
+      }
+    } catch (err) {
+      console.error('Error refetching officers:', err);
+    }
+  };
 
   const handleRemoveAdviser = async (memberId: string, orgId: string) => {
     try {
@@ -135,6 +229,43 @@ export default function OrganizationDetails() {
       setAdviser(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove adviser');
+      console.log('error:', err);
+    }
+  };
+
+  const handleRemoveOfficer = async (memberId: string, orgId: string) => {
+    try {
+      const { error: removeError } = await supabase
+        .from('org_managers')
+        .delete()
+        .eq('user_id', memberId)
+        .eq('org_id', orgId)
+        .eq('manager_role', 'officer');
+
+      if (removeError) throw removeError;
+
+      // Check if user has any remaining manager roles
+      const { data: remainingRoles, error: checkError } = await supabase
+        .from('org_managers')
+        .select('manager_role')
+        .eq('user_id', memberId);
+
+      if (checkError) throw checkError;
+
+      // If no remaining roles, demote back to member
+      if (!remainingRoles || remainingRoles.length === 0) {
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .update({ role: 'member' })
+          .eq('user_id', memberId);
+
+        if (roleUpdateError) throw roleUpdateError;
+      }
+
+      // Update local state
+      setOfficers(prev => prev.filter(officer => officer.id !== memberId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove officer');
       console.log('error:', err);
     }
   };
@@ -204,28 +335,24 @@ export default function OrganizationDetails() {
             )}
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">{organization.name}</h1>
-              <p className="text-sm text-gray-500">{organization.org_code} • {organization.abbrev_name}</p>
+              <p className="text-sm text-gray-500">{organization.abbrev_name}</p>
             </div>
           </div>
           <div className="flex space-x-2">
-            {isAdmin() && (
-              <>
-                <button
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </button>
-              </>
-            )}
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </button>
+            <button
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </button>
           </div>
         </div>
       </div>
@@ -234,7 +361,7 @@ export default function OrganizationDetails() {
       <div className="bg-white shadow sm:rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-base font-semibold leading-6 text-gray-900">Organization Adviser</h3>
-          
+
           {adviser ? (
             <div className="mt-2 max-w-xl text-sm text-gray-500">
               <div className="flex items-center justify-between">
@@ -257,14 +384,12 @@ export default function OrganizationDetails() {
                     <div className="text-sm text-gray-500">{adviser.email}</div>
                   </div>
                 </div>
-                {isAdmin() && (
-                  <button
-                    onClick={() => handleRemoveAdviser(adviser.id, organization.id)}
-                    className="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-500"
-                  >
-                    Remove adviser
-                  </button>
-                )}
+                <button
+                  onClick={() => handleRemoveAdviser(adviser.id, organization.id)}
+                  className="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-500"
+                >
+                  Remove adviser
+                </button>
               </div>
             </div>
           ) : (
@@ -272,23 +397,77 @@ export default function OrganizationDetails() {
               <p className="mt-2 text-sm text-gray-500">
                 No adviser assigned to this organization yet.
               </p>
-              {isAdmin() && (
-                <div className="mt-5">
-                  <button
-                    onClick={() => setIsSelectAdviserOpen(true)}
-                    className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
-                  >
-                    <UserPlus2 className="h-4 w-4 mr-2" />
-                    Assign Adviser
-                  </button>
-                </div>
-              )}
+              <div className="mt-5">
+                <button
+                  onClick={() => setIsSelectAdviserOpen(true)}
+                  className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+                >
+                  <UserPlus2 className="h-4 w-4 mr-2" />
+                  Assign Adviser
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Organization Officers */}
+      <div className="bg-white shadow sm:rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-base font-semibold leading-6 text-gray-900">Organization Officers</h3>
+
+          {officers.length > 0 ? (
+            <div className="mt-2 space-y-3">
+              {officers.map((officer) => (
+                <div key={officer.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    {officer.avatar_url ? (
+                      <img
+                        src={officer.avatar_url}
+                        alt={`${officer.first_name} ${officer.last_name}`}
+                        className="h-10 w-10 rounded-full"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <span className="text-green-700 font-medium text-sm">
+                          {(officer.first_name ? officer.first_name.charAt(0).toUpperCase() : '?')}{(officer.last_name ? officer.last_name.charAt(0).toUpperCase() : '?')}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-medium text-gray-900">{officer.first_name} {officer.last_name}</div>
+                      <div className="text-sm text-gray-500">{officer.email}</div>
+                    </div>
+                  </div>
+                  {canEditOrg(roles?.role || null, orgManagers, id || '') && (
+                    <button
+                      onClick={() => handleRemoveOfficer(officer.id, organization.id)}
+                      className="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-500"
+                    >
+                      Remove officer
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-gray-500">
+              No officers assigned to this organization yet.
+            </p>
+          )}
+          {canEditOrg(roles?.role || null, orgManagers, id || '') && (
+            <div className="mt-5">
+              <button
+                onClick={() => setIsSelectOfficerOpen(true)}
+                className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+              >
+                <UserPlus2 className="h-4 w-4 mr-2" />
+                Add Officer
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="border-b border-gray-200">
           <TabsTrigger
@@ -336,24 +515,24 @@ export default function OrganizationDetails() {
 
         {/* Members Tab */}
         <TabsContent value="members" className="space-y-4">
-          <OrganizationMembers 
-            organizationId={id!} 
+          <OrganizationMembers
+            organizationId={id!}
             onError={handleError}
           />
         </TabsContent>
 
         {/* Posts Tab */}
         <TabsContent value="posts" className="space-y-4">
-          <OrganizationPosts 
-            organizationId={id!} 
+          <OrganizationPosts
+            organizationId={id!}
             onError={handleError}
           />
         </TabsContent>
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
-          <OrganizationReports 
-            organizationId={id!} 
+          <OrganizationReports
+            organizationId={id!}
             onError={handleError}
           />
         </TabsContent>
@@ -382,6 +561,14 @@ export default function OrganizationDetails() {
         onClose={() => setIsSelectAdviserOpen(false)}
         orgId={id!}
         onError={handleError}
+      />
+
+      <SelectOfficer
+        isOpen={isSelectOfficerOpen}
+        onClose={() => setIsSelectOfficerOpen(false)}
+        orgId={id!}
+        onError={handleError}
+        onSuccess={refetchOfficers}
       />
 
       <EditOrganizationModal

@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { supabase } from '../../lib/supabase';
 import type { User } from '../../types/database.types';
 import { ArrowLeft, Edit, Camera, Save, X, Shield, Coins } from 'lucide-react';
 import ImageCropModal from '../components/ImageCropModal';
+import { useAuth } from '../../context/AuthContext';
+import { useUserRoles } from '../../utils/roles';
 
 // Mapping of programs to their corresponding department codes
 const programToDepartmentMap: Record<string, string> = {
@@ -52,6 +54,8 @@ const programToDepartmentMap: Record<string, string> = {
 export default function AdminUserProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const { roles, loading: rolesLoading } = useUserRoles(currentUser?.id);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,12 +77,29 @@ export default function AdminUserProfile() {
   const [showCropModal, setShowCropModal] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string>('');
   const [coins, setCoins] = useState<number>(0);
+  const hasFetchedRef = useRef(false);
+
+  // Reset fetch flag when user ID changes
+  useEffect(() => {
+    hasFetchedRef.current = false;
+    setUser(null);
+    setLoading(true);
+    setError(null);
+  }, [id]);
 
   // Fetch user profile
   useEffect(() => {
     const fetchUser = async () => {
-      if (!id) return;
-      try {
+      if (!id || !roles || hasFetchedRef.current) return;
+
+      // Check permissions - non-admins can only view their own profile
+      if (roles.role !== 'admin' && currentUser?.id !== id) {
+        setError('You can only view your own profile.');
+        setLoading(false);
+        return;
+      }
+
+      hasFetchedRef.current = true;      try {
         setLoading(true);
         const { data, error } = await supabase
           .from('users')
@@ -121,7 +142,7 @@ export default function AdminUserProfile() {
     };
 
     fetchUser();
-  }, [id]);
+  }, [id, roles, currentUser?.id]);
 
   // Realtime subscription for coins
   useEffect(() => {
@@ -147,6 +168,12 @@ export default function AdminUserProfile() {
 
   const handleSave = async () => {
     if (!user) return;
+
+    // Check permissions - non-admins can only edit their own profile
+    if (roles?.role !== 'admin' && currentUser?.id !== user.id) {
+      setError('You can only edit your own profile.');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -328,7 +355,7 @@ export default function AdminUserProfile() {
         onCancel={handleCropCancel}
       />
 
-     <div className="min-h-screen bg-white rounded-lg">
+     <div className="bg-white">
       {/* Header */}
       <div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -344,7 +371,7 @@ export default function AdminUserProfile() {
                 <h1 className="text-xl font-semibold text-gray-900">User Profile</h1>
               </div>
             </div>
-            {!isEditing && (
+            {!isEditing && (roles?.role === 'admin' || currentUser?.id === id) && (
               <button
                 onClick={() => setIsEditing(true)}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
@@ -361,7 +388,7 @@ export default function AdminUserProfile() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white shadow rounded-lg overflow-hidden">
           {/* Profile Header */}
-              <div className="px-6 py-8 bg-gradient-to-r from-green-600 to-green-700">
+              <div className="px-6 py-8 bg-white">
             <div className="flex items-center">
               <div className="relative">
                 {isEditing && avatarFile ? (
@@ -402,23 +429,23 @@ export default function AdminUserProfile() {
                       type="text"
                       value={editForm.first_name}
                       onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
-                      className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
+                      className="text-2xl font-bold text-gray-900 bg-transparent border-b border-gray-300 focus:border-green-500 outline-none"
                       placeholder="First name"
                     />
                     <input
                       type="text"
                       value={editForm.last_name}
                       onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
-                      className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
+                      className="text-2xl font-bold text-gray-900 bg-transparent border-b border-gray-300 focus:border-green-500 outline-none"
                       placeholder="Last name"
                     />
                   </div>
                 ) : (
-                  <h2 className="text-2xl font-bold text-white">
+                  <h2 className="text-2xl font-bold text-gray-900">
                     {user.first_name} {user.last_name}
                   </h2>
                 )}
-                <p className="text-green-100">{user.email}</p>
+                <p className="text-gray-600">{user.email}</p>
                 <div className="mt-2">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     {user.user_type || 'Not specified'}
@@ -454,9 +481,7 @@ export default function AdminUserProfile() {
                   <div>
                     <dt className="text-sm font-medium text-gray-500">User Type</dt>
                     <dd className="text-sm text-gray-900">
-                     
-                        <span className="capitalize">{user.user_type || 'Not specified'}</span>
-
+                      <span className="capitalize">{user.user_type || 'Not specified'}</span>
                     </dd>
                   </div>
 
@@ -648,13 +673,13 @@ export default function AdminUserProfile() {
                     </div>
                   )}
 
-                  {/* <div>
+                  <div>
                     <dt className="text-sm font-medium text-gray-500">Coins</dt>
                     <dd className="text-sm text-gray-900 flex items-center">
                       <Coins className="w-4 h-4 mr-1 text-orange-500" />
                       {coins}
                     </dd>
-                  </div> */}
+                  </div>
 
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Member Since</dt>

@@ -124,15 +124,29 @@ export default function PromoteModal({
 
       // If no role exists or current role is 'member', update to 'officer'
       if (!existingRole || existingRole.role === 'member') {
-        const { error: roleUpdateError } = await supabase
-          .from('user_roles')
-          .upsert({
-            user_id: selectedMember.id,
-            role: 'officer',
-            granted_at: new Date().toISOString()
-          });
+        if (existingRole) {
+          // Update existing role
+          const { error: roleUpdateError } = await supabase
+            .from('user_roles')
+            .update({
+              role: 'officer',
+              granted_at: new Date().toISOString()
+            })
+            .eq('user_id', selectedMember.id);
 
-        if (roleUpdateError) throw roleUpdateError;
+          if (roleUpdateError) throw roleUpdateError;
+        } else {
+          // Insert new role
+          const { error: roleInsertError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: selectedMember.id,
+              role: 'officer',
+              granted_at: new Date().toISOString()
+            });
+
+          if (roleInsertError) throw roleInsertError;
+        }
       }
 
       // Insert into org_managers table

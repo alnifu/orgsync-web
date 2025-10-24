@@ -190,6 +190,7 @@ export default function NewOrganization() {
               <option value="CITE">CITE - College of Information Technology and Engineering</option>
               <option value="CON">CON - College of Nursing</option>
               <option value="COL">COL - College of Law</option>
+              <option value="OTHERS">Others</option>
             </select>
           </div>
 

@@ -11,7 +11,9 @@ import {
   FileText,
   LogOut,
   LayoutDashboard,
-  BarChart3
+  BarChart3,
+  Trophy,
+  Image
 } from "lucide-react";
 
 export default function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: () => void }) {
@@ -34,12 +36,24 @@ export default function Sidebar({ isCollapsed, onToggle }: { isCollapsed: boolea
         { to: "officers", label: "Officers", icon: Users },
         { to: "members", label: "Members", icon: User },
         { to: "posts", label: "Posts", icon: FileText },
+        { to: "contests", label: "Contests", icon: Trophy },
+        { to: "submissions", label: "Submissions", icon: Image },
         { to: "reports", label: "Reports", icon: BarChart3 },
         ...baseLinks.slice(2) // Return to Portal
       ];
     }
 
-    // Officers and advisers only see basic links
+    // Officers and advisers see contest management links
+    if (isOfficer() || isAdviser()) {
+      return [
+        ...baseLinks.slice(0, 2), // My Profile and Organizations
+        { to: "contests", label: "Contests", icon: Trophy },
+        { to: "submissions", label: "Submissions", icon: Image },
+        ...baseLinks.slice(2) // Return to Portal
+      ];
+    }
+
+    // Regular users only see basic links
     return baseLinks;
   };
 

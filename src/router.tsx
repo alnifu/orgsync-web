@@ -17,6 +17,8 @@ import AdminPosts from "./admin/pages/dashboard/Posts";
 import AdminUserProfile from "./admin/pages/UserProfile";
 import AdminReports from "./admin/pages/Reports";
 import PostDetail from "./admin/pages/PostDetail";
+import OfficerContestManager from "./admin/pages/OfficerContestManager";
+import OfficerSubmissions from "./admin/pages/OfficerSubmissions";
 
 // User Routes
 import UserDashboard from "./user/pages/Dashboard";
@@ -26,6 +28,7 @@ import UserOrganizations from "./user/pages/dashboard/Organizations";
 import UserProfile from "./user/pages/dashboard/Profile";
 import UserGames from "./user/pages/dashboard/Games";
 import UserDashboardHome from "./user/pages/dashboard/DashboardHome";
+import MemberContests from "./user/pages/dashboard/ContestPage";
 import QuizGame from "./user/pages/dashboard/QuizGame";
 import RoomGame from "./user/pages/dashboard/RoomGame";
 import QuizSelection from "./user/pages/dashboard/QuizSelection";
@@ -128,7 +131,9 @@ const router = createBrowserRouter([
       { path: "posts", element: <AdminPosts /> },
       { path: "reports", element: <AdminReports /> },
       { path: "profile/:id", element: <AdminUserProfile /> },
-      { path: "posts/:postId", element: <PostDetail /> }
+      { path: "posts/:postId", element: <PostDetail /> },
+      { path: "contests", element: <OfficerContestManager /> },
+      { path: "submissions", element: <OfficerSubmissions /> }
     ]
   },
   // User Routes
@@ -164,7 +169,11 @@ const router = createBrowserRouter([
         path: "games",
         element: <UserGames />
       },
-       { path: "quiz-games", element: <QuizGame /> },
+      {
+        path: "member-contests",
+        element: <MemberContests />
+      },
+      { path: "quiz-games", element: <QuizGame /> },
       { path: "room-game", element: <RoomGame /> },
       { path: "quiz-selection", element: <QuizSelection /> },
       { path: "leaderboard", element: <LeaderboardPage /> },
