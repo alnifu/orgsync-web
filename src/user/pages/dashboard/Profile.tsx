@@ -312,8 +312,8 @@ export default function UserProfile() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-green-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading profile...</p>
         </div>
       </div>
     );
@@ -323,12 +323,18 @@ export default function UserProfile() {
     console.log('Rendering error UI - error:', error, 'user:', user);
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error || 'User not found'}</p>
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center border border-gray-200">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <p className="text-red-600 mb-4 text-lg font-medium">{error || 'User not found'}</p>
           <button
             onClick={() => navigate(-1)}
-            className="text-blue-600 hover:text-blue-800"
+            className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-sm hover:shadow-md"
           >
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Go back
           </button>
         </div>
@@ -348,15 +354,15 @@ export default function UserProfile() {
 
       <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <button
                 onClick={() => navigate(-1)}
-                className="mr-4 p-2 rounded-full hover:bg-green-200"
+                className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-5 w-5 text-gray-600" />
               </button>
               <div className="flex items-center">
                 <h1 className="text-xl font-semibold text-gray-900">Profile</h1>
@@ -365,7 +371,7 @@ export default function UserProfile() {
             {!isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                className="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Profile
@@ -376,34 +382,41 @@ export default function UserProfile() {
       </div>
 
       {/* Profile Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
           {/* Profile Header */}
-              <div className="px-6 py-8 bg-gradient-to-r from-green-600 to-green-700">
-            <div className="flex items-center">
-              <div className="relative">
+          <div className="relative bg-gradient-to-r from-green-600 to-green-700 px-6 py-12">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="relative flex items-center">
+              <div className="relative group">
                 {isEditing && avatarFile ? (
-                  <img
-                    src={URL.createObjectURL(avatarFile)}
-                    alt="Preview"
-                    className="h-24 w-24 rounded-full object-cover border-4 border-white"
-                  />
+                  <div className="relative">
+                    <img
+                      src={URL.createObjectURL(avatarFile)}
+                      alt="Preview"
+                      className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20"
+                    />
+                    <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  </div>
                 ) : user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={`${user.first_name} ${user.last_name}`}
-                    className="h-24 w-24 rounded-full object-cover border-4 border-white"
-                  />
+                  <div className="relative">
+                    <img
+                      src={user.avatar_url}
+                      alt={`${user.first_name} ${user.last_name}`}
+                      className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20"
+                    />
+                    <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  </div>
                 ) : (
-                  <div className="h-24 w-24 rounded-full bg-gray-300 border-4 border-white flex items-center justify-center">
-                    <span className="text-2xl font-bold text-gray-600">
+                  <div className="h-32 w-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-4 border-white shadow-2xl ring-4 ring-white/20 flex items-center justify-center">
+                    <span className="text-4xl font-bold text-gray-600">
                       {(user.first_name ? user.first_name.charAt(0) : '?')}{(user.last_name ? user.last_name.charAt(0) : '?')}
                     </span>
                   </div>
                 )}
                 {isEditing && (
-                  <label className="absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg cursor-pointer hover:bg-gray-50">
-                    <Camera className="h-4 w-4 text-gray-600" />
+                  <label className="absolute bottom-2 right-2 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-200 hover:scale-110 border border-gray-200">
+                    <Camera className="h-5 w-5 text-gray-600" />
                     <input
                       type="file"
                       accept="image/*"
@@ -413,161 +426,173 @@ export default function UserProfile() {
                   </label>
                 )}
               </div>
-              <div className="ml-6">
+              <div className="ml-8 text-white">
                 {isEditing ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <input
                       type="text"
                       value={editForm.first_name}
                       onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
-                      className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
+                      className="text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none text-white placeholder-white/70"
                       placeholder="First name"
                     />
                     <input
                       type="text"
                       value={editForm.last_name}
                       onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
-                      className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
+                      className="text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none text-white placeholder-white/70"
                       placeholder="Last name"
                     />
                   </div>
                 ) : (
-                  <h2 className="text-2xl font-bold text-white">
+                  <h2 className="text-3xl font-bold mb-2">
                     {user.first_name} {user.last_name}
                   </h2>
                 )}
-                <p className="text-green-100">{user.email}</p>
-                <div className="mt-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <p className="text-green-100 text-lg mb-3">{user.email}</p>
+                <div className="flex items-center space-x-3">
+                  <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm border border-white/30">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                     {user.user_type || 'Not specified'}
                   </span>
+                  <div className="flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-orange-500/20 backdrop-blur-sm border border-orange-400/30">
+                    <Coins className="w-4 h-4 mr-2 text-orange-300" />
+                    <span className="text-orange-100">{coins} Coins</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Profile Details */}
-          <div className="px-6 py-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Personal Information */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
-                <dl className="space-y-3">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Email</dt>
-                    <dd className="text-sm text-gray-900">
+          <div className="px-8 py-8 bg-gray-50">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Personal Information Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center mb-6">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900">Personal Information</h3>
+                </div>
+                <dl className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                    <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Email</dt>
+                    <dd className="text-sm text-gray-900 flex-1">
                       {isEditing ? (
                         <input
                           type="email"
                           value={editForm.email}
                           onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                         />
                       ) : (
-                        user.email
+                        <span className="font-medium">{user.email}</span>
                       )}
                     </dd>
                   </div>
 
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">User Type</dt>
-                    <dd className="text-sm text-gray-900">
-                     
-                        <span className="capitalize">{user.user_type || 'Not specified'}</span>
-
-                    </dd>
-                  </div>
-
                   {user.user_type === 'student' && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Student Number</dt>
-                      <dd className="text-sm text-gray-900">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editForm.student_number}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, student_number: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
-                        ) : (
-                          user.student_number || 'Not provided'
-                        )}
-                      </dd>
-                    </div>
-                  )}
+                    <>
+                      <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                        <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Student Number</dt>
+                        <dd className="text-sm text-gray-900 flex-1">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editForm.student_number}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, student_number: e.target.value }))}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            />
+                          ) : (
+                            <span className="font-medium">{user.student_number || 'Not provided'}</span>
+                          )}
+                        </dd>
+                      </div>
 
-                  {user.user_type === 'student' && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Year Level</dt>
-                      <dd className="text-sm text-gray-900">
-                        {isEditing ? (
-                          <select
-                            value={editForm.year_level}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, year_level: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          >
-                            <option value="">Select year</option>
-                            <option value="1">1st Year</option>
-                            <option value="2">2nd Year</option>
-                            <option value="3">3rd Year</option>
-                            <option value="4">4th Year</option>
-                            <option value="5">5th Year</option>
-                          </select>
-                        ) : (
-                          user.year_level ? `${user.year_level}th Year` : 'Not specified'
-                        )}
-                      </dd>
-                    </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                        <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Year Level</dt>
+                        <dd className="text-sm text-gray-900 flex-1">
+                          {isEditing ? (
+                            <select
+                              value={editForm.year_level}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, year_level: e.target.value }))}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            >
+                              <option value="">Select year</option>
+                              <option value="1">1st Year</option>
+                              <option value="2">2nd Year</option>
+                              <option value="3">3rd Year</option>
+                              <option value="4">4th Year</option>
+                              <option value="5">5th Year</option>
+                            </select>
+                          ) : (
+                            <span className="font-medium">{user.year_level ? `${user.year_level}th Year` : 'Not specified'}</span>
+                          )}
+                        </dd>
+                      </div>
+                    </>
                   )}
 
                   {user.user_type === 'faculty' && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Employee ID</dt>
-                      <dd className="text-sm text-gray-900">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editForm.employee_id}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, employee_id: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
-                        ) : (
-                          user.employee_id || 'Not provided'
-                        )}
-                      </dd>
-                    </div>
-                  )}
+                    <>
+                      <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                        <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Employee ID</dt>
+                        <dd className="text-sm text-gray-900 flex-1">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editForm.employee_id}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, employee_id: e.target.value }))}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            />
+                          ) : (
+                            <span className="font-medium">{user.employee_id || 'Not provided'}</span>
+                          )}
+                        </dd>
+                      </div>
 
-                  {user.user_type === 'faculty' && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Position</dt>
-                      <dd className="text-sm text-gray-900">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editForm.position}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, position: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          />
-                        ) : (
-                          user.position || 'Not specified'
-                        )}
-                      </dd>
-                    </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                        <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Position</dt>
+                        <dd className="text-sm text-gray-900 flex-1">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editForm.position}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, position: e.target.value }))}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                            />
+                          ) : (
+                            <span className="font-medium">{user.position || 'Not specified'}</span>
+                          )}
+                        </dd>
+                      </div>
+                    </>
                   )}
                 </dl>
               </div>
 
-              {/* Academic Information */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Academic Information</h3>
-                <dl className="space-y-3">
+              {/* Academic Information Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center mb-6">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900">Academic Information</h3>
+                </div>
+                <dl className="space-y-4">
                   {user.user_type === 'student' && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Department</dt>
-                      <dd className="text-sm text-gray-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                      <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Department</dt>
+                      <dd className="text-sm text-gray-900 flex-1">
                         {isEditing ? (
-                          <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
                             {editForm.department ? (
                               editForm.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
                               editForm.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
@@ -579,57 +604,45 @@ export default function UserProfile() {
                             ) : "Select a program to auto-populate department"}
                           </div>
                         ) : (
-                          user.department ? (
-                            user.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
-                            user.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
-                            user.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
-                            user.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
-                            user.department === "CON" ? "CON - College of Nursing" :
-                            user.department === "COL" ? "COL - College of Law" :
-                            user.department
-                          ) : 'Not specified'
+                          <span className="font-medium">
+                            {user.department ? (
+                              user.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                              user.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                              user.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                              user.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                              user.department === "CON" ? "CON - College of Nursing" :
+                              user.department === "COL" ? "COL - College of Law" :
+                              user.department
+                            ) : 'Not specified'}
+                          </span>
                         )}
                       </dd>
                     </div>
                   )}
 
                   {user.user_type === 'faculty' && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Department</dt>
-                      <dd className="text-sm text-gray-900">
-                        {isEditing ? (
-                          <select
-                            value={editForm.department}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, department: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                          >
-                            <option value="">Select department</option>
-                            <option value="CBEAM">CBEAM - College of Business, Economics, Accountancy and Management</option>
-                            <option value="CEAS">CEAS - College of Education, Arts and Sciences</option>
-                            <option value="CIHTM">CIHTM - College of International Hospitality and Tourism Management</option>
-                            <option value="CITE">CITE - College of Information Technology and Engineering</option>
-                            <option value="CON">CON - College of Nursing</option>
-                            <option value="COL">COL - College of Law</option>
-                          </select>
-                        ) : (
-                          user.department ? (
-                            user.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
-                            user.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
-                            user.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
-                            user.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
-                            user.department === "CON" ? "CON - College of Nursing" :
-                            user.department === "COL" ? "COL - College of Law" :
-                            user.department
-                          ) : 'Not specified'
-                        )}
+                    <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                      <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Department</dt>
+                      <dd className="text-sm text-gray-900 flex-1">
+                        <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                          {editForm.department ? (
+                            editForm.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                            editForm.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                            editForm.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                            editForm.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                            editForm.department === "CON" ? "CON - College of Nursing" :
+                            editForm.department === "COL" ? "COL - College of Law" :
+                            editForm.department
+                          ) : "Department not set"}
+                        </div>
                       </dd>
                     </div>
                   )}
 
                   {user.user_type === 'student' && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Program</dt>
-                      <dd className="text-sm text-gray-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                      <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Program</dt>
+                      <dd className="text-sm text-gray-900 flex-1">
                         {isEditing ? (
                           <select
                             value={editForm.program}
@@ -647,7 +660,7 @@ export default function UserProfile() {
                                 return newForm;
                               });
                             }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                           >
                             <option value="">Select program</option>
 
@@ -700,28 +713,22 @@ export default function UserProfile() {
                             </optgroup>
                           </select>
                         ) : (
-                          user.program || 'Not specified'
+                          <span className="font-medium">{user.program || 'Not specified'}</span>
                         )}
                       </dd>
                     </div>
                   )}
 
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Coins</dt>
-                    <dd className="text-sm text-gray-900 flex items-center">
-                      <Coins className="w-4 h-4 mr-1 text-orange-500" />
-                      {coins}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Member Since</dt>
-                    <dd className="text-sm text-gray-900">
-                      {new Date(user.created_at).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+                  <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
+                    <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Member Since</dt>
+                    <dd className="text-sm text-gray-900 flex-1">
+                      <span className="font-medium">
+                        {new Date(user.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
                     </dd>
                   </div>
                 </dl>
@@ -730,7 +737,7 @@ export default function UserProfile() {
 
             {/* Edit Actions */}
             {isEditing && (
-              <div className="mt-8 flex justify-end space-x-3">
+              <div className="mt-8 flex justify-end space-x-4">
                 <button
                   onClick={() => {
                     setIsEditing(false);
@@ -749,17 +756,17 @@ export default function UserProfile() {
                       user_type: user.user_type || ''
                     });
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center"
                 >
-                  <X className="h-4 w-4 mr-2 inline" />
+                  <X className="h-4 w-4 mr-2" />
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                  className="px-6 py-3 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:opacity-50 transition-all duration-200 flex items-center shadow-lg hover:shadow-xl"
                 >
-                  <Save className="h-4 w-4 mr-2 inline" />
+                  <Save className="h-4 w-4 mr-2" />
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>

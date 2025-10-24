@@ -18,6 +18,7 @@ export type User = {
   user_type: string | null; // e.g., 'student', 'faculty'
   email: string | null;
   college: string | null; // student
+  officer_position?: string | null; // officer position in organization
 };
 
 export type OrgManager = {

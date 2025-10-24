@@ -17,6 +17,8 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
   const [members, setMembers] = useState<User[]>([]);
   const [existingOfficerIds, setExistingOfficerIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [position, setPosition] = useState('');
 
   // Fetch all members and existing officers
   useEffect(() => {
@@ -78,11 +80,11 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
       if (!existingRole || existingRole.role === 'member') {
         const { error: roleUpdateError } = await supabase
           .from('user_roles')
-          .upsert({
-            user_id: userId,
+          .update({
             role: 'officer',
             granted_at: new Date().toISOString()
-          });
+          })
+          .eq('user_id', userId);
 
         if (roleUpdateError) throw roleUpdateError;
       }
@@ -93,12 +95,14 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
           user_id: userId,
           org_id: orgId,
           manager_role: 'officer',
-          position: null
+          position: position.trim() || null
         });
 
       if (assignError) throw assignError;
       onSuccess?.();
       onClose();
+      setPosition('');
+      setSelectedUser(null);
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Failed to assign officer');
       console.log('error:', err);
@@ -113,7 +117,13 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        onClose();
+        setSelectedUser(null);
+        setPosition('');
+      }
+    }}>
       <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white p-6 shadow-lg duration-200 sm:rounded-lg">
 
           <DialogTitle className="text-lg font-semibold leading-none tracking-tight">
@@ -132,6 +142,61 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
           />
         </div>
 
+        {/* Selected user and position input */}
+        {selectedUser && (
+          <div className="space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="flex items-center space-x-3">
+              {selectedUser.avatar_url ? (
+                <img
+                  src={selectedUser.avatar_url}
+                  alt={`${selectedUser.first_name} ${selectedUser.last_name}`}
+                  className="h-10 w-10 rounded-full"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <span className="text-green-700 font-medium text-sm">
+                    {((selectedUser.first_name && selectedUser.first_name.length > 0) ? selectedUser.first_name.charAt(0).toUpperCase() : 'U')}{((selectedUser.last_name && selectedUser.last_name.length > 0) ? selectedUser.last_name.charAt(0).toUpperCase() : 'U')}
+                  </span>
+                </div>
+              )}
+              <div>
+                <div className="font-medium text-gray-900">{selectedUser.first_name || 'Unknown'} {selectedUser.last_name || 'User'}</div>
+                <div className="text-sm text-gray-500">{selectedUser.email || 'No email'}</div>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-1">
+                Position (Optional)
+              </label>
+              <input
+                type="text"
+                id="position"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                placeholder="e.g. President, Vice President, Secretary..."
+                className="block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-green-600 sm:text-sm"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handleAssignOfficer(selectedUser.id)}
+                className="flex-1 inline-flex justify-center items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+              >
+                Assign Officer
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedUser(null);
+                  setPosition('');
+                }}
+                className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Members list */}
         <div className="relative max-h-[400px] overflow-y-auto">
           {loading ? (
@@ -145,8 +210,12 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
               {filteredMembers.map((member: User) => (
                 <button
                   key={member.id}
-                  onClick={() => handleAssignOfficer(member.id)}
+                  onClick={() => {
+                    setSelectedUser(member);
+                    setPosition('');
+                  }}
                   className="flex items-center space-x-3 rounded-lg p-3 hover:bg-gray-100 transition-colors text-left w-full"
+                  disabled={!!selectedUser}
                 >
                   {member.avatar_url ? (
                     <img
