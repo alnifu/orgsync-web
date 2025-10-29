@@ -15,6 +15,7 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
   const [searchQuery, setSearchQuery] = useState('');
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(false);
 
   // Fetch all members
   useEffect(() => {
@@ -42,6 +43,9 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
 
   // Handle adviser assignment
   const handleAssignAdviser = async (userId: string) => {
+    if (assigning) return; // Prevent multiple clicks
+    
+    setAssigning(true);
     try {
       // First, update or insert user_roles to ensure they have adviser role
       const { data: existingRole, error: roleCheckError } = await supabase
@@ -81,6 +85,8 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Failed to assign adviser');
       console.log('error:', err);
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -125,7 +131,8 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
                 <button
                   key={member.id}
                   onClick={() => handleAssignAdviser(member.id)}
-                  className="flex items-center space-x-3 rounded-lg p-3 hover:bg-gray-100 transition-colors text-left w-full"
+                  disabled={assigning}
+                  className="flex items-center space-x-3 rounded-lg p-3 hover:bg-gray-100 transition-colors text-left w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {member.avatar_url ? (
                     <img

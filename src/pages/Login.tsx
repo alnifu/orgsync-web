@@ -1,35 +1,58 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 
-type SigninProps = {
-    onSigninSuccess?: (user: any) => void;
+type LoginProps = {
+    onLoginSuccess?: (user: any) => void;
 };
 
-export default function Signin({ onSigninSuccess }: SigninProps) {
+export default function Login({ onLoginSuccess }: LoginProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
 
-    const { signInUser, setUser } = useAuth();
+    const { signInUser } = useAuth();
     const navigate = useNavigate();
 
-    const handleSignin = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        const { success, error: signInError, data } = await signInUser({ email, password });
-
+        console.log("Attempting to log in with", email);
+        const { success, error, data } = await signInUser({
+            email,
+            password,
+        });
+        console.log("Sign-in response:", { success, error, data });
         if (!success) {
-            setError(signInError || 'An error occurred during sign in');
+            setError(error || 'An error occurred during log in');
         } else {
             setError(null);
+            if (onLoginSuccess) {
+                onLoginSuccess(data.user);
+            }
 
-            // Save globally
-            setUser(data.user);
+            // Check if user profile is complete
+            const { data: userProfile, error: profileError } = await supabase
+                .from('users')
+                .select('first_name, last_name, department')
+                .eq('id', data.user.id)
+                .single();
 
-            if (onSigninSuccess) onSigninSuccess(data.user);
+            if (profileError) {
+                console.error('Error fetching user profile:', profileError);
+                // If there's an error fetching profile, redirect to profile setup
+                navigate("/profile-setup");
+                return;
+            }
 
-            navigate("/dashboard");
+            // If profile is incomplete, redirect to profile setup
+            if (!userProfile.first_name || !userProfile.last_name || !userProfile.department) {
+                navigate("/profile-setup");
+            } else {
+                // Redirect to dashboard after successful log in
+                console.log("Log in successful, navigating to dashboard");
+                navigate("/dashboard");
+            }
         }
     };
 
@@ -37,15 +60,20 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign in</h2>
+                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        Log in
+                    </h2>
                 </div>
-                <form onSubmit={handleSignin} className="mt-8 space-y-6">
+                <form onSubmit={handleLogin} className="mt-8 space-y-6">
                     <div className="rounded-md space-y-4">
                         <div>
-                            <label htmlFor="email" className="sr-only">Email address</label>
+                            <label htmlFor="email" className="sr-only">
+                                Email address
+                            </label>
                             <input
                                 id="email"
                                 type="email"
+                                autoComplete="username"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -54,10 +82,13 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                             />
                         </div>
                         <div>
-                            <label htmlFor="password" className="sr-only">Password</label>
+                            <label htmlFor="password" className="sr-only">
+                                Password
+                            </label>
                             <input
                                 id="password"
                                 type="password"
+                                autoComplete="current-password"
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -71,13 +102,16 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                             type="submit"
                             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
                         >
-                            Sign in
+                            Log in
                         </button>
                     </div>
                     <p className="mt-2 text-center text-sm text-gray-600">
                         Don't have an account?{" "}
-                        <Link to="/signup" className="font-medium text-green-600 hover:text-green-500">Sign up here</Link>
+                        <Link to="/signup" className="font-medium text-green-600 hover:text-green-500">
+                            Sign up here
+                        </Link>
                     </p>
+
                     {error && (
                         <div className="rounded-md bg-red-50 p-4">
                             <div className="flex">
@@ -87,6 +121,7 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                             </div>
                         </div>
                     )}
+
                 </form>
             </div>
         </div>

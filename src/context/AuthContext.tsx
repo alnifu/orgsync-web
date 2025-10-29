@@ -76,7 +76,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
-  // Sign in
+  // Log in
   const signInUser = async ({
     email,
     password

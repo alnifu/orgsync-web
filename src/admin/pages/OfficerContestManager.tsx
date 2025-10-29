@@ -21,6 +21,8 @@ const OfficerContestManager: React.FC = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [newContest, setNewContest] = useState({
     title: "",
     description: "",
@@ -72,9 +74,12 @@ const OfficerContestManager: React.FC = () => {
   }, [orgId]);
 
   const handleCreateContest = async () => {
+    if (creating) return; // Prevent multiple clicks
+    
     if (!orgId || !user) return;
     if (!newContest.title.trim()) return alert("Enter a contest title.");
 
+    setCreating(true);
     try {
       const { error } = await supabase.from("room_contests").insert({
         org_id: orgId,
@@ -102,33 +107,51 @@ const OfficerContestManager: React.FC = () => {
     } catch (err) {
       console.error("❌ Failed to create contest:", err);
       alert("Error creating contest.");
+    } finally {
+      setCreating(false);
     }
   };
 
   const toggleContestStatus = async (contest: Contest) => {
-    const { error } = await supabase
-      .from("room_contests")
-      .update({ is_active: !contest.is_active })
-      .eq("id", contest.id);
+    if (toggling) return; // Prevent multiple clicks
+    
+    setToggling(contest.id);
+    try {
+      const { error } = await supabase
+        .from("room_contests")
+        .update({ is_active: !contest.is_active })
+        .eq("id", contest.id);
 
-    if (error) return alert("Failed to update contest status.");
+      if (error) throw error;
 
-    setContests((prev) =>
-      prev.map((c) =>
-        c.id === contest.id ? { ...c, is_active: !contest.is_active } : c
-      )
-    );
+      setContests((prev) =>
+        prev.map((c) =>
+          c.id === contest.id ? { ...c, is_active: !contest.is_active } : c
+        )
+      );
+    } catch (err) {
+      alert("Failed to update contest status.");
+    } finally {
+      setToggling(null);
+    }
   };
 
   const deleteContest = async (id: string) => {
+    if (deleting) return; // Prevent multiple clicks
+    
     if (!window.confirm("Delete this contest?")) return;
 
-    const { error } = await supabase.from("room_contests").delete().eq("id", id);
+    setDeleting(id);
+    try {
+      const { error } = await supabase.from("room_contests").delete().eq("id", id);
 
-    if (error) {
-      alert("Failed to delete contest.");
-    } else {
+      if (error) throw error;
+
       setContests((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      alert("Failed to delete contest.");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -256,15 +279,17 @@ const OfficerContestManager: React.FC = () => {
                   <td className="p-2 text-right space-x-2">
                     <button
                       onClick={() => toggleContestStatus(c)}
-                      className="bg-yellow-400 px-2 py-1 rounded text-xs hover:bg-yellow-500"
+                      disabled={toggling === c.id}
+                      className="bg-yellow-400 px-2 py-1 rounded text-xs hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {c.is_active ? "Deactivate" : "Activate"}
+                      {toggling === c.id ? "..." : (c.is_active ? "Deactivate" : "Activate")}
                     </button>
                     <button
                       onClick={() => deleteContest(c.id)}
-                      className="bg-red-400 px-2 py-1 rounded text-xs hover:bg-red-500"
+                      disabled={deleting === c.id}
+                      className="bg-red-400 px-2 py-1 rounded text-xs hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Delete
+                      {deleting === c.id ? "..." : "Delete"}
                     </button>
                   </td>
                 </tr>

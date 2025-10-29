@@ -23,12 +23,23 @@ export const useUserRoles = (userId: string | undefined) => {
   const [orgManagers, setOrgManagers] = useState<OrgManager[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!userId) {
+      setRoles(null);
+      setOrgManagers([]);
       setLoading(false);
+      setInitialized(true);
+      setRetryCount(0);
       return;
     }
+
+    // Prevent multiple simultaneous fetches
+    if (initialized) return;
+
+    setRetryCount(0); // Reset retry count on new fetch
 
     const fetchUserRoles = async () => {
       try {
@@ -45,6 +56,7 @@ export const useUserRoles = (userId: string | undefined) => {
         if (roleError) {
           console.error('Error fetching user role:', roleError);
           setError('Failed to fetch user role');
+          // Don't throw here, continue with org managers
         }
 
         // Fetch organization management roles
@@ -56,6 +68,7 @@ export const useUserRoles = (userId: string | undefined) => {
         if (managersError) {
           console.error('Error fetching org managers:', managersError);
           setError('Failed to fetch organization roles');
+          // Don't throw here either
         }
 
         // Set the data
@@ -70,26 +83,49 @@ export const useUserRoles = (userId: string | undefined) => {
       } catch (err) {
         console.error('Error in fetchUserRoles:', err);
         setError('Failed to load user roles');
+        // Set default values on error
+        setRoles(null);
+        setOrgManagers([]);
+        // Retry after 5 seconds on error (max 3 retries)
+        if (retryCount < 3) {
+          setTimeout(() => {
+            if (userId) {
+              setRetryCount(prev => prev + 1);
+              fetchUserRoles();
+            }
+          }, 5000);
+        }
       } finally {
         setLoading(false);
+        setInitialized(true);
       }
     };
 
     fetchUserRoles();
-  }, [userId]);
+  }, [userId, initialized]);
+
+  // Refresh function for manual re-fetching
+  const refresh = () => {
+    setInitialized(false);
+    setError(null);
+    setRetryCount(0);
+  };
 
   return {
     roles,
     orgManagers,
     loading,
     error,
-    // Helper functions
-    isAdmin: () => roles?.role === 'admin',
-    isOfficer: () => roles?.role === 'officer',
-    isAdviser: () => roles?.role === 'adviser',
-    isMember: () => roles?.role === 'member',
-    hasOrgAccess: (orgId: string) => orgManagers.some(manager => manager.org_id === orgId),
+    initialized,
+    refresh,
+    // Helper functions - consider loading state
+    isAdmin: () => !loading && roles?.role === 'admin',
+    isOfficer: () => !loading && roles?.role === 'officer',
+    isAdviser: () => !loading && roles?.role === 'adviser',
+    isMember: () => !loading && roles?.role === 'member',
+    hasOrgAccess: (orgId: string) => !loading && orgManagers.some(manager => manager.org_id === orgId),
     getOrgRole: (orgId: string) => {
+      if (loading) return null;
       const manager = orgManagers.find(m => m.org_id === orgId);
       return manager?.manager_role || null;
     }
@@ -102,7 +138,8 @@ export const hasRoleAccess = (userRole: UserRole | null, requiredRoles: UserRole
   return requiredRoles.includes(userRole);
 };
 
-export const canManageOrg = (userRole: UserRole | null, orgManagers: OrgManager[], orgId: string): boolean => {
+export const canManageOrg = (userRole: UserRole | null, orgManagers: OrgManager[], orgId: string, loading: boolean = false): boolean => {
+  if (loading) return false; // Don't allow access while loading
   if (userRole === 'admin') return true;
   if (userRole === 'officer' || userRole === 'adviser') {
     return orgManagers.some(manager => manager.org_id === orgId);
@@ -110,7 +147,8 @@ export const canManageOrg = (userRole: UserRole | null, orgManagers: OrgManager[
   return false;
 };
 
-export const canEditOrg = (userRole: UserRole | null, orgManagers: OrgManager[], orgId: string): boolean => {
+export const canEditOrg = (userRole: UserRole | null, orgManagers: OrgManager[], orgId: string, loading: boolean = false): boolean => {
+  if (loading) return false; // Don't allow access while loading
   if (userRole === 'admin') return true;
   if (userRole === 'officer') {
     return orgManagers.some(manager => manager.org_id === orgId && manager.manager_role === 'officer');

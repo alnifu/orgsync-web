@@ -175,20 +175,30 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
     <div className="padding-4 space-y-6">
       {/* Add Member */}
       <div className="bg-white shadow rounded-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-md font-medium text-gray-900 flex items-center">
-            <UserPlus className="h-5 w-5 mr-2" />Add Members
-          </h4>
-          <button
-            onClick={toggleAddMembers}
-            className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100 transition-colors"
-          >
-            {showAddMembers ? (
-              <ChevronUp className="h-4 w-4 text-gray-500" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-gray-500" />
+        <div className="flex items-center justify-between cursor-pointer hover:bg-green-50 hover:border-green-200 rounded-lg p-3 transition-all duration-200 border-2 border-transparent hover:shadow-sm" onClick={toggleAddMembers}>
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <UserPlus className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900">Add Members</h4>
+              <p className="text-sm text-gray-600">Invite new members to join your organization</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {selectedMembers.length > 0 && (
+              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                {selectedMembers.length} selected
+              </span>
             )}
-          </button>
+            <div className="p-2 hover:bg-gray-100 rounded-md transition-colors">
+              {showAddMembers ? (
+                <ChevronUp className="h-5 w-5 text-gray-600" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-600" />
+              )}
+            </div>
+          </div>
         </div>
 
         {showAddMembers && (
@@ -257,8 +267,19 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
             {/* Member Selection */}
             <div className="border border-gray-200 rounded-md max-h-64 overflow-y-auto">
               {filteredAvailableMembers.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  {availableMembers.length === 0 ? 'No available members' : 'No members match your search'}
+                <div className="p-8 text-center">
+                  <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                    <Users className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-1">
+                    {availableMembers.length === 0 ? 'No available members' : 'No members match your search'}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {availableMembers.length === 0
+                      ? 'All users are already members of this organization'
+                      : 'Try adjusting your search or filter criteria'
+                    }
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-200">
@@ -315,18 +336,29 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
       {/* Current Members */}
       <div className="bg-white shadow rounded-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-md font-medium text-gray-900 flex items-center">
-            <Users className="h-5 w-5 mr-2" />Current Members ({organizationMembers.length})
-          </h4>
-          <div className="relative">
-            <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search members..."
-              value={currentMemberSearch}
-              onChange={e => setCurrentMemberSearch(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-            />
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Users className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900">Current Members</h4>
+              <p className="text-sm text-gray-600">Manage existing organization members</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+              {organizationMembers.length} members
+            </span>
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search members..."
+                value={currentMemberSearch}
+                onChange={e => setCurrentMemberSearch(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+              />
+            </div>
           </div>
         </div>
 

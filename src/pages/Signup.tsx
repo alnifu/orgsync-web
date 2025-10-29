@@ -153,7 +153,7 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
            <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{" "}
             <Link to="/" className="font-medium text-green-600 hover:text-green-500">
-              Sign in here
+              Log in here
             </Link>
           </p>
           {error && (

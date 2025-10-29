@@ -31,8 +31,8 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
       if (onSignupSuccess) {
         onSignupSuccess(data.user);
       }
-      // Redirect to sign in after successful signup
-      navigate("/signin");
+      // Redirect to log in after successful signup
+      navigate("/login");
     }
   };
 
@@ -88,7 +88,7 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
            <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{" "}
             <Link to="/" className="font-medium text-green-600 hover:text-green-500">
-              Sign in here
+              Log in here
             </Link>
           </p>
           {error && (

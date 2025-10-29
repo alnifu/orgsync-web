@@ -18,6 +18,7 @@ export default function CreateQuiz() {
   const [points, setPoints] = useState(10);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [hasTimeSpan, setHasTimeSpan] = useState(false);
   const [openAt, setOpenAt] = useState("");
@@ -94,7 +95,12 @@ export default function CreateQuiz() {
   };
 
   const saveToSupabase = async () => {
+    if (loading) return; // Prevent multiple clicks
+    
     if (!validateQuiz()) return;
+
+    setLoading(true);
+    try {
 
     const {
       data: { user },
@@ -150,6 +156,9 @@ export default function CreateQuiz() {
       setHasTimeSpan(false);
       setOpenAt("");
       setCloseAt("");
+    }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -326,9 +335,10 @@ export default function CreateQuiz() {
 
         <button
           onClick={saveToSupabase}
-          className="w-full mt-6 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-lg transition"
+          disabled={loading}
+          className="w-full mt-6 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-           Save Quiz
+          {loading ? "Saving..." : "Save Quiz"}
         </button>
       </div>
     </div>

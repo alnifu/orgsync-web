@@ -26,6 +26,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   const [status, setStatus] = useState<string>("published");
   const [postType, setPostType] = useState<PostType>("general");
   const [loading, setLoading] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [mediaPreviews, setMediaPreviews] = useState<MediaItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -78,6 +79,10 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   };
 
   async function createPost(): Promise<void> {
+    // Prevent duplicate submissions
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     setLoading(true);
     setUploadProgress(0);
 
@@ -207,6 +212,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
       alert("Error creating post");
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
       setUploadProgress(0);
     }
   }
@@ -618,7 +624,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
             </Dialog.Close>
             <button
               onClick={createPost}
-              disabled={loading}
+              disabled={loading || isSubmitting}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Creating..." : "Create Post"}

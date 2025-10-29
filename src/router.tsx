@@ -35,7 +35,7 @@ import QuizSelection from "./user/pages/dashboard/QuizSelection";
 import LeaderboardPage from "./user/pages/dashboard/LeaderboardPage";
 
 // Auth Pages
-import Signin from "./pages/Signin";
+import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ProfileSetup from "./pages/ProfileSetup";
 
@@ -94,8 +94,8 @@ const router = createBrowserRouter([
     element: <PrivateRoute><Navigate to="/dashboard" replace /></PrivateRoute>
   },
   {
-    path: "/signin",
-    element: <Signin />
+    path: "/login",
+    element: <Login />
   },
   {
     path: "/signup",

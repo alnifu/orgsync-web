@@ -91,7 +91,7 @@ export default function ProfileSetup() {
 
     useEffect(() => {
         if (!authUser) {
-            navigate("/signin");
+            navigate("/login");
             return;
         }
 

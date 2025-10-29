@@ -58,9 +58,9 @@ export default function PrivateRoute({ children }: PrivateRouteProps) {
     );
   }
 
-  // If there's no user, redirect to sign in page
+  // If there's no user, redirect to log in page
   if (!user) {
-    return <Navigate to="/signin" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // If profile is incomplete, redirect to profile setup

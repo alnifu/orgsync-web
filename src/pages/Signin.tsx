@@ -17,14 +17,14 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
 
     const handleSignin = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Attempting to sign in with", email);
+        console.log("Attempting to log in with", email);
         const { success, error, data } = await signInUser({
             email,
             password,
         });
         console.log("Sign-in response:", { success, error, data });
         if (!success) {
-            setError(error || 'An error occurred during sign in');
+            setError(error || 'An error occurred during log in');
         } else {
             setError(null);
             if (onSigninSuccess) {
@@ -49,8 +49,8 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
             if (!userProfile.first_name || !userProfile.last_name || !userProfile.department) {
                 navigate("/profile-setup");
             } else {
-                // Redirect to dashboard after successful sign in
-                console.log("Signin successful, navigating to dashboard");
+                // Redirect to dashboard after successful log in
+                console.log("Log in successful, navigating to dashboard");
                 navigate("/dashboard");
             }
         }
@@ -61,7 +61,7 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
             <div className="max-w-md w-full space-y-8">
                 <div>
                     <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        Sign in
+                        Log in
                     </h2>
                 </div>
                 <form onSubmit={handleSignin} className="mt-8 space-y-6">
@@ -102,7 +102,7 @@ export default function Signin({ onSigninSuccess }: SigninProps) {
                             type="submit"
                             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
                         >
-                            Sign in
+                            Log in
                         </button>
                     </div>
                     <p className="mt-2 text-center text-sm text-gray-600">

@@ -23,6 +23,7 @@ export default function PostDetail() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [userRsvp, setUserRsvp] = useState<EventRsvp | null>(null);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
   const [rsvpStats, setRsvpStats] = useState({
     attending: 0,
     maybe: 0,
@@ -157,37 +158,42 @@ export default function PostDetail() {
   }
 
   async function handleRsvp(status: string) {
-    if (!currentUser || !postId) return;
+    if (!currentUser || !postId || rsvpLoading) return;
 
-    if (userRsvp) {
-      // Update existing RSVP
-      const { error } = await supabase
-        .from('rsvps')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', userRsvp.id);
+    setRsvpLoading(true);
+    try {
+      if (userRsvp) {
+        // Update existing RSVP
+        const { error } = await supabase
+          .from('rsvps')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', userRsvp.id);
 
-      if (!error) {
-        setUserRsvp({ ...userRsvp, status });
-        fetchRsvpStats(); // Refresh stats
+        if (!error) {
+          setUserRsvp({ ...userRsvp, status });
+          fetchRsvpStats(); // Refresh stats
+        }
+      } else {
+        // Create new RSVP
+        const { data, error } = await supabase
+          .from('rsvps')
+          .insert({
+            post_id: postId,
+            user_id: currentUser.id,
+            status
+          })
+          .select()
+          .single();
+
+        if (data && !error) {
+          setUserRsvp(data);
+          fetchRsvpStats(); // Refresh stats
+        }
       }
-    } else {
-      // Create new RSVP
-      const { data, error } = await supabase
-        .from('rsvps')
-        .insert({
-          post_id: postId,
-          user_id: currentUser.id,
-          status
-        })
-        .select()
-        .single();
-
-      if (data && !error) {
-        setUserRsvp(data);
-        fetchRsvpStats(); // Refresh stats
-      }
+    } finally {
+      setRsvpLoading(false);
     }
-  }
+  };
 
   async function fetchUserVote() {
     if (!currentUser || !postId) return;

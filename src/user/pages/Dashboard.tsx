@@ -5,7 +5,6 @@ import { useState, useMemo } from "react";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const location = useLocation();
 
   // Map pathnames to page titles
@@ -18,10 +17,6 @@ export default function Dashboard() {
     return "Dashboard";
   }, [location.pathname]);
 
-  const toggleSidebar = () => {
-    setIsSidebarCollapsed(prev => !prev);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex h-screen">
@@ -32,8 +27,6 @@ export default function Dashboard() {
             ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
         >
           <Sidebar 
-            isCollapsed={isSidebarCollapsed} 
-            onToggle={toggleSidebar}
             onLinkClick={() => setSidebarOpen(false)} 
           />
         </div>
@@ -43,10 +36,7 @@ export default function Dashboard() {
           {/* Sticky Top nav for mobile */}
           <header className="sticky top-0 z-40 flex items-center bg-white shadow px-4 py-3 md:hidden">
             <button
-              onClick={() => {
-                setSidebarOpen(!sidebarOpen);
-                if (!sidebarOpen) setIsSidebarCollapsed(false); // Open sidebar if it's collapsed
-              }}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
               className="text-gray-700 focus:outline-none"
             >
               <Menu className="h-6 w-6" />
@@ -59,14 +49,6 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
-
-      {/* Mobile overlay backdrop */}
-      {!isSidebarCollapsed && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={toggleSidebar}
-        />
-      )}
     </div>
   );
 }

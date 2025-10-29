@@ -20,6 +20,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [postType, setPostType] = useState<PostType>("general");
   const [loading, setLoading] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [existingMedia, setExistingMedia] = useState<MediaItem[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [mediaPreviews, setMediaPreviews] = useState<MediaItem[]>([]);
@@ -43,7 +44,11 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
 
   async function updatePost(): Promise<void> {
     if (!post) return;
-    
+
+    // Prevent duplicate submissions
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     setLoading(true);
     setUploadProgress(0);
 
@@ -100,6 +105,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
       alert("Error updating post");
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
       setUploadProgress(0);
     }
   }
@@ -393,7 +399,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
             </Dialog.Close>
             <button
               onClick={updatePost}
-              disabled={loading}
+              disabled={loading || isSubmitting}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Updating..." : "Update Post"}

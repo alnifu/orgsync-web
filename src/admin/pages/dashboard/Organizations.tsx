@@ -116,6 +116,13 @@ export default function Organizations() {
     }
   }, [searchQuery, filterOrgType, filterDepartment, sortField, sortDirection, currentPage, rolesLoading]);
 
+  // Auto-navigate officers/advisers to single organization
+  useEffect(() => {
+    if (!loading && !rolesLoading && organizations.length === 1 && (isOfficer() || isAdviser()) && !isAdmin()) {
+      navigate(organizations[0].id);
+    }
+  }, [organizations, loading, rolesLoading, navigate]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');

@@ -10,7 +10,7 @@ export default function PrivateRoute({ children }: PrivateRouteProps) {
 
   // If there's no user, redirect to sign in page
   if (!user) {
-    return <Navigate to="/signin" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // If there is a user, render the protected route

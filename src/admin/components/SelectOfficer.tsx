@@ -19,6 +19,7 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [position, setPosition] = useState('');
+  const [assigning, setAssigning] = useState(false);
 
   // Fetch all members and existing officers
   useEffect(() => {
@@ -64,6 +65,9 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
 
   // Handle officer assignment
   const handleAssignOfficer = async (userId: string) => {
+    if (assigning) return; // Prevent multiple clicks
+    
+    setAssigning(true);
     try {
       // First, update or insert user_roles to ensure they have officer role
       const { data: existingRole, error: roleCheckError } = await supabase
@@ -77,7 +81,7 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
       }
 
       // If no role exists or current role is 'member', update to 'officer'
-      if (!existingRole || existingRole.role === 'member') {
+      if (!existingRole || existingRole.role === 'member' || existingRole.role === 'adviser') {
         const { error: roleUpdateError } = await supabase
           .from('user_roles')
           .update({
@@ -106,6 +110,8 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Failed to assign officer');
       console.log('error:', err);
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -180,9 +186,10 @@ export default function SelectOfficer({ isOpen, onClose, orgId, onError, onSucce
             <div className="flex space-x-2">
               <button
                 onClick={() => handleAssignOfficer(selectedUser.id)}
-                className="flex-1 inline-flex justify-center items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
+                disabled={assigning}
+                className="flex-1 inline-flex justify-center items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Assign Officer
+                {assigning ? 'Assigning...' : 'Assign Officer'}
               </button>
               <button
                 onClick={() => {
