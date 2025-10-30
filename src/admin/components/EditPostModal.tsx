@@ -20,11 +20,12 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [postType, setPostType] = useState<PostType>("general");
   const [loading, setLoading] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [existingMedia, setExistingMedia] = useState<MediaItem[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [mediaPreviews, setMediaPreviews] = useState<MediaItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadController, setUploadController] = useState<AbortController | null>(null);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // Update form when post changes
   useEffect(() => {
@@ -42,13 +43,30 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
     }
   }, [post]);
 
+  // Handle page unload/navigation cancellation
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isUploading) {
+        e.preventDefault();
+        e.returnValue = 'Upload in progress. Are you sure you want to leave?';
+        // Cancel the upload
+        uploadController?.abort();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Cancel any ongoing uploads when component unmounts
+      if (uploadController) {
+        uploadController.abort();
+      }
+    };
+  }, [isUploading, uploadController]);
+
   async function updatePost(): Promise<void> {
     if (!post) return;
-
-    // Prevent duplicate submissions
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
+    
     setLoading(true);
     setUploadProgress(0);
 
@@ -63,16 +81,42 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
 
       // Upload new files if any
       if (selectedFiles.length > 0) {
-        const uploadResults = await uploadFiles(selectedFiles, post.user_id);
-        const successfulUploads = uploadResults.filter(result => result.success && result.mediaItem);
-        finalMedia = [...finalMedia, ...successfulUploads.map(result => result.mediaItem!)];
+        // Create abort controller for this upload session
+        const controller = new AbortController();
+        setUploadController(controller);
+        setIsUploading(true);
 
-        if (successfulUploads.length !== selectedFiles.length) {
-          const failedCount = selectedFiles.length - successfulUploads.length;
-          alert(`${failedCount} file(s) failed to upload. Post will be updated with successful uploads only.`);
+        try {
+          const uploadResults = await uploadFiles(selectedFiles, post.user_id, (progress) => {
+            setUploadProgress(progress);
+          }, controller);
+          
+          const successfulUploads = uploadResults.filter(result => result.success && result.mediaItem);
+          finalMedia = [...finalMedia, ...successfulUploads.map(result => result.mediaItem!)];
+
+          // Check if all uploads were successful
+          if (successfulUploads.length !== selectedFiles.length) {
+            const failedCount = selectedFiles.length - successfulUploads.length;
+            const cancelledCount = uploadResults.filter(result => result.error === 'Upload cancelled').length;
+            
+            if (cancelledCount > 0) {
+              alert(`Upload was cancelled. ${cancelledCount} file(s) were not uploaded.`);
+            } else {
+              alert(`${failedCount} file(s) failed to upload. Post will be updated with successful uploads only.`);
+            }
+          }
+        } catch (error) {
+          if (controller.signal.aborted) {
+            alert("Upload was cancelled.");
+          } else {
+            throw error;
+          }
+        } finally {
+          setUploadController(null);
+          setIsUploading(false);
         }
 
-        setUploadProgress(100);
+        // Progress is already set to 100% by the callback
       }
 
       const tagsArray: string[] = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
@@ -105,7 +149,6 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
       alert("Error updating post");
     } finally {
       setLoading(false);
-      setIsSubmitting(false);
       setUploadProgress(0);
     }
   }
@@ -118,6 +161,13 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
   }
 
   function handleClose(): void {
+    // Cancel any ongoing uploads
+    if (uploadController) {
+      uploadController.abort();
+      setUploadController(null);
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
     onOpenChange(false);
     // Reset form when closing
     if (post) {
@@ -377,11 +427,27 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
                 )}
 
                 {uploadProgress > 0 && uploadProgress < 100 && (
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Uploading files...</span>
+                      <button
+                        onClick={() => {
+                          uploadController?.abort();
+                          setIsUploading(false);
+                          setUploadController(null);
+                          setUploadProgress(0);
+                        }}
+                        className="text-sm text-red-600 hover:text-red-700 underline"
+                      >
+                        Cancel upload
+                      </button>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -399,7 +465,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
             </Dialog.Close>
             <button
               onClick={updatePost}
-              disabled={loading || isSubmitting}
+              disabled={loading}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Updating..." : "Update Post"}

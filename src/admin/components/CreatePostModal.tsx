@@ -26,10 +26,11 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   const [status, setStatus] = useState<string>("published");
   const [postType, setPostType] = useState<PostType>("general");
   const [loading, setLoading] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [mediaPreviews, setMediaPreviews] = useState<MediaItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadController, setUploadController] = useState<AbortController | null>(null);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
   const [formFields, setFormFields] = useState<Array<{type: string, question: string, required: boolean}>>([
     {type: 'text', question: '', required: false}
@@ -40,12 +41,26 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   const [eventLocation, setEventLocation] = useState<string>("");
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
 
-  // Sync postType with defaultPostType when modal opens or prop changes
+  // Handle page unload/navigation cancellation
   useEffect(() => {
-    if (defaultPostType) {
-      setPostType(defaultPostType);
-    }
-  }, [defaultPostType]);
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isUploading) {
+        e.preventDefault();
+        e.returnValue = 'Upload in progress. Are you sure you want to leave?';
+        // Cancel the upload
+        uploadController?.abort();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Cancel any ongoing uploads when component unmounts
+      if (uploadController) {
+        uploadController.abort();
+      }
+    };
+  }, [isUploading, uploadController]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -79,10 +94,6 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   };
 
   async function createPost(): Promise<void> {
-    // Prevent duplicate submissions
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
     setLoading(true);
     setUploadProgress(0);
 
@@ -149,17 +160,33 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
 
       // Upload media files if any
       if (selectedFiles.length > 0) {
-        const uploadResults = await uploadFiles(selectedFiles, currentUser.id);
+        // Create abort controller for this upload session
+        const controller = new AbortController();
+        setUploadController(controller);
+        setIsUploading(true);
+
+        const uploadResults = await uploadFiles(selectedFiles, currentUser.id, (progress) => {
+          setUploadProgress(progress);
+        }, controller);
+        
         const successfulUploads = uploadResults.filter(result => result.success && result.mediaItem);
         uploadedMedia = successfulUploads.map(result => result.mediaItem!);
 
         // Check if all uploads were successful
         if (successfulUploads.length !== selectedFiles.length) {
           const failedCount = selectedFiles.length - successfulUploads.length;
-          alert(`${failedCount} file(s) failed to upload. Post will be created without those files.`);
+          const cancelledCount = uploadResults.filter(result => result.error === 'Upload cancelled').length;
+          
+          if (cancelledCount > 0) {
+            alert(`Upload was cancelled. ${cancelledCount} file(s) were not uploaded.`);
+          } else {
+            alert(`${failedCount} file(s) failed to upload. Post will be created without those files.`);
+          }
         }
 
-        setUploadProgress(100);
+        setUploadController(null);
+        setIsUploading(false);
+        // Progress is already set to 100% by the callback
       }
 
       const tagsArray: string[] = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
@@ -212,7 +239,6 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
       alert("Error creating post");
     } finally {
       setLoading(false);
-      setIsSubmitting(false);
       setUploadProgress(0);
     }
   }
@@ -231,6 +257,13 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   }
 
   function handleClose(): void {
+    // Cancel any ongoing uploads
+    if (uploadController) {
+      uploadController.abort();
+      setUploadController(null);
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
     onOpenChange(false);
     resetForm();
   }
@@ -602,11 +635,27 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
                 )}
 
                 {uploadProgress > 0 && uploadProgress < 100 && (
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Uploading files...</span>
+                      <button
+                        onClick={() => {
+                          uploadController?.abort();
+                          setIsUploading(false);
+                          setUploadController(null);
+                          setUploadProgress(0);
+                        }}
+                        className="text-sm text-red-600 hover:text-red-700 underline"
+                      >
+                        Cancel upload
+                      </button>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -624,7 +673,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
             </Dialog.Close>
             <button
               onClick={createPost}
-              disabled={loading || isSubmitting}
+              disabled={loading}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Creating..." : "Create Post"}

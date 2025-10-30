@@ -12,6 +12,8 @@ export interface ValidationResult {
   error?: string;
 }
 
+export type ProgressCallback = (progress: number) => void;
+
 /**
  * Validate file before upload
  * Supabase free plan limits: 50MB per file, 500MB total storage
@@ -35,16 +37,36 @@ export function validateFile(file: File): ValidationResult {
 /**
  * Upload a single file to Supabase storage
  */
-export async function uploadFile(file: File, userId: string): Promise<UploadResult> {
+export async function uploadFile(
+  file: File,
+  userId: string,
+  onProgress?: ProgressCallback,
+  abortController?: AbortController
+): Promise<UploadResult> {
   const validation = validateFile(file);
   if (!validation.valid) {
     return { success: false, error: validation.error };
   }
 
   try {
+    // Check if already cancelled
+    if (abortController?.signal.aborted) {
+      return { success: false, error: 'Upload cancelled' };
+    }
+
+    // Simulate progress for single file upload
+    onProgress?.(10); // Starting upload
+
     // Generate unique filename with timestamp and user ID
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+    onProgress?.(30); // File prepared
+
+    // Check cancellation before upload
+    if (abortController?.signal.aborted) {
+      return { success: false, error: 'Upload cancelled' };
+    }
 
     const { data, error } = await supabase.storage
       .from('media')
@@ -52,6 +74,21 @@ export async function uploadFile(file: File, userId: string): Promise<UploadResu
         cacheControl: '3600',
         upsert: false
       });
+
+    // Check cancellation after upload
+    if (abortController?.signal.aborted) {
+      // Try to clean up the uploaded file
+      if (data?.path) {
+        try {
+          await supabase.storage.from('media').remove([data.path]);
+        } catch (cleanupError) {
+          console.warn('Failed to cleanup cancelled upload:', cleanupError);
+        }
+      }
+      return { success: false, error: 'Upload cancelled' };
+    }
+
+    onProgress?.(80); // Upload completed
 
     if (error) {
       return { success: false, error: error.message };
@@ -61,6 +98,8 @@ export async function uploadFile(file: File, userId: string): Promise<UploadResu
     const { data: { publicUrl } } = supabase.storage
       .from('media')
       .getPublicUrl(data.path);
+
+    onProgress?.(100); // Processing complete
 
     const mediaType = file.type.startsWith('image/') ? 'image' : 'video';
 
@@ -73,6 +112,9 @@ export async function uploadFile(file: File, userId: string): Promise<UploadResu
 
     return { success: true, mediaItem };
   } catch (error) {
+    if (abortController?.signal.aborted) {
+      return { success: false, error: 'Upload cancelled' };
+    }
     return { success: false, error: 'Failed to upload file' };
   }
 }
@@ -80,12 +122,44 @@ export async function uploadFile(file: File, userId: string): Promise<UploadResu
 /**
  * Upload multiple files
  */
-export async function uploadFiles(files: File[], userId: string): Promise<UploadResult[]> {
+export async function uploadFiles(
+  files: File[],
+  userId: string,
+  onProgress?: ProgressCallback,
+  abortController?: AbortController
+): Promise<UploadResult[]> {
   const results: UploadResult[] = [];
+  const totalFiles = files.length;
 
-  for (const file of files) {
-    const result = await uploadFile(file, userId);
+  for (let i = 0; i < files.length; i++) {
+    // Check if cancelled before starting each file
+    if (abortController?.signal.aborted) {
+      // Mark remaining files as cancelled
+      for (let j = i; j < files.length; j++) {
+        results.push({ success: false, error: 'Upload cancelled' });
+      }
+      break;
+    }
+
+    const file = files[i];
+    const result = await uploadFile(file, userId, (progress) => {
+      if (onProgress) {
+        // Calculate progress for current file
+        const baseProgress = (i / totalFiles) * 100;
+        const currentFileContribution = (progress / 100) * (100 / totalFiles);
+        onProgress(Math.min(Math.round(baseProgress + currentFileContribution), 100));
+      }
+    }, abortController);
     results.push(result);
+
+    // Stop if this file was cancelled
+    if (abortController?.signal.aborted && result.error === 'Upload cancelled') {
+      // Mark remaining files as cancelled
+      for (let j = i + 1; j < files.length; j++) {
+        results.push({ success: false, error: 'Upload cancelled' });
+      }
+      break;
+    }
   }
 
   return results;
