@@ -75,7 +75,6 @@ export interface Posts {
   content: string;
   tags: any[] | null;
   status: string | null;
-  view_count: number | null;
   is_pinned: boolean | null;
   created_at: string;
   updated_at: string | null;
@@ -86,6 +85,8 @@ export interface Posts {
   end_time?: string | null;
   location?: string | null;
   visibility?: 'public' | 'private';
+  game_route?: string | null;
+  post_views?: { user_id: string }[];
 }
 
 export type PostType = 'general' | 'event' | 'poll' | 'feedback';

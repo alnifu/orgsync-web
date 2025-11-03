@@ -107,7 +107,7 @@ export default function RegisterModal({
   if (!user || !selectedPost) return;
 
   try {
-    // 🔹 Step 0: Auto-RSVP if not already RSVPed
+    // Auto-RSVP if not already RSVPed
     if (!rsvp[selectedPost.id]) {
       const { error: rsvpError } = await supabase.from("rsvps").insert({
         post_id: selectedPost.id,
@@ -142,7 +142,7 @@ export default function RegisterModal({
       setRsvp((prev) => ({ ...prev, [selectedPost.id]: true }));
     }
 
-    // 🔹 Step 1: Insert registration
+    // Insert registration
     const { error } = await supabase.from("event_registrations").insert({
       post_id: selectedPost.id,
       user_id: user.id,
@@ -161,7 +161,7 @@ export default function RegisterModal({
       return;
     }
 
-    // 🔹 Step 2: Award coins for registration
+    // Award coins for registration
     const { data: rpcData2, error: rpcError2 } = await supabase.rpc(
       "award_user_coins_once",
       {
@@ -179,10 +179,10 @@ export default function RegisterModal({
       toast.success(`🎉 You earned ${rpcData2} coins for registering!`);
     }
 
-    // 🔹 Step 3: Update local state
+    // Update local state
     setRegistered((prev) => ({ ...prev, [selectedPost.id]: true }));
 
-    // 🔹 Step 4: Reset form & close modal
+    // Reset form & close modal
     setRegisterData({
       last_name: "",
       first_name: "",

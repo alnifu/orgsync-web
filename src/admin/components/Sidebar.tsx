@@ -11,7 +11,8 @@ import {
   LayoutDashboard,
   BarChart3,
   Trophy,
-  Image
+  Image,
+  Brain
 } from "lucide-react";
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -50,6 +51,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
       // Add organization link if they have assigned organizations
       if (orgManagers && orgManagers.length > 0) {
         links.push({ to: `organizations/${orgManagers[0].org_id}`, label: "My Organization", icon: Building2 });
+        links.push({ to: `organizations/${orgManagers[0].org_id}/ml-dashboard`, label: "ML Analytics", icon: Brain });
       }
 
       links.push(

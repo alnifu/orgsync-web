@@ -19,16 +19,10 @@ export default function DeleteOrganization({
 }: DeleteOrganizationProps) {
   const [confirmCode, setConfirmCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Prevent duplicate submissions
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
     setLoading(true);
     try {
       const { error } = await supabase
@@ -44,7 +38,6 @@ export default function DeleteOrganization({
       onError?.(err instanceof Error ? err.message : 'Failed to delete organization');
     } finally {
       setLoading(false);
-      setIsSubmitting(false);
     }
   };
 
@@ -87,7 +80,7 @@ export default function DeleteOrganization({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={confirmCode !== organization.org_code || loading || isSubmitting}
+            disabled={confirmCode !== organization.org_code || loading}
             className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Deleting...' : 'Delete Organization'}

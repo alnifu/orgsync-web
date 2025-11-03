@@ -41,9 +41,13 @@ export default function MemberContests() {
 
   return (
     <div className="p-6 min-h-screen bg-gray-50 text-gray-900">
-      <h1 className="text-3xl font-bold mb-6 text-green-700">
-        Active Contests
-      </h1>
+
+        <div className="mb-6 text-center">
+          <p className="text-gray-600 text-sm mt-1">
+            Show off your creativity! Join active room design contests, personalize your virtual space, 
+            and submit your masterpiece to earn exciting rewards.
+          </p>
+        </div>
 
       {loading ? (
         <p>Loading contests...</p>
@@ -71,7 +75,7 @@ export default function MemberContests() {
                 </p>
               )}
               <button
-                onClick={() => navigate("/user/dashboard//room-game")}
+                onClick={() => navigate("/user/dashboard/room-game")}
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full"
               >
                 Join Contest

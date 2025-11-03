@@ -3,7 +3,8 @@ import { supabase } from "../../lib/supabase";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Edit3, Upload, Image, Video, Trash2 } from "lucide-react";
 import type { Posts, MediaItem, PostType } from '../../types/database.types';
-import { uploadFiles, validateFile, deleteFile, getFilePathFromUrl } from '../../lib/media';
+import { uploadFiles, validateFile } from '../../lib/media';
+import { sendNotificationsToOrgMembers } from '../../lib/notifications';
 
 interface EditPostModalProps {
   post: Posts | null;
@@ -26,6 +27,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadController, setUploadController] = useState<AbortController | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [selectedGame, setSelectedGame] = useState<string>("");
 
   // Update form when post changes
   useEffect(() => {
@@ -40,6 +42,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
       setSelectedFiles([]);
       setMediaPreviews([]);
       setUploadProgress(0);
+      setSelectedGame(post.game_route ? (post.game_route === '/user/dashboard/quiz-selection' ? 'quiz' : 'room') : '');
     }
   }, [post]);
 
@@ -130,6 +133,7 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
         post_type: postType,
         updated_at: new Date().toISOString(),
         media: finalMedia.length > 0 ? finalMedia : null,
+        game_route: selectedGame ? (selectedGame === 'quiz' ? '/user/dashboard/quiz-selection' : '/user/dashboard/room-game') : null,
       };
 
       const { error } = await supabase
@@ -141,6 +145,17 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
         console.error(error);
         alert("Error updating post: " + error.message);
       } else {
+        // Send notifications if status changed to published and has org_id
+        if (status === 'published' && post.status !== 'published' && post.org_id) {
+          // Fetch org name
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('name')
+            .eq('id', post.org_id)
+            .single();
+          const orgName = orgData?.name || 'Unknown Organization';
+          await sendNotificationsToOrgMembers(post.org_id, `New post published from ${orgName}: ${title.trim()}`, post.id);
+        }
         onOpenChange(false);
         onPostUpdated();
       }
@@ -151,13 +166,6 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
       setLoading(false);
       setUploadProgress(0);
     }
-  }
-
-  function resetForm(): void {
-    setTitle("");
-    setContent("");
-    setTags("");
-    setStatus("published");
   }
 
   function handleClose(): void {
@@ -283,6 +291,22 @@ export default function EditPostModal({ post, open, onOpenChange, onPostUpdated 
                 rows={8}
               />
             </div>
+
+            {/* Game Link Selector */}
+            {(postType === 'general' || postType === 'event') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Link a Game (Optional)</label>
+                <select
+                  value={selectedGame}
+                  onChange={(e) => setSelectedGame(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                >
+                  <option value="">No Game</option>
+                  <option value="quiz">Quiz Game</option>
+                  <option value="room">Room Game</option>
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>

@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Pin, Tag, Eye, Calendar, User as UserIcon, Edit3, Trash2, MoreVertical, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
+import { Pin, Tag, Eye, Calendar, Edit3, Trash2, MoreVertical, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare, Users } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import type { Posts, PostType, Organization, User } from '../../types/database.types';
 
@@ -13,6 +14,7 @@ interface PostCardProps {
   onViewResponses?: (post: Posts) => void;
   isOwner?: boolean;
   isAdmin?: boolean;
+  isOfficer?: boolean;
   showOrgInfo?: boolean; // Whether to show organization info (for general posts page)
   organization?: Organization | null; // Organization data
   poster?: User | null; // Poster user data
@@ -28,6 +30,7 @@ export default function PostCard({
   onViewResponses,
   isOwner = false,
   isAdmin = false,
+  isOfficer = false,
   showOrgInfo = false,
   organization,
   poster
@@ -37,6 +40,34 @@ export default function PostCard({
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [fetchedOrg, setFetchedOrg] = useState<any>(null);
+  const [fetchedUser, setFetchedUser] = useState<any>(null);
+
+  // Fetch organization and user data if not provided
+  useEffect(() => {
+    const fetchData = async () => {
+      if (post.org_id && !organization) {
+        const { data } = await supabase
+          .from('organizations')
+          .select('name, abbrev_name, org_pic')
+          .eq('id', post.org_id)
+          .single();
+        setFetchedOrg(data);
+      }
+      if (post.user_id && !poster) {
+        const { data } = await supabase
+          .from('users')
+          .select('id, first_name, last_name, profile_pic')
+          .eq('id', post.user_id)
+          .single();
+        setFetchedUser(data);
+      }
+    };
+    fetchData();
+  }, [post.org_id, post.user_id, organization, poster]);
+
+  const displayOrg = organization || fetchedOrg;
+  const displayUser = poster || fetchedUser;
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -325,6 +356,34 @@ export default function PostCard({
            post.post_type === 'general' ? getGeneralContent() :
            post.content}
         </p>
+
+        {/* Game Link */}
+        {post.game_route && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-indigo-700 mb-2">🎮 Game Link</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isAdmin && !isOfficer) {
+                  window.open(post.game_route!, '_blank');
+                }
+              }}
+              disabled={isAdmin || isOfficer}
+              title={isAdmin || isOfficer ? "Games are only playable by users" : "Play Game"}
+              className={`w-full px-4 py-2 text-sm font-medium rounded-lg flex items-center justify-center gap-2 transition-colors ${
+                isAdmin || isOfficer
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              }`}
+            >
+              <span>Play {post.game_route === '/user/dashboard/quiz-selection' ? 'Quiz' : 'Room'} Game</span>
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* Event Details */}
         {post.post_type === 'event' && (
@@ -626,10 +685,49 @@ export default function PostCard({
               </div>
             )}
             <div className="flex items-center gap-1">
-              <UserIcon size={14} />
-              <span>
-                {poster ? `${poster.first_name} ${poster.last_name}` : post.user_id.slice(0, 8) + '...'}
-              </span>
+              {displayOrg ? (
+                <>
+                  {displayOrg.org_pic ? (
+                    <img
+                      src={displayOrg.org_pic}
+                      alt={displayOrg.abbrev_name || displayOrg.name}
+                      className="w-4 h-4 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+                      <span className="text-xs font-medium text-white">
+                        {displayOrg.abbrev_name?.charAt(0) || displayOrg.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <span className="text-xs font-medium text-gray-700">
+                    {displayOrg.abbrev_name || displayOrg.name}
+                  </span>
+                </>
+              ) : displayUser ? (
+                <>
+                  {displayUser.profile_pic ? (
+                    <img
+                      src={displayUser.profile_pic}
+                      alt={`${displayUser.first_name} ${displayUser.last_name}`}
+                      className="w-4 h-4 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                      <span className="text-xs font-medium text-white">
+                        {displayUser.first_name.charAt(0)}{displayUser.last_name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <span className="text-xs font-medium text-gray-700">
+                    {displayUser.first_name} {displayUser.last_name}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-gray-500">
+                  {post.user_id.slice(0, 8)}...
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <Calendar size={14} />
@@ -643,7 +741,7 @@ export default function PostCard({
           </div>
           <div className="flex items-center gap-1">
             <Eye size={14} />
-            <span>{post.view_count || 0}</span>
+            <span>{post.post_views?.length ?? 0}</span>
           </div>
         </div>
       </div>

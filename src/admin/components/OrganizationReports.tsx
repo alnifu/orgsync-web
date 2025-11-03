@@ -342,18 +342,18 @@ export default function OrganizationReports({ organizationId, onError }: Organiz
         dateFilter
           ? supabase
             .from('posts')
-            .select('view_count')
+            .select('post_views(user_id)')
             .eq('org_id', organizationId)
             .gte('created_at', dateFilter)
           : supabase
             .from('posts')
-            .select('view_count')
+            .select('post_views(user_id)')
             .eq('org_id', organizationId),
 
         // Recent views (last 30 days)
         supabase
           .from('posts')
-          .select('view_count')
+          .select('post_views(user_id)')
           .eq('org_id', organizationId)
           .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
 
@@ -476,8 +476,8 @@ export default function OrganizationReports({ organizationId, onError }: Organiz
       const feedbackCount = postTypes.filter((p: PostTypeData) => p.post_type === 'feedback').length;
 
       // Calculate total views
-      const totalViews = totalViewsResult.data?.reduce((sum, post) => sum + (post.view_count || 0), 0) || 0;
-      const recentViews = recentViewsResult.data?.reduce((sum, post) => sum + (post.view_count || 0), 0) || 0;
+      const totalViews = totalViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
+      const recentViews = recentViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
 
       // Calculate coins
       const totalCoins = coinsResult.data?.reduce((sum, gameRoom) => sum + (gameRoom.coins || 0), 0) || 0;

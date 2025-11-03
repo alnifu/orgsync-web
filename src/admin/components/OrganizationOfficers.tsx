@@ -33,6 +33,7 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
           user_id,
           org_id,
           manager_role,
+          position,
           assigned_at,
           users (
             id,
@@ -48,7 +49,6 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
             year_level,
             employee_id,
             department,
-            position,
             user_type,
             email
           )
@@ -58,7 +58,10 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
 
       if (error) throw error;
       if (data) {
-        setOfficers(data.map(item => item.users as unknown as User));
+        setOfficers(data.map(item => ({
+          ...(item.users as unknown as User),
+          position: item.position // Use position from org_managers table
+        })));
       } else {
         setOfficers([]);
       }
@@ -185,7 +188,7 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
   };
 
   const viewProfile = (userId: string) => {
-    navigate(`/admin/profile/${userId}`);
+    navigate(`/admin/dashboard/profile/${userId}`);
   };
 
   const handleAssignOfficer = async () => {
@@ -490,9 +493,6 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
                   Position
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -538,9 +538,6 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {officer.position || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {officer.employee_id || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center space-x-2">

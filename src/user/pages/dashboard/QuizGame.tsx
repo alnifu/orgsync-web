@@ -9,27 +9,27 @@ const QuizGame: React.FC = () => {
   const [selectedQuizData, setSelectedQuizData] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [quizId, setQuizId] = useState<string | null>(null);
+  const [isLandscape, setIsLandscape] = useState(
+    window.matchMedia("(orientation: landscape)").matches
+  );
+  const [isIOS, setIsIOS] = useState(false);
 
-  const {
-    unityProvider,
-    isLoaded,
-    loadingProgression,
-    sendMessage,
-  } = useUnityContext({
-    loaderUrl: "/unity/game2/Build/QuizNew.loader.js",
-    dataUrl: "/unity/game2/Build/QuizNew.data",
-    frameworkUrl: "/unity/game2/Build/QuizNew.framework.js",
-    codeUrl: "/unity/game2/Build/QuizNew.wasm",
-  });
+  const { unityProvider, isLoaded, loadingProgression, sendMessage } =
+    useUnityContext({
+      loaderUrl: "/unity/game2/Build/QuizNew.loader.js",
+      dataUrl: "/unity/game2/Build/QuizNew.data",
+      frameworkUrl: "/unity/game2/Build/QuizNew.framework.js",
+      codeUrl: "/unity/game2/Build/QuizNew.wasm",
+    });
 
-  // Load quiz from sessionStorage (set on QuizSelection)
+  // Load quiz data from sessionStorage
   useEffect(() => {
     const quizData = sessionStorage.getItem("selectedQuizData");
     const quizId = sessionStorage.getItem("selectedQuizId");
-    const orgId = sessionStorage.getItem("currentOrgId"); // optional
+    const orgId = sessionStorage.getItem("currentOrgId");
 
     if (!quizData || !quizId) {
-      console.warn("⚠️ Quiz or quiz ID not found in sessionStorage. Redirecting...");
+      console.warn("⚠️ Missing quiz data, redirecting...");
       navigate("/dashboard");
       return;
     }
@@ -37,31 +37,53 @@ const QuizGame: React.FC = () => {
     setSelectedQuizData(quizData);
     setQuizId(quizId);
     setOrgId(orgId);
-    console.log("✅ Loaded from sessionStorage:", { quizId, orgId, quizData: quizData.substring(0, 50) + "..." });
   }, [navigate]);
 
-  // Send IDs and Quiz JSON to Unity once loaded
+  // Send user info + quiz data to Unity
   useEffect(() => {
     if (!isLoaded || !user || !quizId || !selectedQuizData) return;
 
-    console.log("➡️ Sending UserId, OrgId, QuizId, QuizData to Unity...");
-
     sendMessage("GameManager", "ReceiveUserId", user.id);
-    console.log("➡️ UserId sent:", user.id);
-
-    if (orgId) {
-      sendMessage("GameManager", "ReceiveOrgId", orgId);
-      console.log("➡️ OrgId sent:", orgId);
-    } else {
-      console.warn("⚠️ OrgId not available");
-    }
-
+    if (orgId) sendMessage("GameManager", "ReceiveOrgId", orgId);
     sendMessage("GameManager", "ReceiveQuizId", quizId);
-    console.log("➡️ QuizId sent:", quizId);
-
     sendMessage("GameManager", "ReceiveQuizData", selectedQuizData);
-    console.log("➡️ QuizData sent (first 100 chars):", selectedQuizData.substring(0, 100) + "...");
   }, [isLoaded, user, quizId, orgId, selectedQuizData, sendMessage]);
+
+  // Detect iOS and orientation
+  useEffect(() => {
+    const ua = window.navigator.userAgent;
+    setIsIOS(/iPad|iPhone|iPod/.test(ua) && !("MSStream" in window));
+
+    const mql = window.matchMedia("(orientation: landscape)");
+    const handleChange = (e: MediaQueryListEvent) => setIsLandscape(e.matches);
+    mql.addEventListener("change", handleChange);
+
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
+
+  // Auto fullscreen + landscape lock (Android only)
+  useEffect(() => {
+    const enableFullscreenAndLandscape = async () => {
+      try {
+        const elem = document.documentElement;
+
+        if (elem.requestFullscreen) await elem.requestFullscreen();
+        else if ((elem as any).webkitRequestFullscreen)
+          (elem as any).webkitRequestFullscreen();
+
+        const orientation: any = (screen as any).orientation;
+        if (orientation && orientation.lock) {
+          await orientation.lock("landscape");
+        } else {
+          console.warn("Orientation lock not supported.");
+        }
+      } catch (err) {
+        console.warn("Fullscreen/orientation lock failed:", err);
+      }
+    };
+
+    if (!isIOS) enableFullscreenAndLandscape();
+  }, [isIOS]);
 
   return (
     <div
@@ -70,24 +92,33 @@ const QuizGame: React.FC = () => {
         top: 0,
         left: 0,
         width: "100vw",
-        height: "100vh",
+        height: "100dvh",
         display: "flex",
         flexDirection: "column",
         background: "#000",
+        overflow: "hidden",
       }}
     >
-      {/* 🔹 Top bar with back button */}
+      {/* Top bar with Back button */}
       <div
         style={{
-          padding: "10px",
-          background: "rgba(0,0,0,0.7)",
-          textAlign: "left",
-          flexShrink: 0,
-          zIndex: 10,
+          position: "absolute",
+          top: 10,
+          left: 10,
+          zIndex: 1000,
         }}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={async () => {
+            try {
+              if (document.fullscreenElement) await document.exitFullscreen();
+              const orientation: any = (screen as any).orientation;
+              if (orientation && orientation.unlock) orientation.unlock();
+              navigate(-1);
+            } catch {
+              navigate(-1);
+            }
+          }}
           style={{
             padding: "8px 16px",
             background: "#16a34a",
@@ -101,20 +132,44 @@ const QuizGame: React.FC = () => {
         </button>
       </div>
 
-      {/* 🔸 Unity Game (Responsive 16:9 with spacing below header) */}
+      {/* Unity Game with 16:9 ratio based on height */}
       <div
         style={{
           flex: 1,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          overflow: "hidden",
           background: "#000",
-          paddingTop: "8px", // ✅ space below the buttons
+          overflow: "hidden",
+          position: "relative",
         }}
       >
+        {/* iOS Portrait Overlay */}
+        {isIOS && !isLandscape && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100dvh",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              background: "black",
+              color: "white",
+              fontSize: "20px",
+              textAlign: "center",
+              zIndex: 3000,
+              padding: "20px",
+            }}
+          >
+            Please rotate your device to landscape to play the quiz.
+          </div>
+        )}
+
         {!isLoaded && (
-          <p style={{ color: "#fff", marginBottom: "1rem" }}>
+          <p style={{ color: "#fff", position: "absolute", top: "50%" }}>
             Loading Unity... {Math.round(loadingProgression * 100)}%
           </p>
         )}
@@ -122,9 +177,8 @@ const QuizGame: React.FC = () => {
         <div
           style={{
             position: "relative",
-            width: "100%",
-            maxWidth: "100vw",
-            aspectRatio: "16 / 9", // ✅ maintain perfect 16:9 ratio
+            width: "min(100vw, calc(100dvh * (16 / 9)))",
+            height: "100dvh",
             background: "#000",
             display: "flex",
             justifyContent: "center",
@@ -134,9 +188,12 @@ const QuizGame: React.FC = () => {
           <Unity
             unityProvider={unityProvider}
             style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
               width: "100%",
               height: "100%",
-              objectFit: "contain", // ✅ prevents stretching
+              objectFit: "contain",
               background: "#000",
             }}
           />

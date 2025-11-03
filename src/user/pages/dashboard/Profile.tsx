@@ -45,9 +45,6 @@ const programToDepartmentMap: Record<string, string> = {
 
   // CON - College of Nursing
   "BS Nursing": "CON",
-
-  // COL - College of Law
-  "Juris Doctor": "COL",
 };
 
 export default function UserProfile() {
@@ -73,6 +70,7 @@ export default function UserProfile() {
   const [showCropModal, setShowCropModal] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string>('');
   const [coins, setCoins] = useState<number>(0);
+  const [badges, setBadges] = useState<any[]>([]);
 
   // Fetch user profile
   useEffect(() => {
@@ -129,6 +127,24 @@ export default function UserProfile() {
         } else {
           setCoins(coinData?.coins ?? 0);
         }
+
+        // Fetch user badges (joined badges table)
+        try {
+          const { data: badgeData, error: badgeError } = await supabase
+            .from('user_badges')
+            .select('earned_at, badges (id, name, description, icon_url, category, required_plays)')
+            .eq('user_id', authUser.id)
+            .order('earned_at', { ascending: false });
+
+          if (badgeError) {
+            console.error('Error fetching user badges:', badgeError);
+          } else {
+            setBadges(badgeData || []);
+            console.log('Badges fetched:', badgeData);
+          }
+        } catch (innerErr) {
+          console.error('Unexpected error fetching badges:', innerErr);
+        }
       } catch (err) {
         console.log('Error in fetchUser:', err);
         setError(err instanceof Error ? err.message : 'Failed to load user profile');
@@ -171,7 +187,6 @@ export default function UserProfile() {
 
       // Upload new avatar if selected
       if (avatarFile) {
-        // Always use the same filename for each user to ensure replacement
         const fileName = `${user.id}-avatar.jpg`;
         const { error: uploadError } = await supabase.storage
           .from('avatars')
@@ -249,7 +264,6 @@ export default function UserProfile() {
     setShowCropModal(false);
     setCropImageSrc('');
 
-    // If we already have the user loaded, upload immediately and replace the stored avatar
     if (!user) return;
 
     try {
@@ -263,7 +277,7 @@ export default function UserProfile() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL and add cache-busting query so browsers/CDN don't serve the stale image
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
@@ -290,7 +304,6 @@ export default function UserProfile() {
       setUser(updatedUser);
       console.log('User updated with new avatar');
 
-      // Clear local avatarFile because we've already uploaded and updated DB
       setAvatarFile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload avatar');
@@ -342,6 +355,14 @@ export default function UserProfile() {
     );
   }
 
+  // Group badges by category
+  const groupedBadges = badges.reduce((acc: Record<string, any[]>, ub: any) => {
+    const cat = ub.badges?.category || 'other';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(ub);
+    return acc;
+  }, {});
+
   return (
     <>
       {/* Crop Modal */}
@@ -387,7 +408,7 @@ export default function UserProfile() {
           {/* Profile Header */}
           <div className="relative bg-gradient-to-r from-green-600 to-green-700 px-6 py-12">
             <div className="absolute inset-0 bg-black/10"></div>
-            <div className="relative flex items-center">
+            <div className="relative flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 sm:gap-8">
               <div className="relative group">
                 {isEditing && avatarFile ? (
                   <div className="relative">
@@ -426,7 +447,7 @@ export default function UserProfile() {
                   </label>
                 )}
               </div>
-              <div className="ml-8 text-white">
+              <div className="text-white sm:ml-8 mt-4 sm:mt-0">
                 {isEditing ? (
                   <div className="space-y-3">
                     <input
@@ -457,9 +478,9 @@ export default function UserProfile() {
                     </svg>
                     {user.user_type || 'Not specified'}
                   </span>
-                  <div className="flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-orange-500/20 backdrop-blur-sm border border-orange-400/30">
-                    <Coins className="w-4 h-4 mr-2 text-orange-300" />
-                    <span className="text-orange-100">{coins} Coins</span>
+                  <div className="flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-yellow-200 backdrop-blur-sm border border-orange-400/30">
+                    <Coins className="w-4 h-4 mr-2 text-yellow-700" />
+                    <span className="text-yellow-700">{coins} Coins</span>
                   </div>
                 </div>
               </div>
@@ -707,10 +728,6 @@ export default function UserProfile() {
                             <optgroup label="College of Nursing">
                               <option value="BS Nursing">BS Nursing</option>
                             </optgroup>
-
-                            <optgroup label="College of Law">
-                              <option value="Juris Doctor">Juris Doctor</option>
-                            </optgroup>
                           </select>
                         ) : (
                           <span className="font-medium">{user.program || 'Not specified'}</span>
@@ -733,6 +750,54 @@ export default function UserProfile() {
                   </div>
                 </dl>
               </div>
+            </div>
+
+            {/* BADGES SECTION */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Achievements</h3>
+
+              {badges.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <p className="text-gray-600">No badges earned yet. Play some mini games to earn badges!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {/* Render badges grouped by category (participation / unique_quiz etc.) */}
+                  {Object.keys(groupedBadges).map((category) => (
+                    <div key={category} className="col-span-1">
+                      <div className="mb-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-50 text-green-700 border border-green-100">
+                          {category === 'participation' ? ' Participation' :
+                           category === 'unique_quiz' ? ' Explorer' :
+                           category}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        {groupedBadges[category].map((ub: any) => (
+                          <div key={ub.badges?.id || ub.badge_id} className="bg-white rounded-lg border border-gray-100 p-4 flex items-center gap-4 hover:shadow-md transition">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden border border-gray-200">
+                              <img
+                                src={ub.badges?.icon_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(ub.badges?.name || 'Badge')}&background=F0FFF4&color=2F855A&size=128`}
+                                alt={ub.badges?.name || 'Badge'}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold text-gray-900">{ub.badges?.name}</h4>
+                                <span className="text-xs text-gray-400">{ub.badges?.required_plays ? `${ub.badges.required_plays}` : ''}</span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">{ub.badges?.description}</p>
+                              <div className="text-xs text-gray-400 mt-2">Earned on {new Date(ub.earned_at).toLocaleDateString()}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Edit Actions */}

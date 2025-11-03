@@ -106,11 +106,11 @@ export default function Reports() {
 
         // Total views
         dateFilter
-          ? supabase.from('posts').select('view_count').gte('created_at', dateFilter)
-          : supabase.from('posts').select('view_count'),
+          ? supabase.from('posts').select('post_views(user_id)').gte('created_at', dateFilter)
+          : supabase.from('posts').select('post_views(user_id)'),
 
         // Recent views (last 30 days)
-        supabase.from('posts').select('view_count')
+        supabase.from('posts').select('post_views(user_id)')
           .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       ]);
 
@@ -120,8 +120,8 @@ export default function Reports() {
       const facultyCount = userTypes.filter(u => u.user_type === 'faculty').length;
 
       // Calculate total views
-      const totalViews = totalViewsResult.data?.reduce((sum, post) => sum + (post.view_count || 0), 0) || 0;
-      const recentViews = recentViewsResult.data?.reduce((sum, post) => sum + (post.view_count || 0), 0) || 0;
+      const totalViews = totalViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
+      const recentViews = recentViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
 
       setStats({
         totalUsers: usersResult.count || 0,

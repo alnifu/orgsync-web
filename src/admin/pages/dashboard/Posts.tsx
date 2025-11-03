@@ -23,7 +23,7 @@ export default function PostsComponent() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
-  const [sortBy, setSortBy] = useState<keyof Posts>("created_at");
+  const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -37,7 +37,7 @@ export default function PostsComponent() {
   const [selectedPostType, setSelectedPostType] = useState<PostType>("general");
 
   // Get user roles
-  const { isAdmin } = useUserRoles(currentUser?.id);
+  const { isAdmin, isOfficer } = useUserRoles(currentUser?.id);
 
   // Get all unique tags from posts
   const allTags: string[] = [...new Set(posts.flatMap(post => post.tags || []))];
@@ -63,7 +63,8 @@ export default function PostsComponent() {
         .from("posts")
         .select(`
           id, title, content, created_at, updated_at, user_id, tags, 
-          status, view_count, is_pinned, org_id, media, post_type, visibility
+          status, is_pinned, org_id, media, post_type, visibility, game_route,
+          post_views(user_id)
         `)
         .or(`status.eq.published,status.eq.archived${currentUser ? `,status.eq.draft.and.user_id.eq.${currentUser.id}` : ''}`)
         .order("is_pinned", { ascending: false })
@@ -99,8 +100,16 @@ export default function PostsComponent() {
 
     // Sort
     filtered.sort((a: Posts, b: Posts) => {
-      let aValue: any = a[sortBy];
-      let bValue: any = b[sortBy];
+      let aValue: any;
+      let bValue: any;
+      
+      if (sortBy === "views") {
+        aValue = a.post_views?.length ?? 0;
+        bValue = b.post_views?.length ?? 0;
+      } else {
+        aValue = a[sortBy as keyof Posts];
+        bValue = b[sortBy as keyof Posts];
+      }
       
       if (sortBy === "created_at" || sortBy === "updated_at") {
         aValue = new Date(aValue);
@@ -252,7 +261,7 @@ export default function PostsComponent() {
               <option value="created_at_asc">Oldest First</option>
               <option value="title_asc">Title A-Z</option>
               <option value="title_desc">Title Z-A</option>
-              <option value="view_count_desc">Most Views</option>
+              <option value="views_desc">Most Views</option>
             </select>
           </div>
         </div>
@@ -295,6 +304,7 @@ export default function PostsComponent() {
                 onViewResponses={handleViewResponses}
                 isOwner={isPostOwner(post)}
                 isAdmin={isAdmin()}
+                isOfficer={isOfficer()}
                 showOrgInfo={true}
                 organization={(post as any).organizations}
                 poster={(post as any).users}
@@ -320,7 +330,7 @@ export default function PostsComponent() {
                 <div className="text-sm text-gray-500">Unique Tags</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{posts.reduce((sum, p) => sum + (p.view_count || 0), 0)}</div>
+                <div className="text-2xl font-bold text-green-600">{posts.reduce((sum, p) => sum + (p.post_views?.length ?? 0), 0)}</div>
                 <div className="text-sm text-gray-500">Total Views</div>
               </div>
             </div>

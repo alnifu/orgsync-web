@@ -19,7 +19,7 @@ const LeaderboardPage: React.FC = () => {
   const [selectedQuiz, setSelectedQuiz] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 1️⃣ Fetch user orgs
+  // Fetch user orgs
   useEffect(() => {
     const fetchUserOrgs = async () => {
       setLoading(true);
@@ -65,7 +65,7 @@ const LeaderboardPage: React.FC = () => {
     fetchUserOrgs();
   }, []);
 
-  // 2️⃣ Fetch quizzes for selected org
+  // Fetch quizzes for selected org
   useEffect(() => {
     if (!selectedOrg) return;
 
@@ -119,6 +119,13 @@ const LeaderboardPage: React.FC = () => {
   return (
     <div className="min-h-screen p-3">
       <div className="max-w-lg mx-auto bg-white rounded-2xl shadow p-6">
+
+        <div className="mb-6 text-center">
+          <p className="text-gray-600 text-sm mt-1">
+            Compete for the top spot! Earn rewards through quizzes and challenges, 
+            climb the leaderboard, and show off your organization’s spirit.
+          </p>
+        </div>
 
         {/* Org selector */}
         <div className="mb-4">

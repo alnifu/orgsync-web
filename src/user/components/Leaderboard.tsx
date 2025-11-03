@@ -34,20 +34,20 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ quizId, orgId }) => {
           .order("score", { ascending: false })
           .limit(10);
 
-        console.log("📝 Raw data:", data, "Error:", error);
+        console.log("Raw data:", data, "Error:", error);
 
         if (error) throw error;
 
         if (!data || data.length === 0) {
           setEntries([]);
           setErrorMessage("No scores yet for this quiz in this organization.");
-          console.warn("⚠️ No leaderboard entries returned by Supabase.");
+          console.warn("No leaderboard entries returned by Supabase.");
         } else {
-          console.log("✅ Leaderboard entries found:", data);
+          console.log("Leaderboard entries found:", data);
           setEntries(data);
         }
       } catch (err: any) {
-        console.error("❌ Error fetching leaderboard:", err);
+        console.error("Error fetching leaderboard:", err);
         setErrorMessage(err.message || "Failed to fetch leaderboard.");
       } finally {
         setLoading(false);
@@ -70,14 +70,26 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ quizId, orgId }) => {
       {entries.length > 0 ? (
         <ol className="divide-y divide-gray-200">
           {entries.map((entry, index) => (
-            <li key={entry.id} className="py-3 flex justify-between">
+            <li key={entry.id} className="py-3 flex justify-between items-center">
               <span>
                 {index + 1}.{" "}
                 <span className="font-medium">
                   {entry.username || entry.user_id.slice(0, 6)}
                 </span>
               </span>
-              <span className="font-semibold">{entry.score}</span>
+              <div className="text-right">
+                <span className="font-semibold block">{entry.score}</span>
+                <span className="text-xs text-gray-500">
+                  {new Date(entry.created_at).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                </span>
+              </div>
             </li>
           ))}
         </ol>

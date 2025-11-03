@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X, Plus, Upload, Image, Video, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare } from "lucide-react";
 import type { Posts, MediaItem, PostType } from '../../types/database.types';
 import { uploadFiles, validateFile } from '../../lib/media';
+import { sendNotificationsToOrgMembers } from '../../lib/notifications';
 
 interface AuthUser {
   id: string;
@@ -40,6 +41,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
   const [endTime, setEndTime] = useState<string>("");
   const [eventLocation, setEventLocation] = useState<string>("");
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+  const [selectedGame, setSelectedGame] = useState<string>("");
 
   // Handle page unload/navigation cancellation
   useEffect(() => {
@@ -79,6 +81,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
       setEndTime("");
       setEventLocation("");
       setVisibility('public');
+      setSelectedGame("");
       // postType is set by the defaultPostType useEffect above
     }
   }, [open]);
@@ -206,7 +209,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
         });
       }
 
-      const newPost: Omit<Posts, 'id' | 'created_at' | 'updated_at' | 'view_count' | 'is_pinned'> = {
+      const newPost: Omit<Posts, 'id' | 'created_at' | 'updated_at' | 'is_pinned'> = {
         title: title.trim(),
         content: postContent,
         user_id: currentUser.id,
@@ -216,6 +219,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
         post_type: postType,
         media: uploadedMedia.length > 0 ? uploadedMedia : null,
         visibility,
+        game_route: selectedGame ? (selectedGame === 'quiz' ? '/user/dashboard/quiz-selection' : '/user/dashboard/room-game') : null,
         ...(postType === 'event' && {
           event_date: eventDate,
           start_time: startTime,
@@ -224,12 +228,27 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
         })
       };
 
-      const { error } = await supabase.from("posts").insert(newPost);
+      const { data, error } = await supabase
+        .from("posts")
+        .insert(newPost)
+        .select('id')
+        .single();
 
       if (error) {
         console.error(error);
         alert("Error creating post: " + error.message);
       } else {
+        // Send notifications if post is published and has an org_id
+        if (status === 'published' && newPost.org_id && data) {
+          // Fetch org name
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('name')
+            .eq('id', newPost.org_id)
+            .single();
+          const orgName = orgData?.name || 'Unknown Organization';
+          await sendNotificationsToOrgMembers(newPost.org_id, `New post published from ${orgName}: ${title.trim()}`, data.id);
+        }
         resetForm();
         onOpenChange(false);
         onPostCreated();
@@ -377,6 +396,22 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
                 rows={postType === 'poll' ? 3 : 6}
               />
             </div>
+
+            {/* Game Link Selector */}
+            {(postType === 'general' || postType === 'event') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Link a Game (Optional)</label>
+                <select
+                  value={selectedGame}
+                  onChange={(e) => setSelectedGame(e.target.value)}
+                  className={`w-full border border-gray-300 rounded-lg p-3 focus:ring-2 outline-none transition-all ${getFocusRingColor()}`}
+                >
+                  <option value="">No Game</option>
+                  <option value="quiz">Quiz Game</option>
+                  <option value="room">Room Game</option>
+                </select>
+              </div>
+            )}
 
             {/* Poll Options */}
             {postType === 'poll' && (

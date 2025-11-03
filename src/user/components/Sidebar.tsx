@@ -8,6 +8,9 @@ import {
   User,
   Gamepad2,
   Trophy,
+  Target,
+  Palette,
+  Bell,
   LogOut
 } from "lucide-react";
 
@@ -22,11 +25,14 @@ export default function Sidebar({
   const links = [
     { to: ".", label: "Dashboard", icon: LayoutDashboard },
     { to: "newsfeed", label: "News Feed", icon: Newspaper },
+    { to: "notifications", label: "Notifications", icon: Bell },
     { to: "events", label: "Events", icon: CalendarDays },
     { to: "organizations", label: "Organizations", icon: Users },
     { to: "profile", label: "Profile", icon: User },
     { to: "games", label: "Games", icon: Gamepad2 },
-    { to: "leaderboard", label: "Leaderboard", icon: Trophy },
+    { to: "leaderboard", label: "Quiz Leaderboard", icon: Trophy },
+    { to: "community-goals", label: "Quiz Community Goals", icon: Target },
+    { to: "member-contests", label: "Room Design Contests", icon: Palette },
     { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard },
   ];
 

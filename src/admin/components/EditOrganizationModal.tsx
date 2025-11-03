@@ -34,7 +34,6 @@ export default function EditOrganization({
   const [bannerPicFile, setBannerPicFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Validation functions
   const validateField = (field: string, value: string) => {
@@ -70,11 +69,6 @@ export default function EditOrganization({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Prevent duplicate submissions
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
     setLoading(true);
     try {
       let orgPicUrl = organization.org_pic;
@@ -115,7 +109,6 @@ export default function EditOrganization({
       onError?.(err instanceof Error ? err.message : 'Failed to update organization');
     } finally {
       setLoading(false);
-      setIsSubmitting(false);
     }
   };
 
@@ -467,7 +460,7 @@ export default function EditOrganization({
                   </button>
                   <button
                     type="submit"
-                    disabled={loading || isSubmitting}
+                    disabled={loading}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {loading ? (

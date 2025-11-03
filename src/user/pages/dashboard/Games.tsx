@@ -4,7 +4,7 @@ export default function Games() {
   return (
     <div className="p-3 max-w-6xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card 1: Decorate your virtual room */}
+        {/* Card 1: My virtual room */}
         <div className="bg-white shadow rounded-2xl p-6 max-w-md mx-auto">
           <div className="w-full aspect-[16/9] mb-4">
             <img
@@ -31,12 +31,12 @@ export default function Games() {
           </div>
         </div>
 
-        {/* Card 2: Mini Games */}
+        {/* Card 2: Quiz Games */}
         <div className="bg-white shadow rounded-2xl p-6 max-w-md mx-auto">
           <div className="w-full aspect-[16/9] mb-4">
             <img
               src="https://marketplace.canva.com/EAFT3WPtA0A/1/0/1600w/canva-trivia-game-fun-presentation-in-green-light-blue-retro-pixel-style-CshQ_oTTdTY.jpg"
-              alt="Mini Games"
+              alt="Quiz Games"
               className="w-full h-full object-cover rounded-lg"
             />
           </div>

@@ -93,7 +93,7 @@ export default function AdminUserProfile() {
       if (!id || !roles || hasFetchedRef.current) return;
 
       // Check permissions - non-admins can only view their own profile
-      if (roles.role !== 'admin' && currentUser?.id !== id) {
+      if (roles.role === 'member' && currentUser?.id !== id) {
         setError('You can only view your own profile.');
         setLoading(false);
         return;

@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
-import { useNavigate } from "react-router";
 
 type SignupProps = {
   onSignupSuccess?: (user: any) => void;

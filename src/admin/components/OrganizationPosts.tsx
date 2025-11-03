@@ -26,7 +26,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
   const [filteredPosts, setFilteredPosts] = useState<Posts[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
-  const [sortBy, setSortBy] = useState<keyof Posts>("created_at");
+  const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -93,7 +93,8 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
         .from("posts")
         .select(`
           id, title, content, created_at, updated_at, user_id, tags, 
-          status, view_count, is_pinned, org_id, media, post_type, visibility
+          status, is_pinned, org_id, media, post_type, visibility, game_route,
+          post_views(user_id)
         `)
         .eq('org_id', organizationId)
         .order("is_pinned", { ascending: false })
@@ -130,8 +131,16 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
 
     // Sort
     filtered.sort((a: Posts, b: Posts) => {
-      let aValue: any = a[sortBy];
-      let bValue: any = b[sortBy];
+      let aValue: any;
+      let bValue: any;
+      
+      if (sortBy === "views") {
+        aValue = a.post_views?.length ?? 0;
+        bValue = b.post_views?.length ?? 0;
+      } else {
+        aValue = a[sortBy as keyof Posts];
+        bValue = b[sortBy as keyof Posts];
+      }
       
       if (sortBy === "created_at" || sortBy === "updated_at") {
         aValue = new Date(aValue);
@@ -299,7 +308,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
             <option value="created_at_asc">Oldest First</option>
             <option value="title_asc">Title A-Z</option>
             <option value="title_desc">Title Z-A</option>
-            <option value="view_count_desc">Most Views</option>
+            <option value="views_desc">Most Views</option>
           </select>
         </div>
       </div>
@@ -346,6 +355,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
               onViewResponses={handleViewResponses}
               isOwner={isPostOwner(post)}
               isAdmin={isAdmin() || isOfficer}
+              isOfficer={isOfficer}
               showOrgInfo={false}
               poster={(post as any).users}
             />

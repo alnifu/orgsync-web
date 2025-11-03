@@ -4,6 +4,8 @@ import { createBrowserRouter, Navigate, RouterProvider, Link } from "react-route
 import PrivateRoute from "./components/PrivateRoute";
 import { useAuth } from "./context/AuthContext";
 import { useUserRoles } from "./utils/roles";
+import { useNotifications } from "./hooks/useNotifications";
+import PostDetail from "./pages/PostDetail";
 
 // Admin Routes
 import AdminDashboard from "./admin/pages/Dashboard";
@@ -11,14 +13,15 @@ import AdminOrganizations from "./admin/pages/dashboard/Organizations";
 import AdminNewOrganization from "./admin/pages/dashboard/NewOrganization";
 import AdminOrganizationDetails from "./admin/pages/dashboard/OrganizationDetails";
 import AdminOrgTable from "./admin/pages/dashboard/OrgTable";
+import AdminDashboardHome from "./admin/pages/dashboard/AdminDashboardHome";
 import AdminOfficers from "./admin/pages/dashboard/Officers";
 import AdminMembers from "./admin/pages/dashboard/Members";
 import AdminPosts from "./admin/pages/dashboard/Posts";
 import AdminUserProfile from "./admin/pages/UserProfile";
 import AdminReports from "./admin/pages/Reports";
-import PostDetail from "./admin/pages/PostDetail";
 import OfficerContestManager from "./admin/pages/OfficerContestManager";
 import OfficerSubmissions from "./admin/pages/OfficerSubmissions";
+import MLDashboard from "./admin/components/MLDashboard";
 
 // User Routes
 import UserDashboard from "./user/pages/Dashboard";
@@ -28,11 +31,13 @@ import UserOrganizations from "./user/pages/dashboard/Organizations";
 import UserProfile from "./user/pages/dashboard/Profile";
 import UserGames from "./user/pages/dashboard/Games";
 import UserDashboardHome from "./user/pages/dashboard/DashboardHome";
+import CommunityGoalsPage from "./user/pages/dashboard/CommunityGoalsPage";
 import MemberContests from "./user/pages/dashboard/ContestPage";
 import QuizGame from "./user/pages/dashboard/QuizGame";
 import RoomGame from "./user/pages/dashboard/RoomGame";
 import QuizSelection from "./user/pages/dashboard/QuizSelection";
 import LeaderboardPage from "./user/pages/dashboard/LeaderboardPage";
+import NotificationInbox from "./user/components/NotificationInbox";
 
 // Auth Pages
 import Login from "./pages/Login";
@@ -115,6 +120,10 @@ const router = createBrowserRouter([
     element: <PrivateRoute><AdminDashboard /></PrivateRoute>,
     children: [
       {
+        index: true,
+        element: <AdminDashboardHome />
+      },
+      {
         path: "org-table",
         element: <AdminOrgTable />
       },
@@ -123,7 +132,8 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminOrganizations /> },
           { path: "new", element: <AdminNewOrganization /> },
-          { path: ":id", element: <AdminOrganizationDetails /> }
+          { path: ":id", element: <AdminOrganizationDetails /> },
+          { path: ":orgId/ml-dashboard", element: <MLDashboard /> }
         ]
       },
       { path: "officers", element: <AdminOfficers /> },
@@ -169,6 +179,8 @@ const router = createBrowserRouter([
         path: "games",
         element: <UserGames />
       },
+            { path: "community-goals", element: <CommunityGoalsPage /> },
+
       {
         path: "member-contests",
         element: <MemberContests />
@@ -177,6 +189,7 @@ const router = createBrowserRouter([
       { path: "room-game", element: <RoomGame /> },
       { path: "quiz-selection", element: <QuizSelection /> },
       { path: "leaderboard", element: <LeaderboardPage /> },
+      { path: "notifications", element: <NotificationInbox /> },
       {
         path: "posts/:postId",
         element: <PostDetail />
@@ -218,5 +231,6 @@ const router = createBrowserRouter([
 ]);
 
 export default function Root() {
+  useNotifications(); // Enable global notifications
   return <RouterProvider router={router} />;
 }
