@@ -508,8 +508,8 @@ export default function UserProfile() {
                         <input
                           type="email"
                           value={editForm.email}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                          readOnly
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                         />
                       ) : (
                         <span className="font-medium">{user.email}</span>
@@ -526,8 +526,8 @@ export default function UserProfile() {
                             <input
                               type="text"
                               value={editForm.student_number}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, student_number: e.target.value }))}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                              readOnly
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                             />
                           ) : (
                             <span className="font-medium">{user.student_number || 'Not provided'}</span>
@@ -568,8 +568,8 @@ export default function UserProfile() {
                             <input
                               type="text"
                               value={editForm.employee_id}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, employee_id: e.target.value }))}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                              readOnly
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                             />
                           ) : (
                             <span className="font-medium">{user.employee_id || 'Not provided'}</span>
