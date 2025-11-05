@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { useState } from "react";
-=======
 import { useState, useEffect } from "react";
->>>>>>> friend/main
 import { supabase } from "../../lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
 

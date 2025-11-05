@@ -100,7 +100,7 @@ export class MLService {
 
     // Initialize all members
     members?.forEach(member => {
-      const user = member.users as User;
+      const user = member.users as unknown as User;
       userMap.set(member.user_id, {
         userId: member.user_id,
         userName: `${user.first_name} ${user.last_name}`,

@@ -40,14 +40,14 @@ export default function NewOrganization() {
     }
   };
 
-  const generateOrgCode = (name) => {
+  const generateOrgCode = (name: string): string => {
     if (!name) return "";
 
     const ignoreWords = ["THE", "OF", "AND", "&"];
     return name
       .split(" ")
-      .filter(word => word.trim() !== "" && !ignoreWords.includes(word.toUpperCase()))
-      .map(word => word[0].toUpperCase())
+      .filter((word: string) => word.trim() !== "" && !ignoreWords.includes(word.toUpperCase()))
+      .map((word: string) => word[0].toUpperCase())
       .join("");
   };
 

@@ -17,12 +17,9 @@ import DeleteOrganizationModal from '../../components/DeleteOrganizationModal';
 import OrganizationLeaderboard from '../../components/OrganizationLeaderboard';
 import OrganizationQuizzes from '../../components/OrganizationQuizzes';
 import OrganizationOfficers from '../../components/OrganizationOfficers';
-<<<<<<< HEAD
-=======
 import FlappyConfigUploader from './FlappyConfigUploader';
 import FlappyCommunityGoalsManager from './FlappyCommunityGoalsManager';
 import CommunityGoalsManager from './CommunityGoalsManager';
->>>>>>> friend/main
 import { Pencil, Trash2, ArrowLeft } from 'lucide-react';
 
 export default function OrganizationDetails() {
