@@ -394,86 +394,6 @@ export default function AdminUserProfile() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
           {/* Profile Header */}
-<<<<<<< HEAD
-          <div className="relative bg-gradient-to-r from-green-600 to-green-700 px-6 py-12">
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="relative flex items-center">
-              <div className="relative group">
-                {isEditing && avatarFile ? (
-                  <div className="relative">
-                    <img
-                      src={URL.createObjectURL(avatarFile)}
-                      alt="Preview"
-                      className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20"
-                    />
-                    <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                  </div>
-                ) : user.avatar_url ? (
-                  <div className="relative">
-                    <img
-                      src={user.avatar_url}
-                      alt={`${user.first_name} ${user.last_name}`}
-                      className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20"
-                    />
-                    <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                  </div>
-                ) : (
-                  <div className="h-32 w-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-4 border-white shadow-2xl ring-4 ring-white/20 flex items-center justify-center">
-                    <span className="text-4xl font-bold text-gray-600">
-                      {(user.first_name ? user.first_name.charAt(0) : '?')}{(user.last_name ? user.last_name.charAt(0) : '?')}
-                    </span>
-                  </div>
-                )}
-                {isEditing && (
-                  <label className="absolute bottom-2 right-2 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-200 hover:scale-110 border border-gray-200">
-                    <Camera className="h-5 w-5 text-gray-600" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
-              <div className="ml-8 text-white">
-                {isEditing ? (
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={editForm.first_name}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
-                      className="text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none text-white placeholder-white/70"
-                      placeholder="First name"
-                    />
-                    <input
-                      type="text"
-                      value={editForm.last_name}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
-                      className="text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none text-white placeholder-white/70"
-                      placeholder="Last name"
-                    />
-                  </div>
-                ) : (
-                  <h2 className="text-3xl font-bold mb-2">
-                    {user.first_name} {user.last_name}
-                  </h2>
-                )}
-                <p className="text-green-100 text-lg mb-3">{user.email}</p>
-                <div className="flex items-center space-x-3">
-                  <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm border border-white/30">
-                    <Shield className="w-4 h-4 mr-2" />
-                    {user.user_type || 'Not specified'}
-                  </span>
-                  <div className="flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-orange-500/20 backdrop-blur-sm border border-orange-400/30">
-                    <Coins className="w-4 h-4 mr-2 text-orange-300" />
-                    <span className="text-orange-100">{coins} Coins</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-=======
 <div className="relative bg-gradient-to-r from-green-600 to-green-700 px-6 py-12">
   <div className="absolute inset-0 bg-black/10"></div>
   <div className="relative flex flex-col md:flex-row md:items-center md:space-x-8 items-center text-center md:text-left">
@@ -552,7 +472,6 @@ export default function AdminUserProfile() {
     </div>
   </div>
 </div>
->>>>>>> friend/main
 
           {/* Profile Details */}
           <div className="px-8 py-8 bg-gray-50">
@@ -573,13 +492,8 @@ export default function AdminUserProfile() {
                         <input
                           type="email"
                           value={editForm.email}
-<<<<<<< HEAD
-                          onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-=======
                           readOnly
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
->>>>>>> friend/main
                         />
                       ) : (
                         <span className="font-medium">{user.email}</span>
@@ -596,13 +510,8 @@ export default function AdminUserProfile() {
                             <input
                               type="text"
                               value={editForm.student_number}
-<<<<<<< HEAD
-                              onChange={(e) => setEditForm(prev => ({ ...prev, student_number: e.target.value }))}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-=======
                               readOnly
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
->>>>>>> friend/main
                             />
                           ) : (
                             <span className="font-medium">{user.student_number || 'Not provided'}</span>
@@ -643,13 +552,8 @@ export default function AdminUserProfile() {
                             <input
                               type="text"
                               value={editForm.employee_id}
-<<<<<<< HEAD
-                              onChange={(e) => setEditForm(prev => ({ ...prev, employee_id: e.target.value }))}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-=======
                               readOnly
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
->>>>>>> friend/main
                             />
                           ) : (
                             <span className="font-medium">{user.employee_id || 'Not provided'}</span>
@@ -698,10 +602,6 @@ export default function AdminUserProfile() {
                           editForm.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
                           editForm.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
                           editForm.department === "CON" ? "CON - College of Nursing" :
-<<<<<<< HEAD
-                          editForm.department === "COL" ? "COL - College of Law" :
-=======
->>>>>>> friend/main
                           editForm.department
                         ) : "Select a program to auto-populate department"}
                       </div>
@@ -712,75 +612,7 @@ export default function AdminUserProfile() {
                     <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
                       <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Program</dt>
                       <dd className="text-sm text-gray-900 flex-1">
-<<<<<<< HEAD
-                        {isEditing ? (
-                          <select
-                            value={editForm.program}
-                            onChange={(e) => {
-                              const selectedProgram = e.target.value;
-                              setEditForm(prev => {
-                                const newForm = { ...prev, program: selectedProgram };
-                                // Auto-set department when program is selected
-                                if (selectedProgram) {
-                                  const department = programToDepartmentMap[selectedProgram];
-                                  if (department) {
-                                    newForm.department = department;
-                                  }
-                                }
-                                return newForm;
-                              });
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                          >
-                            <option value="">Select Program</option>
-                            <optgroup label="College of Arts and Sciences (CAS)">
-                              <option value="Bachelor of Arts in Communication">Bachelor of Arts in Communication</option>
-                              <option value="Bachelor of Arts in English">Bachelor of Arts in English</option>
-                              <option value="Bachelor of Arts in Filipino">Bachelor of Arts in Filipino</option>
-                              <option value="Bachelor of Arts in History">Bachelor of Arts in History</option>
-                              <option value="Bachelor of Arts in Political Science">Bachelor of Arts in Political Science</option>
-                              <option value="Bachelor of Science in Biology">Bachelor of Science in Biology</option>
-                              <option value="Bachelor of Science in Chemistry">Bachelor of Science in Chemistry</option>
-                              <option value="Bachelor of Science in Mathematics">Bachelor of Science in Mathematics</option>
-                              <option value="Bachelor of Science in Physics">Bachelor of Science in Physics</option>
-                              <option value="Bachelor of Science in Psychology">Bachelor of Science in Psychology</option>
-                            </optgroup>
-                            <optgroup label="College of Business Administration (CBA)">
-                              <option value="Bachelor of Science in Accountancy">Bachelor of Science in Accountancy</option>
-                              <option value="Bachelor of Science in Business Administration">Bachelor of Science in Business Administration</option>
-                              <option value="Bachelor of Science in Entrepreneurship">Bachelor of Science in Entrepreneurship</option>
-                              <option value="Bachelor of Science in Hospitality Management">Bachelor of Science in Hospitality Management</option>
-                              <option value="Bachelor of Science in Tourism Management">Bachelor of Science in Tourism Management</option>
-                            </optgroup>
-                            <optgroup label="College of Computer Studies (CCS)">
-                              <option value="Bachelor of Science in Computer Science">Bachelor of Science in Computer Science</option>
-                              <option value="Bachelor of Science in Information Technology">Bachelor of Science in Information Technology</option>
-                              <option value="Bachelor of Science in Information Systems">Bachelor of Science in Information Systems</option>
-                              <option value="Associate in Computer Technology">Associate in Computer Technology</option>
-                            </optgroup>
-                            <optgroup label="College of Education (COED)">
-                              <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
-                              <option value="Bachelor of Secondary Education">Bachelor of Secondary Education</option>
-                              <option value="Bachelor of Physical Education">Bachelor of Physical Education</option>
-                              <option value="Bachelor of Special Needs Education">Bachelor of Special Needs Education</option>
-                            </optgroup>
-                            <optgroup label="College of Engineering (COE)">
-                              <option value="Bachelor of Science in Civil Engineering">Bachelor of Science in Civil Engineering</option>
-                              <option value="Bachelor of Science in Computer Engineering">Bachelor of Science in Computer Engineering</option>
-                              <option value="Bachelor of Science in Electrical Engineering">Bachelor of Science in Electrical Engineering</option>
-                              <option value="Bachelor of Science in Electronics Engineering">Bachelor of Science in Electronics Engineering</option>
-                              <option value="Bachelor of Science in Mechanical Engineering">Bachelor of Science in Mechanical Engineering</option>
-                            </optgroup>
-                            <optgroup label="College of Nursing (CN)">
-                              <option value="Bachelor of Science in Nursing">Bachelor of Science in Nursing</option>
-                            </optgroup>
-                          </select>
-                        ) : (
-                          <span className="font-medium">{user.program || 'Not specified'}</span>
-                        )}
-=======
                         <span className="font-medium">{user.program || 'Not specified'}</span>
->>>>>>> friend/main
                       </dd>
                     </div>
                   )}

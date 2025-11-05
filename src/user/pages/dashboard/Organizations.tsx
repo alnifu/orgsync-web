@@ -30,18 +30,11 @@ export default function Organizations() {
       if (!user) return;
 
       const { data: orgsData, error: orgsError } = await supabase
-<<<<<<< HEAD
-        .from("organizations")
-        .select(
-          "id, name, abbrev_name, org_pic, banner_pic, email, description, department, status, date_established, org_type"
-        );
-=======
       .from("organizations")
       .select(
         "id, name, abbrev_name, org_pic, banner_pic, email, description, department, status, date_established, org_type"
       )
       .eq("status", "active");
->>>>>>> friend/main
 
       if (orgsError) throw orgsError;
 
@@ -108,12 +101,9 @@ if (loading) {
 
   return (
     <div className="p-3 max-w-2xl mx-auto space-y-6">
-<<<<<<< HEAD
-=======
       <h1 className="text-2xl font-bold text-green-700 mb-4 text-center">
         Organizations
       </h1>
->>>>>>> friend/main
       {/* Joined Organizations */}
       <div>
         <h2 className="text-lg font-semibold text-green-700 mb-2">Joined</h2>

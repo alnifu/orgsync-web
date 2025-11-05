@@ -163,13 +163,6 @@ export default function DashboardHome() {
       <section>
         <h3 className="text-lg font-semibold mb-3">🎮 Featured Games</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-<<<<<<< HEAD
-          <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
-            <p className="font-medium text-gray-900">My Virtual Room</p>
-            <Link
-              to="/room-game"
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
-=======
           {/* My Virtual Room */}
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
             <div>
@@ -181,18 +174,10 @@ export default function DashboardHome() {
             <Link
               to="room-game"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition ml-4 whitespace-nowrap"
->>>>>>> friend/main
             >
               Play
             </Link>
           </div>
-<<<<<<< HEAD
-          <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
-            <p className="font-medium text-gray-900">Quiz Games</p>
-            <Link
-              to="/quiz-selection"
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
-=======
 
           {/* Quiz Games */}
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
@@ -221,7 +206,6 @@ export default function DashboardHome() {
             <Link
               to="flappy-challenges"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition ml-4 whitespace-nowrap"
->>>>>>> friend/main
             >
               Play
             </Link>

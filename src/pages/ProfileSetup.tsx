@@ -84,12 +84,6 @@ export default function ProfileSetup() {
 
         // CON - College of Nursing
         "BS Nursing": "CON",
-<<<<<<< HEAD
-
-        // COL - College of Law
-        "Juris Doctor": "COL",
-=======
->>>>>>> friend/main
     };
 
     useEffect(() => {
@@ -258,10 +252,6 @@ export default function ProfileSetup() {
 
             if (updateError) throw updateError;
 
-<<<<<<< HEAD
-            // Redirect to dashboard
-            navigate("/dashboard");
-=======
             // After updating user profile, check if program has an org_id
             if (userProfile.user_type === "student" && profileData.program) {
             // 1. Find the program row
@@ -301,7 +291,6 @@ export default function ProfileSetup() {
             // Finally, redirect to dashboard
             navigate("/dashboard");
 
->>>>>>> friend/main
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to complete profile setup");
         } finally {
@@ -414,13 +403,6 @@ export default function ProfileSetup() {
                                 <optgroup label="College of Nursing">
                                     <option value="BS Nursing">BS Nursing</option>
                                 </optgroup>
-<<<<<<< HEAD
-
-                                <optgroup label="College of Law">
-                                    <option value="Juris Doctor">Juris Doctor</option>
-                                </optgroup>
-=======
->>>>>>> friend/main
                             </select>
                         </div>
                         <div className="space-y-4">
@@ -433,12 +415,7 @@ export default function ProfileSetup() {
                                                 profileData.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
                                                     profileData.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
                                                         profileData.department === "CON" ? "CON - College of Nursing" :
-<<<<<<< HEAD
-                                                            profileData.department === "COL" ? "COL - College of Law" :
-                                                                profileData.department
-=======
                                                             profileData.department
->>>>>>> friend/main
                                     ) : "Not specified"}
                                 </div>
                             </div>

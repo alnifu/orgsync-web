@@ -32,21 +32,14 @@ import UserProfile from "./user/pages/dashboard/Profile";
 import UserGames from "./user/pages/dashboard/Games";
 import UserDashboardHome from "./user/pages/dashboard/DashboardHome";
 import CommunityGoalsPage from "./user/pages/dashboard/CommunityGoalsPage";
-<<<<<<< HEAD
-import MemberContests from "./user/pages/dashboard/ContestPage";
-=======
 import MemberContests from "./user/pages/dashboard/MemberContests";
->>>>>>> friend/main
 import QuizGame from "./user/pages/dashboard/QuizGame";
 import RoomGame from "./user/pages/dashboard/RoomGame";
 import QuizSelection from "./user/pages/dashboard/QuizSelection";
 import LeaderboardPage from "./user/pages/dashboard/LeaderboardPage";
 import NotificationInbox from "./user/components/NotificationInbox";
-<<<<<<< HEAD
-=======
 import FlappyChallengePicker from "./user/pages/dashboard/FlappyChallengePicker";
 import FlappyGame from "./user/pages/dashboard/FlappyGame";
->>>>>>> friend/main
 
 // Auth Pages
 import Login from "./pages/Login";
@@ -199,11 +192,8 @@ const router = createBrowserRouter([
       { path: "quiz-selection", element: <QuizSelection /> },
       { path: "leaderboard", element: <LeaderboardPage /> },
       { path: "notifications", element: <NotificationInbox /> },
-<<<<<<< HEAD
-=======
       { path: "flappy-challenges", element: <FlappyChallengePicker /> },
       { path: "flappy-game", element: <FlappyGame /> },
->>>>>>> friend/main
       {
         path: "posts/:postId",
         element: <PostDetail />

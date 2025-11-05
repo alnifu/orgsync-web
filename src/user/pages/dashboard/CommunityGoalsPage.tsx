@@ -6,19 +6,6 @@ interface Organization {
   name: string;
 }
 
-<<<<<<< HEAD
-interface CommunityGoal {
-  id: string;
-  org_id: string;
-  quiz_id: number;
-  goal_type: "score" | "participants";
-  goal_target: number;
-  reward_coins: number;
-  is_completed: boolean;
-  current_progress: number;
-  created_at: string;
-  quiz_title?: string; 
-=======
 type GameType = "quiz" | "flappy";
 
 interface CommunityGoal {
@@ -33,24 +20,16 @@ interface CommunityGoal {
   is_completed: boolean;
   created_at: string;
   title?: string; // quiz title or challenge name
->>>>>>> friend/main
 }
 
 const CommunityGoalsPage: React.FC = () => {
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<string>("");
-<<<<<<< HEAD
-  const [goals, setGoals] = useState<CommunityGoal[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch user org memberships
-=======
   const [selectedGame, setSelectedGame] = useState<GameType>("quiz");
   const [goals, setGoals] = useState<CommunityGoal[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch user's organizations
->>>>>>> friend/main
   useEffect(() => {
     const fetchUserOrgs = async () => {
       setLoading(true);
@@ -59,10 +38,6 @@ const CommunityGoalsPage: React.FC = () => {
         const user = userData?.user;
         if (!user) return;
 
-<<<<<<< HEAD
-        // Fetch orgs where the user is an active member
-=======
->>>>>>> friend/main
         const { data: memberships, error: membershipsError } = await supabase
           .from("org_members")
           .select("org_id")
@@ -77,10 +52,6 @@ const CommunityGoalsPage: React.FC = () => {
         }
 
         const orgIds = memberships.map((m) => m.org_id);
-<<<<<<< HEAD
-
-=======
->>>>>>> friend/main
         const { data: orgData, error: orgError } = await supabase
           .from("organizations")
           .select("id, name")
@@ -100,50 +71,13 @@ const CommunityGoalsPage: React.FC = () => {
     fetchUserOrgs();
   }, []);
 
-<<<<<<< HEAD
-  // Fetch community goals for selected org (with quiz titles)
-=======
   // Fetch goals when org or game changes
->>>>>>> friend/main
   useEffect(() => {
     if (!selectedOrg) return;
 
     const fetchGoals = async () => {
       setLoading(true);
       try {
-<<<<<<< HEAD
-        // Fetch all goals
-        const { data: goalsData, error: goalsError } = await supabase
-          .from("community_goals")
-          .select("*")
-          .eq("org_id", selectedOrg)
-          .order("created_at", { ascending: false });
-
-        if (goalsError) throw goalsError;
-        if (!goalsData) {
-          setGoals([]);
-          return;
-        }
-
-        // Fetch all quiz titles used in these goals
-        const quizIds = goalsData.map((g) => g.quiz_id);
-        const { data: quizzesData, error: quizzesError } = await supabase
-          .from("quizzes")
-          .select("id, title")
-          .in("id", quizIds);
-
-        if (quizzesError) throw quizzesError;
-
-        const quizMap = new Map(quizzesData.map((q) => [q.id, q.title]));
-
-        // Attach titles to goals
-        const goalsWithTitles = goalsData.map((g) => ({
-          ...g,
-          quiz_title: quizMap.get(g.quiz_id) || `Quiz ID: ${g.quiz_id}`,
-        }));
-
-        setGoals(goalsWithTitles);
-=======
         if (selectedGame === "quiz") {
           const { data: goalsData, error: goalsError } = await supabase
             .from("community_goals")
@@ -199,7 +133,6 @@ const CommunityGoalsPage: React.FC = () => {
           }));
           setGoals(goalsWithNames);
         }
->>>>>>> friend/main
       } catch (err) {
         console.error("❌ Error fetching goals:", err);
       } finally {
@@ -208,21 +141,13 @@ const CommunityGoalsPage: React.FC = () => {
     };
 
     fetchGoals();
-<<<<<<< HEAD
-  }, [selectedOrg]);
-=======
   }, [selectedOrg, selectedGame]);
->>>>>>> friend/main
 
   if (loading) return <div className="text-center py-10">Loading community goals...</div>;
 
   return (
     <div className="min-h-screen p-3">
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow p-6">
-<<<<<<< HEAD
-
-=======
->>>>>>> friend/main
         <div className="mb-6 text-center">
           <p className="text-gray-600 text-sm mt-1">
             Stay on top of your organization’s goals! 
@@ -230,10 +155,6 @@ const CommunityGoalsPage: React.FC = () => {
           </p>
         </div>
 
-<<<<<<< HEAD
-        {/* Org selector */}
-=======
->>>>>>> friend/main
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Select Organization
@@ -241,11 +162,7 @@ const CommunityGoalsPage: React.FC = () => {
           <select
             value={selectedOrg}
             onChange={(e) => setSelectedOrg(e.target.value)}
-<<<<<<< HEAD
-            className="w-full border rounded-lg p-2"
-=======
             className="w-full border rounded-lg p-2 mb-4"
->>>>>>> friend/main
           >
             <option value="">Select an organization</option>
             {orgs.map((org) => (
@@ -254,14 +171,6 @@ const CommunityGoalsPage: React.FC = () => {
               </option>
             ))}
           </select>
-<<<<<<< HEAD
-        </div>
-
-        {/* Goals list */}
-        {goals.length === 0 ? (
-          <p className="text-gray-500 text-center py-10">
-            No active goals found for this organization.
-=======
 
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Select Game
@@ -279,7 +188,6 @@ const CommunityGoalsPage: React.FC = () => {
         {goals.length === 0 ? (
           <p className="text-gray-500 text-center py-10">
             No active {selectedGame === "quiz" ? "quiz" : "Flappy"} goals found for this organization.
->>>>>>> friend/main
           </p>
         ) : (
           <div className="space-y-6">
@@ -290,11 +198,7 @@ const CommunityGoalsPage: React.FC = () => {
               );
               const goalTypeLabel =
                 goal.goal_type === "score"
-<<<<<<< HEAD
-                  ? "Total Score Goal"
-=======
                   ? "Score Goal"
->>>>>>> friend/main
                   : "Participants Goal";
 
               return (
@@ -305,20 +209,11 @@ const CommunityGoalsPage: React.FC = () => {
                   }`}
                 >
                   <h2 className="text-lg font-semibold mb-1">
-<<<<<<< HEAD
-                    🎯 Quiz: {goal.quiz_title}
-                  </h2>
-
-                  <p className="text-sm text-gray-600 mb-2">
-                    {goalTypeLabel} — Target: {goal.goal_target} | Reward: 💰{" "}
-                    {goal.reward_coins} coins
-=======
                     {selectedGame === "quiz" ? "🎯 Quiz:" : "🕹 Flappy:"} {goal.title}
                   </h2>
 
                   <p className="text-sm text-gray-600 mb-2">
                     {goalTypeLabel} — Target: {goal.goal_target} | Reward: 💰 {goal.reward_coins} coins
->>>>>>> friend/main
                   </p>
 
                   <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
@@ -331,12 +226,7 @@ const CommunityGoalsPage: React.FC = () => {
                   </div>
 
                   <p className="text-xs text-gray-500 mt-1 text-right">
-<<<<<<< HEAD
-                    {goal.current_progress}/{goal.goal_target} (
-                    {progressPercent.toFixed(1)}%)
-=======
                     {goal.current_progress}/{goal.goal_target} ({progressPercent.toFixed(1)}%)
->>>>>>> friend/main
                   </p>
 
                   {goal.is_completed && (

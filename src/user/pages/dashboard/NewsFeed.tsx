@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";
-<<<<<<< HEAD
-import { Heart, Search, ChevronLeft, ChevronRight } from "lucide-react";
-=======
 import { Heart, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
->>>>>>> friend/main
 import toast, { Toaster } from "react-hot-toast";
 
 import RSVPModal from "../../components/RSVPModal";
@@ -162,14 +158,11 @@ export default function UserNewsFeed() {
   const [feedbackResponses, setFeedbackResponses] = useState<{ [key: string]: string }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: string]: boolean }>({});
 
-<<<<<<< HEAD
-=======
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [joinedOrgs, setJoinedOrgs] = useState<any[]>([]);
   const [selectedOrg, setSelectedOrg] = useState("");
   const [selectedType, setSelectedType] = useState("");
 
->>>>>>> friend/main
   const navigate = useNavigate();
 
   const [viewed, setViewed] = useState<{ [key: string]: boolean }>({});
@@ -241,18 +234,6 @@ export default function UserNewsFeed() {
 
       const memberOrgIds = memberData?.map((m) => m.org_id) ?? [];
 
-<<<<<<< HEAD
-      // Fetch all posts
-      const { data: postsData, error: postsError } = await supabase
-        .from("posts")
-        .select(`
-        *,
-        organizations (name, abbrev_name, org_pic),
-        post_likes(user_id),
-        post_views(user_id)
-      `)
-        .order("created_at", { ascending: false });
-=======
       // Fetch details of joined organizations
       const { data: joinedOrgData, error: joinedOrgError } = await supabase
         .from("organizations")
@@ -274,7 +255,6 @@ export default function UserNewsFeed() {
       `)
       .eq("organizations.status", "active") 
       .order("created_at", { ascending: false });
->>>>>>> friend/main
       if (postsError) throw postsError;
 
       // Filter posts based on visibility and membership
@@ -706,18 +686,6 @@ export default function UserNewsFeed() {
       <div className="p-3 max-w-2xl mx-auto overflow-hidden">
         <Toaster position="top-center" reverseOrder={false} />
 
-<<<<<<< HEAD
-        {/* Search Bar */}
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Search posts..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-500 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
-          />
-=======
         {/* Search Bar + Filter Icon */}
         <div className="mb-4 flex items-center gap-2">
           <div className="relative flex-1">
@@ -736,7 +704,6 @@ export default function UserNewsFeed() {
           >
             <Filter className="h-5 w-5 text-gray-600" />
           </button>
->>>>>>> friend/main
         </div>
 
         {filteredPosts.length === 0 ? (
@@ -920,8 +887,6 @@ export default function UserNewsFeed() {
             </div>
           ))
         )}
-<<<<<<< HEAD
-=======
 
         {showFilterModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -986,7 +951,6 @@ export default function UserNewsFeed() {
             </div>
           </div>
         )}
->>>>>>> friend/main
       </div>
     );
   }

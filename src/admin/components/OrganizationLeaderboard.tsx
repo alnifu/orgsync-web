@@ -7,8 +7,6 @@ interface LeaderboardEntry {
   username?: string | null;
   score: number;
   created_at: string;
-<<<<<<< HEAD
-=======
   rank?: number;
 }
 
@@ -20,7 +18,6 @@ interface Quiz {
 interface FlappyChallenge {
   challenge_id: string;
   name: string;
->>>>>>> friend/main
 }
 
 interface OrganizationLeaderboardProps {
@@ -28,16 +25,6 @@ interface OrganizationLeaderboardProps {
 }
 
 const OrganizationLeaderboard: React.FC<OrganizationLeaderboardProps> = ({ organizationId }) => {
-<<<<<<< HEAD
-  const [quizzes, setQuizzes] = useState<{ id: number; title: string }[]>([]);
-  const [selectedQuiz, setSelectedQuiz] = useState<number | null>(null);
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  // Fetch quizzes for the organization
-  useEffect(() => {
-=======
   const [gameType, setGameType] = useState<"quiz" | "flappy">("quiz");
 
   // Quiz state
@@ -57,34 +44,21 @@ const OrganizationLeaderboard: React.FC<OrganizationLeaderboardProps> = ({ organ
   useEffect(() => {
     if (gameType !== "quiz") return;
 
->>>>>>> friend/main
     const fetchQuizzes = async () => {
       setLoading(true);
       try {
         const { data, error } = await supabase
           .from("quizzes")
           .select("id, title")
-<<<<<<< HEAD
-          .eq("org_id", organizationId);
-=======
           .eq("org_id", organizationId)
           .order("created_at", { ascending: false });
->>>>>>> friend/main
 
         if (error) throw error;
 
         setQuizzes(data || []);
-<<<<<<< HEAD
-        if (data && data.length > 0) {
-          setSelectedQuiz(data[0].id);
-        }
-      } catch (err: any) {
-        console.error("❌ Error fetching quizzes:", err);
-=======
         if (data && data.length > 0) setSelectedQuiz(data[0].id);
       } catch (err: any) {
         console.error("Error fetching quizzes:", err);
->>>>>>> friend/main
         setErrorMessage("Failed to load quizzes.");
       } finally {
         setLoading(false);
@@ -92,41 +66,6 @@ const OrganizationLeaderboard: React.FC<OrganizationLeaderboardProps> = ({ organ
     };
 
     fetchQuizzes();
-<<<<<<< HEAD
-  }, [organizationId]);
-
-  // Fetch leaderboard for selected quiz
-  useEffect(() => {
-    if (!selectedQuiz) return;
-
-    const fetchLeaderboard = async () => {
-      setLoading(true);
-      setErrorMessage("");
-      console.log("⏳ Fetching leaderboard for quizId:", selectedQuiz, "orgId:", organizationId);
-
-      try {
-        const { data, error } = await supabase
-          .from("scores")
-          .select("id, user_id, username, score, created_at, org_id")
-          .eq("quiz_id", selectedQuiz)
-          .eq("org_id", organizationId)
-          .order("score", { ascending: false })
-          .limit(10);
-
-        console.log("📝 Raw data:", data, "Error:", error);
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-          setEntries([]);
-          setErrorMessage("No scores yet for this quiz.");
-        } else {
-          setEntries(data);
-        }
-      } catch (err: any) {
-        console.error("❌ Error fetching leaderboard:", err);
-        setErrorMessage(err.message || "Failed to fetch leaderboard.");
-=======
   }, [organizationId, gameType]);
 
   // Fetch Flappy challenges
@@ -190,36 +129,11 @@ const OrganizationLeaderboard: React.FC<OrganizationLeaderboardProps> = ({ organ
       } catch (err: any) {
         console.error("Error fetching scores:", err);
         setErrorMessage("Failed to fetch leaderboard.");
->>>>>>> friend/main
       } finally {
         setLoading(false);
       }
     };
 
-<<<<<<< HEAD
-    fetchLeaderboard();
-  }, [selectedQuiz, organizationId]);
-
-  const handleQuizChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = Number(e.target.value);
-    setSelectedQuiz(isNaN(value) ? null : value);
-  };
-
-  if (loading && quizzes.length === 0) return <div className="text-center py-8">Loading...</div>;
-
-  return (
-    <div className="space-y-4">
-      {quizzes.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Select Quiz</label>
-          <select
-            value={selectedQuiz ?? ""}
-            onChange={handleQuizChange}
-            className="w-full border border-gray-300 rounded-md p-2 focus:ring-green-500 focus:border-green-500"
-          >
-            {quizzes.map((quiz) => (
-              <option key={quiz.id} value={quiz.id}>{quiz.title}</option>
-=======
     fetchScores();
   }, [gameType, selectedQuiz, selectedFlappy, organizationId]);
 
@@ -255,49 +169,11 @@ const OrganizationLeaderboard: React.FC<OrganizationLeaderboardProps> = ({ organ
               <option key={quiz.id} value={quiz.id}>
                 {quiz.title}
               </option>
->>>>>>> friend/main
             ))}
           </select>
         </div>
       )}
 
-<<<<<<< HEAD
-      {selectedQuiz ? (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4 text-center">🏆 Leaderboard</h3>
-
-          {errorMessage && (
-            <div className="text-center text-red-500 mb-4">{errorMessage}</div>
-          )}
-
-          {loading ? (
-            <div className="text-center py-8">Loading leaderboard...</div>
-          ) : entries.length > 0 ? (
-            <ol className="divide-y divide-gray-200">
-              {entries.map((entry, index) => (
-                <li key={entry.id} className="py-3 flex justify-between">
-                  <span>
-                    {index + 1}.{" "}
-                    <span className="font-medium">
-                      {entry.username || entry.user_id.slice(0, 6)}
-                    </span>
-                  </span>
-                  <span className="font-semibold">{entry.score}</span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <div className="text-center text-gray-500 py-6">
-              No leaderboard entries yet.
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="text-center text-gray-500 py-6">
-          No quizzes available for this organization.
-        </div>
-      )}
-=======
       {/* Flappy Selector */}
       {gameType === "flappy" && flappyChallenges.length > 0 && (
         <div>
@@ -340,13 +216,8 @@ const OrganizationLeaderboard: React.FC<OrganizationLeaderboardProps> = ({ organ
           !loading && <div className="text-center text-gray-500 py-6">No leaderboard entries yet.</div>
         )}
       </div>
->>>>>>> friend/main
     </div>
   );
 };
 
-<<<<<<< HEAD
 export default OrganizationLeaderboard;
-=======
-export default OrganizationLeaderboard;
->>>>>>> friend/main

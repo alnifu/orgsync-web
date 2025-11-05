@@ -196,11 +196,7 @@ export default function OrganizationDetails() {
       <div className="space-y-4">
         {/* Banner Picture */}
         {organization.banner_pic && (
-<<<<<<< HEAD
-          <div className="w-full h-90 bg-gray-100 rounded-lg overflow-hidden">
-=======
           <div className="w-full h-40 sm:h-60 md:h-72 lg:h-120 bg-gray-100 rounded-lg overflow-hidden">
->>>>>>> friend/main
             <img
               src={organization.banner_pic}
               alt={`${organization.name} banner`}
@@ -252,78 +248,44 @@ export default function OrganizationDetails() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-<<<<<<< HEAD
-        <TabsList className="border-b border-gray-200 bg-white p-1 rounded-lg shadow-sm">
-          <TabsTrigger
-            value="overview"
-            className="px-6 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-=======
 <TabsList className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap border-b border-gray-200 bg-white p-1 rounded-lg shadow-sm">
           <TabsTrigger
             value="overview"
             className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
->>>>>>> friend/main
           >
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="members"
-<<<<<<< HEAD
-            className="px-6 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-=======
             className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
->>>>>>> friend/main
           >
             Members
           </TabsTrigger>
           <TabsTrigger
             value="officers"
-<<<<<<< HEAD
-            className="px-6 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-=======
             className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
->>>>>>> friend/main
           >
             Officers
           </TabsTrigger>
           <TabsTrigger
             value="posts"
-<<<<<<< HEAD
-            className="px-6 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-=======
             className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
->>>>>>> friend/main
           >
             Posts
           </TabsTrigger>
           <TabsTrigger
             value="reports"
-<<<<<<< HEAD
-            className="px-6 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-=======
             className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
->>>>>>> friend/main
           >
             Reports
           </TabsTrigger>
           <TabsTrigger
             value="quizzes"
-<<<<<<< HEAD
-            className="px-6 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-=======
             className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
->>>>>>> friend/main
           >
             Quizzes
           </TabsTrigger>
           <TabsTrigger
-<<<<<<< HEAD
-            value="leaderboard"
-            className="px-6 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-          >
-            Leaderboard
-          </TabsTrigger>
-=======
             value="flappy"
             className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
@@ -347,7 +309,6 @@ export default function OrganizationDetails() {
           >
             Flappy Goals
           </TabsTrigger>
->>>>>>> friend/main
         </TabsList>
 
         {/* Overview Tab */}
@@ -397,20 +358,15 @@ export default function OrganizationDetails() {
           <OrganizationQuizzes organizationId={id!} />
         </TabsContent>
 
-<<<<<<< HEAD
-=======
         {/* Flappy Tab */}
         <TabsContent value="flappy" className="space-y-4">
           <FlappyConfigUploader orgId={id!} />
         </TabsContent>
 
->>>>>>> friend/main
         {/* Leaderboard Tab */}
         <TabsContent value="leaderboard" className="space-y-4">
           <OrganizationLeaderboard organizationId={id!} />
         </TabsContent>
-<<<<<<< HEAD
-=======
 
         {/* Quiz Goals Tab */}
         <TabsContent value="quiz-goals" className="space-y-4">
@@ -421,7 +377,6 @@ export default function OrganizationDetails() {
         <TabsContent value="flappy-goals" className="space-y-4">
           <FlappyCommunityGoalsManager />
         </TabsContent>
->>>>>>> friend/main
       </Tabs>
 
       {/* Error Display */}

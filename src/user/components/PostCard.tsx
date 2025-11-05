@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { Tag, Eye, Calendar, User as UserIcon, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare, Users } from "lucide-react";
 import type { Posts, PostType, Organization, User } from '../../types/database.types';
 
@@ -22,7 +21,6 @@ export default function PostCard({
   organization,
   poster
 }: PostCardProps) {
-  const navigate = useNavigate();
   const [imageError, setImageError] = useState<{[key: number]: boolean}>({});
   const [currentMediaIndex, setCurrentMediaIndex] = useState<number>(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -238,33 +236,8 @@ export default function PostCard({
         <p className="text-gray-600 leading-relaxed line-clamp-3 mb-3">
           {post.post_type === 'poll' ? getPollQuestion() :
            post.post_type === 'feedback' ? getFormDescription() :
-           post.post_type === 'general' ? post.content.replace(/\n\[game:\w+:[^\]]+\]/, '') :
            post.content}
         </p>
-
-        {/* Game Link */}
-        {(() => {
-          const gameMatch = post.content?.match(/\[game:(\w+):([^\]]+)\]/);
-          if (gameMatch) {
-            const [, gameType, gameRoute] = gameMatch;
-            return (
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-indigo-700 mb-2">🎮 Ready to Play?</p>
-                <button
-                  onClick={() => navigate(gameRoute)}
-                  className="w-full px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>Play {gameType === 'quiz' ? 'Quiz' : 'Room'} Game</span>
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
-                  </svg>
-                </button>
-              </div>
-            );
-          }
-          return null;
-        })()}
 
         {/* Event Details */}
         {post.post_type === 'event' && (

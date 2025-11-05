@@ -2,10 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
-<<<<<<< HEAD
-=======
 import { Eye, EyeOff } from "lucide-react";
->>>>>>> friend/main
 
 type LoginProps = {
     onLoginSuccess?: (user: any) => void;
@@ -15,10 +12,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
-<<<<<<< HEAD
-=======
     const [showPassword, setShowPassword] = useState(false);
->>>>>>> friend/main
 
     const { signInUser } = useAuth();
     const navigate = useNavigate();
@@ -65,77 +59,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     };
 
     return (
-<<<<<<< HEAD
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        Log in
-                    </h2>
-                </div>
-                <form onSubmit={handleLogin} className="mt-8 space-y-6">
-                    <div className="rounded-md space-y-4">
-                        <div>
-                            <label htmlFor="email" className="sr-only">
-                                Email address
-                            </label>
-                            <input
-                                id="email"
-                                type="email"
-                                autoComplete="username"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                                placeholder="Email address"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="password" className="sr-only">
-                                Password
-                            </label>
-                            <input
-                                id="password"
-                                type="password"
-                                autoComplete="current-password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                                placeholder="Password"
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <button
-                            type="submit"
-                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-                        >
-                            Log in
-                        </button>
-                    </div>
-                    <p className="mt-2 text-center text-sm text-gray-600">
-                        Don't have an account?{" "}
-                        <Link to="/signup" className="font-medium text-green-600 hover:text-green-500">
-                            Sign up here
-                        </Link>
-                    </p>
-
-                    {error && (
-                        <div className="rounded-md bg-red-50 p-4">
-                            <div className="flex">
-                                <div className="ml-3">
-                                    <p className="text-sm font-medium text-red-800">{error}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                </form>
-            </div>
-        </div>
-    );
-=======
     <div className="min-h-screen flex flex-col md:flex-row">
       <div className="flex-1 bg-gradient-to-br from-green-700 to-green-500 text-white flex flex-col justify-center items-center p-10">
         <h1 className="text-5xl md:text-6xl font-extrabold mb-4 drop-shadow-lg text-center">
@@ -225,5 +148,4 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       </div>
     </div>
   );
->>>>>>> friend/main
 }

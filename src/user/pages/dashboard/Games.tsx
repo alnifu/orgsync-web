@@ -3,12 +3,9 @@ import { Link } from "react-router";
 export default function Games() {
   return (
     <div className="p-3 max-w-6xl mx-auto">
-<<<<<<< HEAD
-=======
       <h1 className="text-2xl font-bold text-green-700 mb-4 text-center">
         Games
       </h1>
->>>>>>> friend/main
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card 1: My virtual room */}
         <div className="bg-white shadow rounded-2xl p-6 max-w-md mx-auto">
@@ -25,12 +22,8 @@ export default function Games() {
           <p className="text-sm text-gray-600 text-center mb-4">
             A cozy 2D simulation where you can design and personalize your own
             room. Buy, place, arrange furniture, and
-<<<<<<< HEAD
-            manage your items through an inventory system.
-=======
             manage your items through an inventory system. 
             Submit screenshots to earn rewards!
->>>>>>> friend/main
           </p>
           <div className="flex justify-center">
             <Link
@@ -54,11 +47,7 @@ export default function Games() {
           <h2 className="text-lg font-semibold text-center mb-2">Quiz Games</h2>
           <p className="text-sm text-gray-600 text-center mb-4">
             Fun and interactive challenges to test your knowledge and skills
-<<<<<<< HEAD
-            while competing with friends.
-=======
             while competing with friends!
->>>>>>> friend/main
           </p>
           <div className="flex justify-center">
             <Link
@@ -69,8 +58,6 @@ export default function Games() {
             </Link>
           </div>
         </div>
-<<<<<<< HEAD
-=======
 
         {/* Card 3: Flappy Challenge */}
         <div className="bg-white shadow rounded-2xl p-6 max-w-md mx-auto">
@@ -97,7 +84,6 @@ export default function Games() {
             </Link>
           </div>
         </div>
->>>>>>> friend/main
       </div>
     </div>
   );

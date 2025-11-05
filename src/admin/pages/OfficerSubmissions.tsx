@@ -6,11 +6,7 @@ export default function OfficerSubmissions() {
   const [contests, setContests] = useState<any[]>([]);
   const [selectedContest, setSelectedContest] = useState<string>("");
   const [submissions, setSubmissions] = useState<any[]>([]);
-<<<<<<< HEAD
-  const [loading, setLoading] = useState(true);
-=======
   const [loading, setLoading] = useState(false);
->>>>>>> friend/main
 
   useEffect(() => {
     resolveOrgAndContests();

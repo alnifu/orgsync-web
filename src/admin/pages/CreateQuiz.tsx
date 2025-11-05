@@ -16,9 +16,6 @@ interface Question {
   answers: Answer[];
 }
 
-<<<<<<< HEAD
-export default function CreateQuiz() {
-=======
 interface CreateQuizProps {
   orgId: string;
   existingQuiz?: any;
@@ -26,7 +23,6 @@ interface CreateQuizProps {
 }
 
 export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizProps) {
->>>>>>> friend/main
   const [quizName, setQuizName] = useState("");
   const [timeLimit, setTimeLimit] = useState(30);
   const [points, setPoints] = useState(10);
@@ -38,8 +34,6 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
   const [openAt, setOpenAt] = useState("");
   const [closeAt, setCloseAt] = useState("");
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
   if (existingQuiz) {
     setQuizName(existingQuiz.title || "");
@@ -52,7 +46,6 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
   }
 }, [existingQuiz]);
 
->>>>>>> friend/main
   const addQuestion = () => {
     setQuestions([
       ...questions,
@@ -124,21 +117,11 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
   };
 
   const saveToSupabase = async () => {
-<<<<<<< HEAD
-    if (loading) return; // Prevent multiple clicks
-    
-    if (!validateQuiz()) return;
-
-    setLoading(true);
-    try {
-
-=======
   if (loading) return;
   if (!validateQuiz()) return;
 
   setLoading(true);
   try {
->>>>>>> friend/main
     const {
       data: { user },
       error: userError,
@@ -149,44 +132,12 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
       return;
     }
 
-<<<<<<< HEAD
-    const { data: orgManager, error: orgError } = await supabase
-      .from("org_managers")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (orgError || !orgManager) {
-      toast.error("Could not find your organization. Please check your access.");
-      console.error("Error finding organization:", orgError?.message);
-      return;
-    }
-
-=======
->>>>>>> friend/main
     const quizData = {
       timeLimitInSeconds: timeLimit,
       pointsAddedForCorrectAnswer: points,
       questions,
     };
 
-<<<<<<< HEAD
-    const quizInsertData: any = {
-      title: quizName,
-      data: quizData,
-      org_id: orgManager.org_id,
-    };
-
-    if (hasTimeSpan) {
-      quizInsertData.open_at = openAt ? new Date(openAt).toISOString() : null;
-      quizInsertData.close_at = closeAt ? new Date(closeAt).toISOString() : null;
-    } else {
-      quizInsertData.open_at = null;
-      quizInsertData.close_at = null;
-    }
-
-    const { error } = await supabase.from("quizzes").insert([quizInsertData]);
-=======
     const quizFields: any = {
       title: quizName,
       data: quizData,
@@ -211,25 +162,11 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
         .insert([quizFields]);
       error = insertError;
     }
->>>>>>> friend/main
 
     if (error) {
       toast.error("Failed to save quiz. Please try again.");
       console.error("Error saving quiz:", error.message);
     } else {
-<<<<<<< HEAD
-      toast.success("Quiz saved successfully!");
-      setQuestions([]);
-      setQuizName("");
-      setHasTimeSpan(false);
-      setOpenAt("");
-      setCloseAt("");
-    }
-    } finally {
-      setLoading(false);
-    }
-  };
-=======
       toast.success(existingQuiz ? "Quiz updated successfully!" : "Quiz created successfully!");
       if (onClose) onClose(); // Close modal
     }
@@ -237,7 +174,6 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
     setLoading(false);
   }
 };
->>>>>>> friend/main
 
   return (
     <div className="min-h-screen flex justify-center items-start px-4 py-4 bg-gray-50">
@@ -415,11 +351,7 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
           disabled={loading}
           className="w-full mt-6 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-<<<<<<< HEAD
-          {loading ? "Saving..." : "Save Quiz"}
-=======
           {loading ? "Saving..." : existingQuiz ? "Update Quiz" : "Save Quiz"}
->>>>>>> friend/main
         </button>
       </div>
     </div>
