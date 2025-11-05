@@ -22,4 +22,17 @@ body {
   min-height: 100%;
   width: 100%;
   background: #000;
+<<<<<<< HEAD
 }
+=======
+}
+
+/* Hide scrollbar but still allow scroll */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; 
+  scrollbar-width: none;    
+}
+>>>>>>> friend/main

@@ -394,6 +394,7 @@ export default function AdminUserProfile() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
           {/* Profile Header */}
+<<<<<<< HEAD
           <div className="relative bg-gradient-to-r from-green-600 to-green-700 px-6 py-12">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative flex items-center">
@@ -472,6 +473,86 @@ export default function AdminUserProfile() {
               </div>
             </div>
           </div>
+=======
+<div className="relative bg-gradient-to-r from-green-600 to-green-700 px-6 py-12">
+  <div className="absolute inset-0 bg-black/10"></div>
+  <div className="relative flex flex-col md:flex-row md:items-center md:space-x-8 items-center text-center md:text-left">
+    {/* Avatar */}
+    <div className="relative group mb-4 md:mb-0">
+      {isEditing && avatarFile ? (
+        <img
+          src={URL.createObjectURL(avatarFile)}
+          alt="Preview"
+          className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20 mx-auto"
+        />
+      ) : user.avatar_url ? (
+        <img
+          src={user.avatar_url}
+          alt={`${user.first_name} ${user.last_name}`}
+          className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20 mx-auto"
+        />
+      ) : (
+        <div className="h-32 w-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-4 border-white shadow-2xl ring-4 ring-white/20 flex items-center justify-center mx-auto">
+          <span className="text-4xl font-bold text-gray-600">
+            {(user.first_name ? user.first_name.charAt(0) : '?')}
+            {(user.last_name ? user.last_name.charAt(0) : '?')}
+          </span>
+        </div>
+      )}
+      {isEditing && (
+        <label className="absolute bottom-2 right-2 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-200 hover:scale-110 border border-gray-200">
+          <Camera className="h-5 w-5 text-gray-600" />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
+        </label>
+      )}
+    </div>
+
+    {/* Name & Badges */}
+    <div className="flex flex-col space-y-3 text-white">
+      {isEditing ? (
+        <div className="flex flex-col md:flex-row md:space-x-4 items-center justify-center md:justify-start space-y-2 md:space-y-0">
+          <input
+            type="text"
+            value={editForm.first_name}
+            onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
+            className="text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none text-white placeholder-white/70"
+            placeholder="First name"
+          />
+          <input
+            type="text"
+            value={editForm.last_name}
+            onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
+            className="text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none text-white placeholder-white/70"
+            placeholder="Last name"
+          />
+        </div>
+      ) : (
+        <h2 className="text-3xl font-bold">
+          {user.first_name} {user.last_name}
+        </h2>
+      )}
+
+      <p className="text-green-100 text-lg">{user.email}</p>
+
+      <div className="flex flex-wrap justify-center md:justify-start gap-3">
+        <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm border border-white/30">
+          <Shield className="w-4 h-4 mr-2" />
+          {user.user_type || 'Not specified'}
+        </span>
+        <div className="flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-yellow-200 backdrop-blur-sm border border-orange-400/30">
+          <Coins className="w-4 h-4 mr-2 text-yellow-700" />
+          <span className="text-yellow-700">{coins} Coins</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+>>>>>>> friend/main
 
           {/* Profile Details */}
           <div className="px-8 py-8 bg-gray-50">
@@ -492,8 +573,13 @@ export default function AdminUserProfile() {
                         <input
                           type="email"
                           value={editForm.email}
+<<<<<<< HEAD
                           onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+=======
+                          readOnly
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+>>>>>>> friend/main
                         />
                       ) : (
                         <span className="font-medium">{user.email}</span>
@@ -510,8 +596,13 @@ export default function AdminUserProfile() {
                             <input
                               type="text"
                               value={editForm.student_number}
+<<<<<<< HEAD
                               onChange={(e) => setEditForm(prev => ({ ...prev, student_number: e.target.value }))}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+=======
+                              readOnly
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+>>>>>>> friend/main
                             />
                           ) : (
                             <span className="font-medium">{user.student_number || 'Not provided'}</span>
@@ -552,8 +643,13 @@ export default function AdminUserProfile() {
                             <input
                               type="text"
                               value={editForm.employee_id}
+<<<<<<< HEAD
                               onChange={(e) => setEditForm(prev => ({ ...prev, employee_id: e.target.value }))}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+=======
+                              readOnly
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+>>>>>>> friend/main
                             />
                           ) : (
                             <span className="font-medium">{user.employee_id || 'Not provided'}</span>
@@ -602,7 +698,10 @@ export default function AdminUserProfile() {
                           editForm.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
                           editForm.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
                           editForm.department === "CON" ? "CON - College of Nursing" :
+<<<<<<< HEAD
                           editForm.department === "COL" ? "COL - College of Law" :
+=======
+>>>>>>> friend/main
                           editForm.department
                         ) : "Select a program to auto-populate department"}
                       </div>
@@ -613,6 +712,7 @@ export default function AdminUserProfile() {
                     <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
                       <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Program</dt>
                       <dd className="text-sm text-gray-900 flex-1">
+<<<<<<< HEAD
                         {isEditing ? (
                           <select
                             value={editForm.program}
@@ -678,6 +778,9 @@ export default function AdminUserProfile() {
                         ) : (
                           <span className="font-medium">{user.program || 'Not specified'}</span>
                         )}
+=======
+                        <span className="font-medium">{user.program || 'Not specified'}</span>
+>>>>>>> friend/main
                       </dd>
                     </div>
                   )}

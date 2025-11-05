@@ -156,6 +156,7 @@ const OfficerContestManager: React.FC = () => {
   };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-gray-100 text-gray-900 p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Officer Contest Manager</h1>
@@ -277,12 +278,152 @@ const OfficerContestManager: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-2 text-right space-x-2">
+=======
+  <div className="min-h-screen text-gray-900 p-4 sm:p-6">
+    {/* Header */}
+    <div className="mb-6 text-center">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-3">
+        Room Design Contests
+      </h1>
+    </div>
+
+    {/* Create Contest Form */}
+    {creating ? (
+      <div className="bg-white p-4 rounded-lg mb-6 shadow">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">🆕 Create Contest</h2>
+
+        <div className="space-y-3">
+          <input
+            type="text"
+            placeholder="Contest Title"
+            value={newContest.title}
+            onChange={(e) =>
+              setNewContest({ ...newContest, title: e.target.value })
+            }
+            className="w-full p-2 rounded border border-gray-300"
+          />
+          <textarea
+            placeholder="Contest Description"
+            value={newContest.description}
+            onChange={(e) =>
+              setNewContest({ ...newContest, description: e.target.value })
+            }
+            className="w-full p-2 rounded border border-gray-300"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm text-gray-500">Start Date</label>
+              <input
+                type="datetime-local"
+                value={newContest.start_date}
+                onChange={(e) =>
+                  setNewContest({ ...newContest, start_date: e.target.value })
+                }
+                className="w-full p-2 rounded border border-gray-300"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-500">End Date</label>
+              <input
+                type="datetime-local"
+                value={newContest.end_date}
+                onChange={(e) =>
+                  setNewContest({ ...newContest, end_date: e.target.value })
+                }
+                className="w-full p-2 rounded border border-gray-300"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 mt-3">
+            <button
+              onClick={handleCreateContest}
+              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 text-white w-full sm:w-auto"
+            >
+              Create Contest
+            </button>
+            <button
+              onClick={() => setCreating(false)}
+              className="bg-red-500 px-4 py-2 rounded hover:bg-red-600 text-white w-full sm:w-auto"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div className="flex justify-center sm:justify-end mb-6">
+        <button
+          onClick={() => setCreating(true)}
+          className="bg-blue-500 px-6 py-2 rounded hover:bg-blue-600 text-white inline-block"
+        >
+          New Contest
+        </button>
+      </div>
+    )}
+
+    {/* Contest Table */}
+    <div className="bg-white rounded-lg p-4 shadow overflow-x-auto">
+      <h2 className="text-lg sm:text-xl font-semibold mb-4">Existing Contests</h2>
+
+      {loading ? (
+        <p>Loading contests...</p>
+      ) : contests.length === 0 ? (
+        <p>No contests yet.</p>
+      ) : (
+        <table className="w-full text-left border-collapse min-w-[600px]">
+          <thead>
+            <tr className="border-b border-gray-300 text-gray-600">
+              <th className="p-2">Title</th>
+              <th className="p-2">Start</th>
+              <th className="p-2">End</th>
+              <th className="p-2">Status</th>
+              <th className="p-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contests.map((c) => (
+              <tr
+                key={c.id}
+                className="border-b border-gray-200 hover:bg-gray-50 text-sm"
+              >
+                <td className="p-2">{c.title}</td>
+                <td className="p-2 text-gray-500">
+                  {c.start_date
+                    ? new Date(c.start_date).toLocaleString()
+                    : "—"}
+                </td>
+                <td className="p-2 text-gray-500">
+                  {c.end_date ? new Date(c.end_date).toLocaleString() : "—"}
+                </td>
+                <td className="p-2">
+                  <span
+                    className={`px-2 py-1 text-xs rounded ${
+                      c.is_active
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-300 text-gray-700"
+                    }`}
+                  >
+                    {c.is_active ? "Active" : "Inactive"}
+                  </span>
+                </td>
+               <td className="p-2">
+                  <div className="flex justify-center md:justify-end gap-2">
+>>>>>>> friend/main
                     <button
                       onClick={() => toggleContestStatus(c)}
                       disabled={toggling === c.id}
                       className="bg-yellow-400 px-2 py-1 rounded text-xs hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
+<<<<<<< HEAD
                       {toggling === c.id ? "..." : (c.is_active ? "Deactivate" : "Activate")}
+=======
+                      {toggling === c.id
+                        ? "..."
+                        : c.is_active
+                        ? "Deactivate"
+                        : "Activate"}
+>>>>>>> friend/main
                     </button>
                     <button
                       onClick={() => deleteContest(c.id)}
@@ -291,6 +432,7 @@ const OfficerContestManager: React.FC = () => {
                     >
                       {deleting === c.id ? "..." : "Delete"}
                     </button>
+<<<<<<< HEAD
                   </td>
                 </tr>
               ))}
@@ -300,6 +442,18 @@ const OfficerContestManager: React.FC = () => {
       </div>
     </div>
   );
+=======
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  </div>
+);
+>>>>>>> friend/main
 };
 
 export default OfficerContestManager;

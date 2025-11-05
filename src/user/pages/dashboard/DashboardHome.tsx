@@ -163,20 +163,65 @@ export default function DashboardHome() {
       <section>
         <h3 className="text-lg font-semibold mb-3">🎮 Featured Games</h3>
         <div className="grid gap-4 sm:grid-cols-2">
+<<<<<<< HEAD
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
             <p className="font-medium text-gray-900">My Virtual Room</p>
             <Link
               to="/room-game"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
+=======
+          {/* My Virtual Room */}
+          <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-gray-900">My Virtual Room</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Design your own virtual space and submit screenshots to earn rewards!
+              </p>
+            </div>
+            <Link
+              to="room-game"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition ml-4 whitespace-nowrap"
+>>>>>>> friend/main
             >
               Play
             </Link>
           </div>
+<<<<<<< HEAD
           <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
             <p className="font-medium text-gray-900">Quiz Games</p>
             <Link
               to="/quiz-selection"
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition"
+=======
+
+          {/* Quiz Games */}
+          <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-gray-900">Quiz Games</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Test your knowledge, compete with others, and climb the leaderboard!
+              </p>
+            </div>
+            <Link
+              to="quiz-selection"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition ml-4 whitespace-nowrap"
+            >
+              Play
+            </Link>
+          </div>
+
+          {/* Flappy Challenge */}
+          <div className="bg-white shadow rounded-lg p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-gray-900">Flappy Challenge</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Tap to fly through obstacles, beat your best score, and compete in challenges!
+              </p>
+            </div>
+            <Link
+              to="flappy-challenges"
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition ml-4 whitespace-nowrap"
+>>>>>>> friend/main
             >
               Play
             </Link>

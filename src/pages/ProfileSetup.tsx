@@ -84,9 +84,12 @@ export default function ProfileSetup() {
 
         // CON - College of Nursing
         "BS Nursing": "CON",
+<<<<<<< HEAD
 
         // COL - College of Law
         "Juris Doctor": "COL",
+=======
+>>>>>>> friend/main
     };
 
     useEffect(() => {
@@ -255,8 +258,50 @@ export default function ProfileSetup() {
 
             if (updateError) throw updateError;
 
+<<<<<<< HEAD
             // Redirect to dashboard
             navigate("/dashboard");
+=======
+            // After updating user profile, check if program has an org_id
+            if (userProfile.user_type === "student" && profileData.program) {
+            // 1. Find the program row
+            const { data: programRow, error: programError } = await supabase
+                .from("programs")
+                .select("org_id")
+                .eq("program", profileData.program)
+                .single();
+
+            if (programError) {
+                console.error("Error fetching program:", programError);
+            } else if (programRow?.org_id) {
+                // 2. Check if already a member
+                const { data: existingMember } = await supabase
+                .from("org_members")
+                .select("id")
+                .eq("user_id", authUser.id)
+                .eq("org_id", programRow.org_id)
+                .maybeSingle();
+
+                // 3. Insert if not yet a member
+                if (!existingMember) {
+                const { error: insertError } = await supabase.from("org_members").insert({
+                    user_id: authUser.id,
+                    org_id: programRow.org_id,
+                    joined_at: new Date().toISOString(),
+                    is_active: true,
+                });
+
+                if (insertError) {
+                    console.error("Error inserting org membership:", insertError);
+                }
+                }
+            }
+            }
+
+            // Finally, redirect to dashboard
+            navigate("/dashboard");
+
+>>>>>>> friend/main
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to complete profile setup");
         } finally {
@@ -369,10 +414,13 @@ export default function ProfileSetup() {
                                 <optgroup label="College of Nursing">
                                     <option value="BS Nursing">BS Nursing</option>
                                 </optgroup>
+<<<<<<< HEAD
 
                                 <optgroup label="College of Law">
                                     <option value="Juris Doctor">Juris Doctor</option>
                                 </optgroup>
+=======
+>>>>>>> friend/main
                             </select>
                         </div>
                         <div className="space-y-4">
@@ -385,8 +433,12 @@ export default function ProfileSetup() {
                                                 profileData.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
                                                     profileData.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
                                                         profileData.department === "CON" ? "CON - College of Nursing" :
+<<<<<<< HEAD
                                                             profileData.department === "COL" ? "COL - College of Law" :
                                                                 profileData.department
+=======
+                                                            profileData.department
+>>>>>>> friend/main
                                     ) : "Not specified"}
                                 </div>
                             </div>

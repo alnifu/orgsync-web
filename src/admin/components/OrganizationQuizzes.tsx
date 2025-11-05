@@ -98,6 +98,10 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
 
   const handleEditQuiz = (quiz: Quiz) => {
     setEditingQuiz(quiz);
+<<<<<<< HEAD
+=======
+    setShowCreateModal(true); // make sure modal shows up
+>>>>>>> friend/main
   };
 
   const handleCloseModal = () => {
@@ -136,7 +140,18 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
   };
 
   const formatDate = (dateString: string) => {
+<<<<<<< HEAD
     return new Date(dateString).toLocaleDateString();
+=======
+    return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+>>>>>>> friend/main
   };
 
   if (loading) {
@@ -185,6 +200,7 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
           </p>
         </div>
       ) : (
+<<<<<<< HEAD
         <div className="space-y-4">
           {filteredQuizzes.map((quiz) => (
             <div key={quiz.id} className="bg-white border border-gray-200 rounded-lg p-4">
@@ -226,6 +242,47 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
                   </button>
                 </div>
               </div>
+=======
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredQuizzes.map((quiz) => (
+            <div
+              key={quiz.id}
+              className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">{quiz.title}</h3>
+                <div className="mt-2 text-sm text-gray-500 space-y-1">
+                  <p>Created: {formatDate(quiz.created_at)}</p>
+                  {quiz.open_at && <p>Opens: {formatDate(quiz.open_at)}</p>}
+                  {quiz.close_at && <p>Closes: {formatDate(quiz.close_at)}</p>}
+                  <p>Questions: {quiz.data?.questions?.length || 0}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mt-4">
+                <button
+                  onClick={() => handleViewScores(quiz)}
+                  className="flex items-center px-3 py-1 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-white hover:bg-blue-50"
+                >
+                  <Users className="h-4 w-4 mr-1" />
+                  View Scores
+                </button>
+                <button
+                  onClick={() => handleEditQuiz(quiz)}
+                  className="flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteQuiz(quiz.id)}
+                  className="flex items-center px-3 py-1 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </button>
+              </div>
+>>>>>>> friend/main
             </div>
           ))}
         </div>
@@ -322,7 +379,11 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
                               {score.score}/{totalQuestions}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+<<<<<<< HEAD
                               {new Date(score.created_at).toLocaleString()}
+=======
+                              {formatDate(score.created_at)}
+>>>>>>> friend/main
                             </td>
                           </tr>
                         );

@@ -132,6 +132,12 @@ export default function Events() {
   return (
     <div className="p-3">
       <div className="bg-white shadow-lg rounded-2xl p-6 max-w-md mx-auto">
+<<<<<<< HEAD
+=======
+        <h1 className="text-2xl font-bold text-green-700 mb-4 text-center">
+          Event Calendar
+        </h1>
+>>>>>>> friend/main
         {/* Calendar */}
         <div className="flex justify-center">
           <Calendar

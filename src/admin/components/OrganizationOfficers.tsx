@@ -449,7 +449,12 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
 
       {/* Current Officers */}
       <div className="bg-white shadow rounded-lg p-6">
+<<<<<<< HEAD
         <div className="flex items-center justify-between mb-4">
+=======
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          {/* Left Section */}
+>>>>>>> friend/main
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-blue-100 rounded-lg">
               <Users className="h-5 w-5 text-blue-600" />
@@ -459,18 +464,33 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
               <p className="text-sm text-gray-600">Manage organization officers and their roles</p>
             </div>
           </div>
+<<<<<<< HEAD
           <div className="flex items-center space-x-2">
             <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
               {officers.length} officers
             </span>
             <div className="relative">
+=======
+
+          {/* Right Section */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto">
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full text-center sm:text-left">
+              {officers.length} officers
+            </span>
+
+            <div className="relative w-full sm:w-auto">
+>>>>>>> friend/main
               <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search officers..."
                 value={currentOfficerSearch}
                 onChange={e => setCurrentOfficerSearchQuery(e.target.value)}
+<<<<<<< HEAD
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+=======
+                className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+>>>>>>> friend/main
               />
             </div>
           </div>

@@ -8,6 +8,7 @@ export default function Dashboard() {
   const location = useLocation();
 
   const isGamePage = useMemo(() => {
+<<<<<<< HEAD
     return location.pathname.includes("quiz-selection") || location.pathname.includes("room-game") || location.pathname.includes("quiz-games");
   }, [location.pathname]);
 
@@ -21,6 +22,9 @@ export default function Dashboard() {
     if (location.pathname.includes("community-goals")) return "Community Goals";
     if (location.pathname.includes("member-contests")) return "Room Design Contests";
     return "Dashboard";
+=======
+    return location.pathname.includes("quiz-selection") || location.pathname.includes("room-game") || location.pathname.includes("quiz-games") || location.pathname.includes("flappy-game");
+>>>>>>> friend/main
   }, [location.pathname]);
 
   return (
@@ -47,7 +51,11 @@ export default function Dashboard() {
               >
                 <Menu className="h-6 w-6" />
               </button>
+<<<<<<< HEAD
               <h1 className="ml-4 text-lg font-semibold">{pageTitle}</h1>
+=======
+              <h1 className="ml-4 text-lg font-semibold">DLSL OrgSync</h1>
+>>>>>>> friend/main
             </header>
           )}
 

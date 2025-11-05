@@ -335,7 +335,8 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
 
       {/* Current Members */}
       <div className="bg-white shadow rounded-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Left Section */}
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-100 rounded-lg">
               <Users className="h-5 w-5 text-green-600" />
@@ -345,18 +346,21 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
               <p className="text-sm text-gray-600">Manage existing organization members</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+
+          {/* Right Section */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-2 sm:gap-0 w-full sm:w-auto">
+            <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full text-center sm:text-left">
               {organizationMembers.length} members
             </span>
-            <div className="relative">
+
+            <div className="relative w-full sm:w-auto">
               <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search members..."
                 value={currentMemberSearch}
                 onChange={e => setCurrentMemberSearch(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
               />
             </div>
           </div>

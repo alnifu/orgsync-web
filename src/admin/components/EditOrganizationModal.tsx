@@ -337,36 +337,36 @@ export default function EditOrganization({
                       </div>
                     )}
 
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
-                      <div className="text-center">
-                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                        <div className="mt-2">
-                          <label htmlFor="org_pic" className="cursor-pointer">
+                    <label htmlFor="org_pic" className="cursor-pointer block">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                        <div className="text-center">
+                          <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                          <div className="mt-2">
                             <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
                               {orgPicFile ? 'Change logo' : 'Upload new logo'}
                             </span>
-                            <input
-                              type="file"
-                              id="org_pic"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const validation = validateFile(file);
-                                  if (!validation.valid) {
-                                    onError?.(validation.error || 'Invalid file');
-                                    return;
-                                  }
-                                  setOrgPicFile(file);
-                                }
-                              }}
-                              className="sr-only"
-                            />
-                          </label>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</p>
                       </div>
-                    </div>
+                      <input
+                        type="file"
+                        id="org_pic"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const validation = validateFile(file);
+                            if (!validation.valid) {
+                              onError?.(validation.error || 'Invalid file');
+                              return;
+                            }
+                            setOrgPicFile(file);
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                    </label>
 
                     {orgPicFile && (
                       <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-md">
@@ -402,36 +402,36 @@ export default function EditOrganization({
                       </div>
                     )}
 
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
-                      <div className="text-center">
-                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                        <div className="mt-2">
-                          <label htmlFor="banner_pic" className="cursor-pointer">
+                    <label htmlFor="banner_pic" className="cursor-pointer block">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                        <div className="text-center">
+                          <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                          <div className="mt-2">
                             <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
                               {bannerPicFile ? 'Change banner' : 'Upload new banner'}
                             </span>
-                            <input
-                              type="file"
-                              id="banner_pic"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const validation = validateFile(file);
-                                  if (!validation.valid) {
-                                    onError?.(validation.error || 'Invalid file');
-                                    return;
-                                  }
-                                  setBannerPicFile(file);
-                                }
-                              }}
-                              className="sr-only"
-                            />
-                          </label>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</p>
                       </div>
-                    </div>
+                      <input
+                        type="file"
+                        id="banner_pic"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const validation = validateFile(file);
+                            if (!validation.valid) {
+                              onError?.(validation.error || 'Invalid file');
+                              return;
+                            }
+                            setBannerPicFile(file);
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                    </label>
 
                     {bannerPicFile && (
                       <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-md">

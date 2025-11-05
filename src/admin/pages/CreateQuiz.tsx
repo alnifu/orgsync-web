@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useState } from "react";
+=======
+import { useState, useEffect } from "react";
+>>>>>>> friend/main
 import { supabase } from "../../lib/supabase";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -12,7 +16,17 @@ interface Question {
   answers: Answer[];
 }
 
+<<<<<<< HEAD
 export default function CreateQuiz() {
+=======
+interface CreateQuizProps {
+  orgId: string;
+  existingQuiz?: any;
+  onClose?: () => void;
+}
+
+export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizProps) {
+>>>>>>> friend/main
   const [quizName, setQuizName] = useState("");
   const [timeLimit, setTimeLimit] = useState(30);
   const [points, setPoints] = useState(10);
@@ -24,6 +38,21 @@ export default function CreateQuiz() {
   const [openAt, setOpenAt] = useState("");
   const [closeAt, setCloseAt] = useState("");
 
+<<<<<<< HEAD
+=======
+  useEffect(() => {
+  if (existingQuiz) {
+    setQuizName(existingQuiz.title || "");
+    setTimeLimit(existingQuiz.data?.timeLimitInSeconds || 30);
+    setPoints(existingQuiz.data?.pointsAddedForCorrectAnswer || 10);
+    setQuestions(existingQuiz.data?.questions || []);
+    setHasTimeSpan(!!(existingQuiz.open_at || existingQuiz.close_at));
+    setOpenAt(existingQuiz.open_at ? new Date(existingQuiz.open_at).toISOString().slice(0, 16) : "");
+    setCloseAt(existingQuiz.close_at ? new Date(existingQuiz.close_at).toISOString().slice(0, 16) : "");
+  }
+}, [existingQuiz]);
+
+>>>>>>> friend/main
   const addQuestion = () => {
     setQuestions([
       ...questions,
@@ -95,6 +124,7 @@ export default function CreateQuiz() {
   };
 
   const saveToSupabase = async () => {
+<<<<<<< HEAD
     if (loading) return; // Prevent multiple clicks
     
     if (!validateQuiz()) return;
@@ -102,6 +132,13 @@ export default function CreateQuiz() {
     setLoading(true);
     try {
 
+=======
+  if (loading) return;
+  if (!validateQuiz()) return;
+
+  setLoading(true);
+  try {
+>>>>>>> friend/main
     const {
       data: { user },
       error: userError,
@@ -112,6 +149,7 @@ export default function CreateQuiz() {
       return;
     }
 
+<<<<<<< HEAD
     const { data: orgManager, error: orgError } = await supabase
       .from("org_managers")
       .select("org_id")
@@ -124,12 +162,15 @@ export default function CreateQuiz() {
       return;
     }
 
+=======
+>>>>>>> friend/main
     const quizData = {
       timeLimitInSeconds: timeLimit,
       pointsAddedForCorrectAnswer: points,
       questions,
     };
 
+<<<<<<< HEAD
     const quizInsertData: any = {
       title: quizName,
       data: quizData,
@@ -145,11 +186,38 @@ export default function CreateQuiz() {
     }
 
     const { error } = await supabase.from("quizzes").insert([quizInsertData]);
+=======
+    const quizFields: any = {
+      title: quizName,
+      data: quizData,
+      org_id: orgId,
+      open_at: hasTimeSpan ? (openAt ? new Date(openAt).toISOString() : null) : null,
+      close_at: hasTimeSpan ? (closeAt ? new Date(closeAt).toISOString() : null) : null,
+    };
+
+    let error;
+
+    if (existingQuiz) {
+      // UPDATE existing quiz
+      const { error: updateError } = await supabase
+        .from("quizzes")
+        .update(quizFields)
+        .eq("id", existingQuiz.id);
+      error = updateError;
+    } else {
+      // CREATE new quiz
+      const { error: insertError } = await supabase
+        .from("quizzes")
+        .insert([quizFields]);
+      error = insertError;
+    }
+>>>>>>> friend/main
 
     if (error) {
       toast.error("Failed to save quiz. Please try again.");
       console.error("Error saving quiz:", error.message);
     } else {
+<<<<<<< HEAD
       toast.success("Quiz saved successfully!");
       setQuestions([]);
       setQuizName("");
@@ -161,6 +229,15 @@ export default function CreateQuiz() {
       setLoading(false);
     }
   };
+=======
+      toast.success(existingQuiz ? "Quiz updated successfully!" : "Quiz created successfully!");
+      if (onClose) onClose(); // Close modal
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+>>>>>>> friend/main
 
   return (
     <div className="min-h-screen flex justify-center items-start px-4 py-4 bg-gray-50">
@@ -338,7 +415,11 @@ export default function CreateQuiz() {
           disabled={loading}
           className="w-full mt-6 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
+<<<<<<< HEAD
           {loading ? "Saving..." : "Save Quiz"}
+=======
+          {loading ? "Saving..." : existingQuiz ? "Update Quiz" : "Save Quiz"}
+>>>>>>> friend/main
         </button>
       </div>
     </div>

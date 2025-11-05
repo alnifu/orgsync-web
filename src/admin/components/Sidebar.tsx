@@ -70,7 +70,15 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const links = getLinks();
 
   const handleSignOut = async () => {
+<<<<<<< HEAD
     await signOut();
+=======
+    const confirmLogout = window.confirm("Are you sure you want to sign out?");
+    if (!confirmLogout) return;
+
+    await signOut();
+    onClose(); // close sidebar after signout
+>>>>>>> friend/main
   };
 
   return (
@@ -78,7 +86,11 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
       isOpen ? 'translate-x-0' : '-translate-x-full'
     }`}>
       <div className="flex h-16 items-center justify-between border-b border-green-600 px-4">
+<<<<<<< HEAD
         <h2 className="text-2xl font-bold text-white">OrgSync</h2>
+=======
+        <h2 className="text-2xl font-bold text-white">DLSL OrgSync</h2>
+>>>>>>> friend/main
       </div>
 
       <div className="flex-1 overflow-auto py-4">
@@ -87,6 +99,10 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
             <NavLink
               key={to}
               to={to}
+<<<<<<< HEAD
+=======
+              end={to.startsWith("organizations/")}
+>>>>>>> friend/main
               onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium transition-colors ${

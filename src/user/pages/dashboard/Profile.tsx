@@ -508,8 +508,13 @@ export default function UserProfile() {
                         <input
                           type="email"
                           value={editForm.email}
+<<<<<<< HEAD
                           onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+=======
+                          readOnly
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+>>>>>>> friend/main
                         />
                       ) : (
                         <span className="font-medium">{user.email}</span>
@@ -526,8 +531,13 @@ export default function UserProfile() {
                             <input
                               type="text"
                               value={editForm.student_number}
+<<<<<<< HEAD
                               onChange={(e) => setEditForm(prev => ({ ...prev, student_number: e.target.value }))}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+=======
+                              readOnly
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+>>>>>>> friend/main
                             />
                           ) : (
                             <span className="font-medium">{user.student_number || 'Not provided'}</span>
@@ -568,8 +578,13 @@ export default function UserProfile() {
                             <input
                               type="text"
                               value={editForm.employee_id}
+<<<<<<< HEAD
                               onChange={(e) => setEditForm(prev => ({ ...prev, employee_id: e.target.value }))}
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+=======
+                              readOnly
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+>>>>>>> friend/main
                             />
                           ) : (
                             <span className="font-medium">{user.employee_id || 'Not provided'}</span>
@@ -612,6 +627,7 @@ export default function UserProfile() {
                     <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
                       <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Department</dt>
                       <dd className="text-sm text-gray-900 flex-1">
+<<<<<<< HEAD
                         {isEditing ? (
                           <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
                             {editForm.department ? (
@@ -637,6 +653,19 @@ export default function UserProfile() {
                             ) : 'Not specified'}
                           </span>
                         )}
+=======
+                        <span className="font-medium">
+                          {user.department ? (
+                            user.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                            user.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                            user.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                            user.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                            user.department === "CON" ? "CON - College of Nursing" :
+                            user.department === "COL" ? "COL - College of Law" :
+                            user.department
+                          ) : 'Not specified'}
+                        </span>
+>>>>>>> friend/main
                       </dd>
                     </div>
                   )}
@@ -645,6 +674,7 @@ export default function UserProfile() {
                     <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
                       <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Department</dt>
                       <dd className="text-sm text-gray-900 flex-1">
+<<<<<<< HEAD
                         <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
                           {editForm.department ? (
                             editForm.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
@@ -656,6 +686,19 @@ export default function UserProfile() {
                             editForm.department
                           ) : "Department not set"}
                         </div>
+=======
+                        <span className="font-medium">
+                          {user.department ? (
+                            user.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                            user.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                            user.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                            user.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                            user.department === "CON" ? "CON - College of Nursing" :
+                            user.department === "COL" ? "COL - College of Law" :
+                            user.department
+                          ) : 'Not specified'}
+                        </span>
+>>>>>>> friend/main
                       </dd>
                     </div>
                   )}
@@ -664,6 +707,7 @@ export default function UserProfile() {
                     <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-gray-100 last:border-b-0">
                       <dt className="text-sm font-medium text-gray-500 sm:w-32 flex-shrink-0 mb-1 sm:mb-0">Program</dt>
                       <dd className="text-sm text-gray-900 flex-1">
+<<<<<<< HEAD
                         {isEditing ? (
                           <select
                             value={editForm.program}
@@ -732,6 +776,11 @@ export default function UserProfile() {
                         ) : (
                           <span className="font-medium">{user.program || 'Not specified'}</span>
                         )}
+=======
+                        <span className="font-medium">
+                          {user.program || 'Not specified'}
+                        </span>
+>>>>>>> friend/main
                       </dd>
                     </div>
                   )}

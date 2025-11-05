@@ -170,38 +170,47 @@ const MLDashboard: React.FC = () => {
   return (
     <div className="space-y-8 p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">ML Analytics Dashboard</h1>
-          <p className="text-gray-600">User segmentation and RSVP prediction insights</p>
-        </div>
-        <div className="flex gap-3">
-          <select
-            value={timeWindow}
-            onChange={(e) => setTimeWindow(e.target.value as '30d' | '90d' | 'all')}
-            className="px-3 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="30d">Last 30 Days</option>
-            <option value="90d">Last 90 Days</option>
-            <option value="all">All Time</option>
-          </select>
-          <button
-            onClick={handleRetrain}
-            disabled={isLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Retrain Models
-          </button>
-          <button
-            onClick={exportReport}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Export Report
-          </button>
-        </div>
-      </div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+  {/* Left Section */}
+  <div className="text-center sm:text-left">
+    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
+      ML Analytics Dashboard
+    </h1>
+    <p className="text-gray-600 text-sm sm:text-base">
+      User segmentation and RSVP prediction insights
+    </p>
+  </div>
+
+  {/* Right Section */}
+  <div className="flex flex-col sm:flex-row gap-3 justify-center sm:justify-end">
+    <select
+      value={timeWindow}
+      onChange={(e) => setTimeWindow(e.target.value as '30d' | '90d' | 'all')}
+      className="px-3 py-2 border border-gray-300 rounded-lg text-sm sm:text-base"
+    >
+      <option value="30d">Last 30 Days</option>
+      <option value="90d">Last 90 Days</option>
+      <option value="all">All Time</option>
+    </select>
+
+    <button
+      onClick={handleRetrain}
+      disabled={isLoading}
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
+    >
+      <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+      Retrain Models
+    </button>
+
+    <button
+      onClick={exportReport}
+      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 text-sm sm:text-base"
+    >
+      <Download className="h-4 w-4" />
+      Export Report
+    </button>
+  </div>
+</div>
 
       {isLoading && (
         <div className="text-center py-8">

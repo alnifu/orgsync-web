@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";
+<<<<<<< HEAD
 import { Heart, Search, ChevronLeft, ChevronRight } from "lucide-react";
+=======
+import { Heart, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+>>>>>>> friend/main
 import toast, { Toaster } from "react-hot-toast";
 
 import RSVPModal from "../../components/RSVPModal";
@@ -158,6 +162,14 @@ export default function UserNewsFeed() {
   const [feedbackResponses, setFeedbackResponses] = useState<{ [key: string]: string }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: string]: boolean }>({});
 
+<<<<<<< HEAD
+=======
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [joinedOrgs, setJoinedOrgs] = useState<any[]>([]);
+  const [selectedOrg, setSelectedOrg] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+
+>>>>>>> friend/main
   const navigate = useNavigate();
 
   const [viewed, setViewed] = useState<{ [key: string]: boolean }>({});
@@ -229,6 +241,7 @@ export default function UserNewsFeed() {
 
       const memberOrgIds = memberData?.map((m) => m.org_id) ?? [];
 
+<<<<<<< HEAD
       // Fetch all posts
       const { data: postsData, error: postsError } = await supabase
         .from("posts")
@@ -239,6 +252,29 @@ export default function UserNewsFeed() {
         post_views(user_id)
       `)
         .order("created_at", { ascending: false });
+=======
+      // Fetch details of joined organizations
+      const { data: joinedOrgData, error: joinedOrgError } = await supabase
+        .from("organizations")
+        .select("id, name, abbrev_name")
+        .in("id", memberOrgIds)
+        .eq("status", "active");
+
+      if (joinedOrgError) throw joinedOrgError;
+      setJoinedOrgs(joinedOrgData ?? []);
+
+      // Fetch all posts
+      const { data: postsData, error: postsError } = await supabase
+      .from("posts")
+      .select(`
+        *,
+        organizations!inner (name, abbrev_name, org_pic, status),
+        post_likes(user_id),
+        post_views(user_id)
+      `)
+      .eq("organizations.status", "active") 
+      .order("created_at", { ascending: false });
+>>>>>>> friend/main
       if (postsError) throw postsError;
 
       // Filter posts based on visibility and membership
@@ -670,6 +706,7 @@ export default function UserNewsFeed() {
       <div className="p-3 max-w-2xl mx-auto overflow-hidden">
         <Toaster position="top-center" reverseOrder={false} />
 
+<<<<<<< HEAD
         {/* Search Bar */}
         <div className="mb-4 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -680,6 +717,26 @@ export default function UserNewsFeed() {
             onChange={(e) => setQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-500 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
           />
+=======
+        {/* Search Bar + Filter Icon */}
+        <div className="mb-4 flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              placeholder="Search posts..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 border border-gray-500 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className="h-10 w-10 flex items-center justify-center border border-gray-500 rounded-lg hover:bg-gray-100"
+          >
+            <Filter className="h-5 w-5 text-gray-600" />
+          </button>
+>>>>>>> friend/main
         </div>
 
         {filteredPosts.length === 0 ? (
@@ -863,6 +920,73 @@ export default function UserNewsFeed() {
             </div>
           ))
         )}
+<<<<<<< HEAD
+=======
+
+        {showFilterModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-80 shadow-lg">
+              <h2 className="text-lg font-semibold mb-4 text-gray-800">Filter Posts</h2>
+
+              {/* Organization Dropdown */}
+              <label className="block text-sm text-gray-600 mb-1">Organization</label>
+              <select
+                value={selectedOrg}
+                onChange={(e) => setSelectedOrg(e.target.value)}
+                className="w-full border border-gray-300 rounded px-2 py-1 mb-4"
+              >
+                <option value="">All</option>
+                {joinedOrgs.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.abbrev_name || org.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Post Type Dropdown */}
+              <label className="block text-sm text-gray-600 mb-1">Post Type</label>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="w-full border border-gray-300 rounded px-2 py-1 mb-4"
+              >
+                <option value="">All</option>
+                <option value="general">General</option>
+                <option value="event">Event</option>
+                <option value="poll">Poll</option>
+                <option value="feedback">Feedback</option>
+              </select>
+
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => {
+                    setSelectedOrg("");
+                    setSelectedType("");
+                    setFilteredPosts(posts);
+                    setShowFilterModal(false);
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                >
+                  Reset
+                </button>
+
+                <button
+                  onClick={() => {
+                    let filtered = [...posts];
+                    if (selectedOrg) filtered = filtered.filter(p => p.org_id === selectedOrg);
+                    if (selectedType) filtered = filtered.filter(p => p.post_type === selectedType);
+                    setFilteredPosts(filtered);
+                    setShowFilterModal(false);
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Filter
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+>>>>>>> friend/main
       </div>
     );
   }
