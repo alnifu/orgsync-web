@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
 import { Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import type { Member } from '../../types/database.types';
+import type { User } from '../../types/database.types';
 
 type SelectAdviserProps = {
   isOpen: boolean;
@@ -13,8 +13,9 @@ type SelectAdviserProps = {
 
 export default function SelectAdviser({ isOpen, onClose, orgId, onError }: SelectAdviserProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(false);
 
   // Fetch all members
   useEffect(() => {
@@ -22,9 +23,9 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from('members')
+          .from('users')
           .select('*')
-          .order('name');
+          .order('first_name');
 
         if (error) throw error;
         setMembers(data || []);
@@ -41,12 +42,42 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
   }, [isOpen, onError]);
 
   // Handle adviser assignment
-  const handleAssignAdviser = async (memberId: string) => {
+  const handleAssignAdviser = async (userId: string) => {
+    if (assigning) return; // Prevent multiple clicks
+    
+    setAssigning(true);
     try {
+      // First, update or insert user_roles to ensure they have adviser role
+      const { data: existingRole, error: roleCheckError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (roleCheckError && roleCheckError.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw roleCheckError;
+      }
+
+      // If no role exists or current role is 'member', update to 'adviser'
+      if (!existingRole || existingRole.role === 'member') {
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: userId,
+            role: 'adviser',
+            granted_at: new Date().toISOString()
+          });
+
+        if (roleUpdateError) throw roleUpdateError;
+      }
+
       const { error: assignError } = await supabase
-        .rpc('assign_adviser', {
-          m_id: memberId,
-          o_id: orgId
+        .from('org_managers')
+        .insert({
+          user_id: userId,
+          org_id: orgId,
+          manager_role: 'adviser',
+          position: null
         });
 
       if (assignError) throw assignError;
@@ -54,13 +85,16 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Failed to assign adviser');
       console.log('error:', err);
+    } finally {
+      setAssigning(false);
     }
   };
 
   // Filter members based on search query
   const filteredMembers = members.filter(member =>
-    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (member.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (member.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (member.email?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
   );
 
   return (
@@ -93,28 +127,29 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
             <p className="text-center text-sm text-gray-500 py-4">No members found</p>
           ) : (
             <div className="grid gap-2">
-              {filteredMembers.map((member: Member) => (
+              {filteredMembers.map((member: User) => (
                 <button
                   key={member.id}
                   onClick={() => handleAssignAdviser(member.id)}
-                  className="flex items-center space-x-3 rounded-lg p-3 hover:bg-gray-100 transition-colors text-left w-full"
+                  disabled={assigning}
+                  className="flex items-center space-x-3 rounded-lg p-3 hover:bg-gray-100 transition-colors text-left w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {member.avatar_url ? (
                     <img
                       src={member.avatar_url}
-                      alt={member.name}
+                      alt={`${member.first_name} ${member.last_name}`}
                       className="h-10 w-10 rounded-full"
                     />
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
                       <span className="text-green-700 font-medium text-sm">
-                        {member.name.slice(0, 2).toUpperCase()}
+                        {((member.first_name && member.first_name.length > 0) ? member.first_name.charAt(0).toUpperCase() : 'U')}{((member.last_name && member.last_name.length > 0) ? member.last_name.charAt(0).toUpperCase() : 'U')}
                       </span>
                     </div>
                   )}
                   <div>
-                    <div className="font-medium text-gray-900">{member.name}</div>
-                    <div className="text-sm text-gray-500">{member.email}</div>
+                    <div className="font-medium text-gray-900">{member.first_name || 'Unknown'} {member.last_name || 'User'}</div>
+                    <div className="text-sm text-gray-500">{member.email || 'No email'}</div>
                   </div>
                 </button>
               ))}

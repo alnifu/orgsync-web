@@ -1,23 +1,26 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import {
   Shield,
   ChevronDown,
   ChevronUp,
   Search,
+  User as UserIcon,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import type { Member } from '../../../types/database.types';
+import type { User } from '../../../types/database.types';
 import PromoteModal from '../../components/PromoteModal';
 
-type SortField = 'name' | 'email' | 'department' | 'year' | 'course' | 'created_at';
+type SortField = 'first_name' | 'last_name' | 'email' | 'department' | 'year_level' | 'program' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
 export default function Members() {
-  const [members, setMembers] = useState<Member[]>([]);
+  const navigate = useNavigate();
+  const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedMember, setSelectedMember] = useState<User | null>(null);
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,7 +29,7 @@ export default function Members() {
   const [filterCourse, setFilterCourse] = useState<string>('');
   
   // Sorting states
-  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortField, setSortField] = useState<SortField>('first_name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   
   // Pagination states
@@ -40,13 +43,13 @@ export default function Members() {
       setLoading(true);
       
       let query = supabase
-        .from('members')
+        .from('users')
         .select('*', { count: 'exact' });
 
       // Apply search filters
       if (searchQuery) {
         query = query.or(
-          `name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,department.ilike.%${searchQuery}%,course.ilike.%${searchQuery}%`
+          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,department.ilike.%${searchQuery}%,program.ilike.%${searchQuery}%`
         );
       }
 
@@ -55,10 +58,10 @@ export default function Members() {
         query = query.eq('department', filterDepartment);
       }
       if (filterYear) {
-        query = query.eq('year', filterYear);
+        query = query.eq('year_level', filterYear);
       }
       if (filterCourse) {
-        query = query.eq('course', filterCourse);
+        query = query.eq('program', filterCourse);
       }
 
       // Apply sorting
@@ -71,7 +74,7 @@ export default function Members() {
       const { data, error, count } = await query;
 
       if (error) throw error;
-
+      console.log('Fetched members:', data);
       setMembers(data || []);
       setTotalCount(count || 0);
     } catch (err) {
@@ -121,48 +124,9 @@ export default function Members() {
           setShowPromoteModal(false);
           setSelectedMember(null);
           setError(null);
+          fetchMembers(); // Refresh the list after promotion
         }}
         selectedMember={selectedMember}
-        onPromote={async (memberId, orgId, position) => {
-          try {
-            // First check if the member is already an officer in any organization
-            const { data: existingOfficer, error: checkError } = await supabase
-              .from('officers')
-              .select('*')
-              .eq('id', memberId)
-              .single();
-
-            if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows returned
-              throw checkError;
-            }
-
-            if (existingOfficer) {
-              throw new Error('This member is already an officer in another organization');
-            }
-
-            // Attempt to promote the member
-            const { error: promoteError } = await supabase.rpc('promote_to_officer', {
-              member_id: memberId,
-              organization_id: orgId,
-              officer_position: position
-            });
-
-            if (promoteError) {
-              // Handle specific error cases
-              if (promoteError.message.includes('does not exist in this organization')) {
-                throw new Error('Member must first be added to the organization before being promoted');
-              }
-              throw promoteError;
-            }
-            
-            fetchMembers(); // Refresh the list after successful promotion
-            setShowPromoteModal(false);
-            setSelectedMember(null);
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to promote member');
-            // Don't close modal on error so user can try again
-          }
-        }}
       />
 
       {/* Search and filters */}
@@ -226,11 +190,11 @@ export default function Members() {
                     <th 
                       scope="col" 
                       className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                      onClick={() => handleSort('name')}
+                      onClick={() => handleSort('first_name')}
                     >
                       <div className="group inline-flex cursor-pointer">
                         Name
-                        <span className="ml-2 flex-none rounded"><SortIcon field="name" /></span>
+                        <span className="ml-2 flex-none rounded"><SortIcon field="first_name" /></span>
                       </div>
                     </th>
                     <th 
@@ -256,21 +220,21 @@ export default function Members() {
                     <th 
                       scope="col" 
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                      onClick={() => handleSort('year')}
+                      onClick={() => handleSort('year_level')}
                     >
                       <div className="group inline-flex cursor-pointer">
                         Year
-                        <span className="ml-2 flex-none rounded"><SortIcon field="year" /></span>
+                        <span className="ml-2 flex-none rounded"><SortIcon field="year_level" /></span>
                       </div>
                     </th>
                     <th 
                       scope="col" 
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                      onClick={() => handleSort('course')}
+                      onClick={() => handleSort('program')}
                     >
                       <div className="group inline-flex cursor-pointer">
                         Course
-                        <span className="ml-2 flex-none rounded"><SortIcon field="course" /></span>
+                        <span className="ml-2 flex-none rounded"><SortIcon field="program" /></span>
                       </div>
                     </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
@@ -305,10 +269,12 @@ export default function Members() {
                             />
                             ) : (
                               <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                <span className="text-sm font-medium text-green-600">{member.name.charAt(0)}</span>
+                                <span className="text-sm font-medium text-green-600">
+                                  {member.first_name ? member.first_name.charAt(0).toUpperCase() : '?'}
+                                </span>
                               </div>
                             )}
-                            {member.name}
+                            {member.first_name} {member.last_name}
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
@@ -318,22 +284,31 @@ export default function Members() {
                           {member.department}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {member.year}
+                          {member.year_level}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {member.course}
+                          {member.program}
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <button 
-                            onClick={() => {
-                              setSelectedMember(member);
-                              setShowPromoteModal(true);
-                            }}
-                            className="text-green-600 hover:text-green-900"
-                            title="Promote to Officer"
-                          >
-                            <Shield className="h-5 w-5" />
-                          </button>
+                          <div className="flex items-center justify-end space-x-2">
+                            <button 
+                              onClick={() => navigate(`/admin/dashboard/profile/${member.id}`)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="View Profile"
+                            >
+                              <UserIcon className="h-5 w-5" />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setShowPromoteModal(true);
+                              }}
+                              className="text-green-600 hover:text-green-900"
+                              title="Promote to Officer"
+                            >
+                              <Shield className="h-5 w-5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))

@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../context/AuthContext';
+import { useUserRoles } from '../../../utils/roles';
+import AccessDenied from '../../../components/AccessDenied';
 import type { Organization } from '../../../types/database.types';
 
 type SortField = 'name' | 'org_code' | 'date_established' | 'org_type';
@@ -17,6 +20,8 @@ type SortDirection = 'asc' | 'desc';
 
 export default function Organizations() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { roles, loading: rolesLoading, isAdmin, isOfficer, isAdviser } = useUserRoles(user?.id);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +45,33 @@ export default function Organizations() {
     try {
       setLoading(true);
       
+      const isUserAdmin = isAdmin();
+      
       let query = supabase
         .from('organizations')
         .select('*', { count: 'exact' });
+
+      // Filter organizations based on user role
+      if (!isUserAdmin) {
+        // For officers and advisers, only show organizations they manage
+        const { data: managedOrgs, error: orgError } = await supabase
+          .from('org_managers')
+          .select('org_id')
+          .eq('user_id', user?.id);
+
+        if (orgError) throw orgError;
+
+        if (managedOrgs && managedOrgs.length > 0) {
+          const orgIds = managedOrgs.map(org => org.org_id);
+          query = query.in('id', orgIds);
+        } else {
+          // No managed organizations, return empty result
+          setOrganizations([]);
+          setTotalCount(0);
+          setLoading(false);
+          return;
+        }
+      }
 
       // Apply search filters
       if (searchQuery) {
@@ -57,6 +86,8 @@ export default function Organizations() {
         query = query.eq('department', filterDepartment);
       }
 
+      console.log('fetchOrganizations: filters applied', { searchQuery, filterOrgType, filterDepartment, sortField, sortDirection, currentPage });
+
       // Apply sorting
       query = query.order(sortField, { ascending: sortDirection === 'asc' });
 
@@ -65,6 +96,8 @@ export default function Organizations() {
       query = query.range(start, start + itemsPerPage - 1);
 
       const { data, error: fetchError, count } = await query;
+
+      console.log('fetchOrganizations: query result', { data, error: fetchError, count });
 
       if (fetchError) throw fetchError;
 
@@ -78,8 +111,17 @@ export default function Organizations() {
   };
 
   useEffect(() => {
-    fetchOrganizations();
-  }, [searchQuery, filterOrgType, filterDepartment, sortField, sortDirection, currentPage]);
+    if (!rolesLoading) {
+      fetchOrganizations();
+    }
+  }, [searchQuery, filterOrgType, filterDepartment, sortField, sortDirection, currentPage, rolesLoading]);
+
+  // Auto-navigate officers/advisers to single organization
+  useEffect(() => {
+    if (!loading && !rolesLoading && organizations.length === 1 && (isOfficer() || isAdviser()) && !isAdmin()) {
+      navigate(organizations[0].id);
+    }
+  }, [organizations, loading, rolesLoading, navigate]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -97,6 +139,19 @@ export default function Organizations() {
       <ChevronDown className="h-4 w-4 text-green-600" />;
   };
 
+  // Check if user has admin access
+  if (rolesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (!isAdmin() && !isOfficer() && !isAdviser()) {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="p-6">
       <div className="sm:flex sm:items-center">
@@ -107,14 +162,16 @@ export default function Organizations() {
           </p>
         </div>
         <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-          <button
-            onClick={() => navigate('new')}
-            type="button"
-            className="flex items-center justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Organization
-          </button>
+          {isAdmin() && (
+            <button
+              onClick={() => navigate('new')}
+              type="button"
+              className="flex items-center justify-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Organization
+            </button>
+          )}
         </div>
       </div>
 
@@ -137,9 +194,9 @@ export default function Organizations() {
           className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
         >
           <option value="">All Types</option>
-          <option value="Prof">Professional</option>
+          <option value="PROF">Professional</option>
           <option value="SPIN">Special Interest</option>
-          <option value="Socio-Civic">Socio-Civic</option>
+          <option value="SCRO">Socio-Civic</option>
         </select>
 
         <select
@@ -178,10 +235,10 @@ export default function Organizations() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {org.name}
+                      {org.abbrev_name || org.name}
                     </h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      {org.org_code} • {org.abbrev_name}
+                      {org.org_code} • {org.name}
                     </p>
                   </div>
                   <span className={

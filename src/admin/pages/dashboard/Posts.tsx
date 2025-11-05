@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";
-import * as Dialog from "@radix-ui/react-dialog";
-import { Plus, Search, Tag, Eye, Pin, Calendar, User, Edit3, Trash2, MoreVertical } from "lucide-react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import type { Posts } from '../../../types/database.types';
+import { Plus, Search, Edit3, Loader2 } from "lucide-react";
+import type { Posts, PostType } from '../../../types/database.types';
+import { useUserRoles } from '../../../utils/roles';
 import CreatePostModal from '../../components/CreatePostModal';
 import EditPostModal from '../../components/EditPostModal';
 import DeletePostModal from '../../components/DeletePostModal';
+import ResponsesModal from '../../components/ResponsesModal';
+import PostCard from '../../components/PostCard';
 
 // Type for the user object from Supabase auth
 interface AuthUser {
@@ -15,11 +17,13 @@ interface AuthUser {
 }
 
 export default function PostsComponent() {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Posts[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Posts[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
-  const [sortBy, setSortBy] = useState<keyof Posts>("created_at");
+  const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -28,7 +32,12 @@ export default function PostsComponent() {
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [responsesModalOpen, setResponsesModalOpen] = useState<boolean>(false);
   const [selectedPost, setSelectedPost] = useState<Posts | null>(null);
+  const [selectedPostType, setSelectedPostType] = useState<PostType>("general");
+
+  // Get user roles
+  const { isAdmin, isOfficer } = useUserRoles(currentUser?.id);
 
   // Get all unique tags from posts
   const allTags: string[] = [...new Set(posts.flatMap(post => post.tags || []))];
@@ -48,21 +57,26 @@ export default function PostsComponent() {
   }
 
   async function fetchPosts(): Promise<void> {
-    const { data, error } = await supabase
-      .from("posts")
-      .select(`
-        id, title, content, created_at, updated_at, user_id, tags, 
-        status, view_count, is_pinned, org_id
-      `)
-      .order("is_pinned", { ascending: false })
-      .order("created_at", { ascending: false });
-    
-    if (!error && data) {
-      setPosts(data as Posts[]);
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("posts")
+        .select(`
+          id, title, content, created_at, updated_at, user_id, tags, 
+          status, is_pinned, org_id, media, post_type, visibility, game_route,
+          post_views(user_id)
+        `)
+        .or(`status.eq.published,status.eq.archived${currentUser ? `,status.eq.draft.and.user_id.eq.${currentUser.id}` : ''}`)
+        .order("is_pinned", { ascending: false })
+        .order("created_at", { ascending: false });
+      
+      if (!error && data) {
+        setPosts(data as Posts[]);
+      }
+    } finally {
+      setIsLoading(false);
     }
-  }
-
-  function filterAndSortPosts(): void {
+  }  function filterAndSortPosts(): void {
     let filtered: Posts[] = [...posts];
 
     // Search filter
@@ -86,8 +100,16 @@ export default function PostsComponent() {
 
     // Sort
     filtered.sort((a: Posts, b: Posts) => {
-      let aValue: any = a[sortBy];
-      let bValue: any = b[sortBy];
+      let aValue: any;
+      let bValue: any;
+      
+      if (sortBy === "views") {
+        aValue = a.post_views?.length ?? 0;
+        bValue = b.post_views?.length ?? 0;
+      } else {
+        aValue = a[sortBy as keyof Posts];
+        bValue = b[sortBy as keyof Posts];
+      }
       
       if (sortBy === "created_at" || sortBy === "updated_at") {
         aValue = new Date(aValue);
@@ -104,11 +126,6 @@ export default function PostsComponent() {
     setFilteredPosts(filtered);
   }
 
-  async function incrementViewCount(postId: string): Promise<void> {
-    await supabase.rpc('increment_view_count', { post_id: postId });
-    fetchPosts();
-  }
-
   async function togglePin(postId: string, currentPinned: boolean): Promise<void> {
     if (!currentUser) return;
     
@@ -119,25 +136,6 @@ export default function PostsComponent() {
       .eq('user_id', currentUser.id);
     
     if (!error) fetchPosts();
-  }
-
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  function getStatusColor(status: string | null): string {
-    switch (status) {
-      case 'published': return 'bg-green-100 text-green-800';
-      case 'draft': return 'bg-yellow-100 text-yellow-800';
-      case 'archived': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
   }
 
   function handleEditPost(post: Posts): void {
@@ -154,6 +152,11 @@ export default function PostsComponent() {
     return currentUser?.id === post.user_id;
   }
 
+  function handleViewResponses(post: Posts): void {
+    setSelectedPost(post);
+    setResponsesModalOpen(true);
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -164,13 +167,48 @@ export default function PostsComponent() {
               <h1 className="text-3xl font-bold text-gray-900">Posts</h1>
               <p className="text-gray-600 mt-1">Share your thoughts and ideas with the community</p>
             </div>
-            <button 
-              onClick={() => setCreateModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md"
-            >
-              <Plus size={20} />
-              Create Post
-            </button>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <button 
+                onClick={() => {
+                  setSelectedPostType("general");
+                  setCreateModalOpen(true);
+                }}
+                className="flex flex-col items-center gap-2 p-4 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+              >
+                <Plus size={24} />
+                <span className="text-sm font-medium">General Post</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedPostType("event");
+                  setCreateModalOpen(true);
+                }}
+                className="flex flex-col items-center gap-2 p-4 bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+              >
+                <Plus size={24} />
+                <span className="text-sm font-medium">Event</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedPostType("poll");
+                  setCreateModalOpen(true);
+                }}
+                className="flex flex-col items-center gap-2 p-4 bg-purple-600 text-white rounded-xl shadow-sm hover:bg-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+              >
+                <Plus size={24} />
+                <span className="text-sm font-medium">Poll</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedPostType("feedback");
+                  setCreateModalOpen(true);
+                }}
+                className="flex flex-col items-center gap-2 p-4 bg-orange-600 text-white rounded-xl shadow-sm hover:bg-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+              >
+                <Plus size={24} />
+                <span className="text-sm font-medium">Feedback Form</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -223,14 +261,19 @@ export default function PostsComponent() {
               <option value="created_at_asc">Oldest First</option>
               <option value="title_asc">Title A-Z</option>
               <option value="title_desc">Title Z-A</option>
-              <option value="view_count_desc">Most Views</option>
+              <option value="views_desc">Most Views</option>
             </select>
           </div>
         </div>
 
         {/* Posts List */}
         <div className="space-y-4">
-          {filteredPosts.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-green-600" />
+              <p className="text-gray-500">Loading posts...</p>
+            </div>
+          ) : filteredPosts.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                 <Edit3 className="text-gray-400" size={24} />
@@ -250,128 +293,28 @@ export default function PostsComponent() {
             </div>
           ) : (
             filteredPosts.map((post: Posts) => (
-              <div
+              <PostCard
                 key={post.id}
-                className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200 ${post.is_pinned ? 'ring-2 ring-green-200 bg-green-50' : ''}`}
-                onClick={() => incrementViewCount(post.id)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      {post.is_pinned && (
-                        <Pin size={16} className="text-green-600 fill-current" />
-                      )}
-                      <h3 className="text-xl font-semibold text-gray-900 hover:text-green-600 transition-colors cursor-pointer">
-                        {post.title}
-                      </h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(post.status)}`}>
-                        {post.status}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 leading-relaxed">{post.content}</p>
-                  </div>
-                  
-                  {/* Actions Menu */}
-                  <div className="flex items-center gap-2">
-                    {isPostOwner(post) && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          togglePin(post.id, post.is_pinned || false);
-                        }}
-                        className={`p-2 rounded-lg transition-colors ${post.is_pinned ? 'text-green-600 hover:bg-green-100' : 'text-gray-400 hover:bg-gray-100'}`}
-                        title={post.is_pinned ? 'Unpin post' : 'Pin post'}
-                      >
-                        <Pin size={16} className={post.is_pinned ? 'fill-current' : ''} />
-                      </button>
-                    )}
-                    
-                    {isPostOwner(post) && (
-                      <DropdownMenu.Root>
-                        <DropdownMenu.Trigger asChild>
-                          <button
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
-                            title="More actions"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-                        </DropdownMenu.Trigger>
-                        <DropdownMenu.Portal>
-                          <DropdownMenu.Content 
-                            className="min-w-[160px] bg-white rounded-lg shadow-lg border border-gray-200 p-1 z-50"
-                            sideOffset={5}
-                          >
-                            <DropdownMenu.Item
-                              onClick={() => handleEditPost(post)}
-                              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md cursor-pointer outline-none"
-                            >
-                              <Edit3 size={14} />
-                              Edit Post
-                            </DropdownMenu.Item>
-                            <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
-                            <DropdownMenu.Item
-                              onClick={() => handleDeletePost(post)}
-                              className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md cursor-pointer outline-none"
-                            >
-                              <Trash2 size={14} />
-                              Delete Post
-                            </DropdownMenu.Item>
-                          </DropdownMenu.Content>
-                        </DropdownMenu.Portal>
-                      </DropdownMenu.Root>
-                    )}
-                  </div>
-                </div>
-
-                {post.tags && post.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {post.tags.map((tag: string, index: number) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium hover:bg-green-200 transition-colors cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTag(tag);
-                        }}
-                      >
-                        <Tag size={12} />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <div className="flex items-center space-x-6 text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <User size={14} />
-                      <span>{post.user_id.slice(0, 8)}...</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar size={14} />
-                      <span>{formatDate(post.created_at)}</span>
-                    </div>
-                    {post.updated_at && post.updated_at !== post.created_at && (
-                      <span className="text-xs">
-                        (edited {formatDate(post.updated_at)})
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Eye size={14} />
-                      <span>{post.view_count || 0}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                post={post}
+                onView={(postId) => navigate(`/admin/dashboard/posts/${postId}`)}
+                onEdit={handleEditPost}
+                onDelete={handleDeletePost}
+                onPin={togglePin}
+                onTagClick={setSelectedTag}
+                onViewResponses={handleViewResponses}
+                isOwner={isPostOwner(post)}
+                isAdmin={isAdmin()}
+                isOfficer={isOfficer()}
+                showOrgInfo={true}
+                organization={(post as any).organizations}
+                poster={(post as any).users}
+              />
             ))
           )}
         </div>
 
         {/* Stats */}
-        {posts.length > 0 && (
+        {!isLoading && posts.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
@@ -387,7 +330,7 @@ export default function PostsComponent() {
                 <div className="text-sm text-gray-500">Unique Tags</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{posts.reduce((sum, p) => sum + (p.view_count || 0), 0)}</div>
+                <div className="text-2xl font-bold text-green-600">{posts.reduce((sum, p) => sum + (p.post_views?.length ?? 0), 0)}</div>
                 <div className="text-sm text-gray-500">Total Views</div>
               </div>
             </div>
@@ -401,6 +344,7 @@ export default function PostsComponent() {
         onOpenChange={setCreateModalOpen}
         onPostCreated={fetchPosts}
         currentUser={currentUser}
+        defaultPostType={selectedPostType}
       />
       
       <EditPostModal
@@ -415,6 +359,12 @@ export default function PostsComponent() {
         open={deleteModalOpen}
         onOpenChange={setDeleteModalOpen}
         onPostDeleted={fetchPosts}
+      />
+
+      <ResponsesModal
+        open={responsesModalOpen}
+        onOpenChange={setResponsesModalOpen}
+        post={selectedPost}
       />
     </div>
   );

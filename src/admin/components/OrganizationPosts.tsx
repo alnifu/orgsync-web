@@ -1,12 +1,14 @@
 // OrganizationPosts.tsx
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Plus, Search, Tag, Eye, Pin, Calendar, User, Edit3, Trash2, MoreVertical } from "lucide-react";
-import type { Posts } from '../../types/database.types';
+import { Plus, Search, Loader2, Edit3 } from "lucide-react";
+import type { Posts, PostType } from '../../types/database.types';
+import { useUserRoles } from '../../utils/roles';
 import CreatePostModal from './CreatePostModal';
 import EditPostModal from './EditPostModal';
 import DeletePostModal from './DeletePostModal';
+import ResponsesModal from './ResponsesModal';
+import PostCard from './PostCard';
 
 interface OrganizationPostsProps {
   organizationId: string;
@@ -24,7 +26,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
   const [filteredPosts, setFilteredPosts] = useState<Posts[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
-  const [sortBy, setSortBy] = useState<keyof Posts>("created_at");
+  const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -34,7 +36,14 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [responsesModalOpen, setResponsesModalOpen] = useState<boolean>(false);
   const [selectedPost, setSelectedPost] = useState<Posts | null>(null);
+  const [selectedPostType, setSelectedPostType] = useState<PostType>("general");
+
+  // Get user roles
+  const { isAdmin, loading: rolesLoading } = useUserRoles(currentUser?.id);
+  const [isAdviser, setIsAdviser] = useState(false);
+  const [isOfficer, setIsOfficer] = useState(false);
 
   // Get all unique tags from posts
   const allTags: string[] = [...new Set(posts.flatMap(post => post.tags || []))];
@@ -52,8 +61,28 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     try {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
+      
+      if (user) {
+        // Fetch all manager roles for this user in the organization
+        const { data: managerRoles, error } = await supabase
+          .from('org_managers')
+          .select('manager_role')
+          .eq('user_id', user.id)
+          .eq('org_id', organizationId);
+        
+        if (!error && managerRoles) {
+          const roles = managerRoles.map(role => role.manager_role);
+          setIsAdviser(roles.includes('adviser'));
+          setIsOfficer(roles.includes('officer'));
+        } else {
+          setIsAdviser(false);
+          setIsOfficer(false);
+        }
+      }
     } catch (err) {
       console.error('Failed to get current user:', err);
+      setIsAdviser(false);
+      setIsOfficer(false);
     }
   }
 
@@ -64,7 +93,8 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
         .from("posts")
         .select(`
           id, title, content, created_at, updated_at, user_id, tags, 
-          status, view_count, is_pinned, org_id
+          status, is_pinned, org_id, media, post_type, visibility, game_route,
+          post_views(user_id)
         `)
         .eq('org_id', organizationId)
         .order("is_pinned", { ascending: false })
@@ -77,9 +107,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     } finally {
       setLoading(false);
     }
-  }
-
-  function filterAndSortPosts(): void {
+  }  function filterAndSortPosts(): void {
     let filtered: Posts[] = [...posts];
 
     // Search filter
@@ -103,8 +131,16 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
 
     // Sort
     filtered.sort((a: Posts, b: Posts) => {
-      let aValue: any = a[sortBy];
-      let bValue: any = b[sortBy];
+      let aValue: any;
+      let bValue: any;
+      
+      if (sortBy === "views") {
+        aValue = a.post_views?.length ?? 0;
+        bValue = b.post_views?.length ?? 0;
+      } else {
+        aValue = a[sortBy as keyof Posts];
+        bValue = b[sortBy as keyof Posts];
+      }
       
       if (sortBy === "created_at" || sortBy === "updated_at") {
         aValue = new Date(aValue);
@@ -119,15 +155,6 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     });
 
     setFilteredPosts(filtered);
-  }
-
-  async function incrementViewCount(postId: string): Promise<void> {
-    try {
-      await supabase.rpc('increment_view_count', { post_id: postId });
-      fetchPosts();
-    } catch (err) {
-      console.error('Failed to increment view count:', err);
-    }
   }
 
   async function togglePin(postId: string, currentPinned: boolean): Promise<void> {
@@ -147,25 +174,6 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     }
   }
 
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  function getStatusColor(status: string | null): string {
-    switch (status) {
-      case 'published': return 'bg-green-100 text-green-800';
-      case 'draft': return 'bg-yellow-100 text-yellow-800';
-      case 'archived': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  }
-
   function handleEditPost(post: Posts): void {
     setSelectedPost(post);
     setEditModalOpen(true);
@@ -180,6 +188,11 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     return currentUser?.id === post.user_id;
   }
 
+  function handleViewResponses(post: Posts): void {
+    setSelectedPost(post);
+    setResponsesModalOpen(true);
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -190,25 +203,64 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
 
   return (
     <div className="space-y-6">
-      {/* Header with Create Button */}
-      <div className="bg-white rounded-lg shadow p-6">
+      {/* Header with Create Buttons */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Organization Posts</h3>
             <p className="text-gray-600 text-sm mt-1">Share updates, announcements, and news with your organization</p>
           </div>
-          <button 
-            onClick={() => setCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 transition-colors"
-          >
-            <Plus size={18} />
-            Create Post
-          </button>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            { (isAdmin() || isOfficer) && (
+              <>
+                <button 
+                  onClick={() => {
+                    setSelectedPostType("general");
+                    setCreateModalOpen(true);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-medium">General Post</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedPostType("event");
+                    setCreateModalOpen(true);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-medium">Event</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedPostType("poll");
+                    setCreateModalOpen(true);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-purple-600 text-white rounded-xl shadow-sm hover:bg-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-medium">Poll</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedPostType("feedback");
+                    setCreateModalOpen(true);
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 bg-orange-600 text-white rounded-xl shadow-sm hover:bg-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-medium">Feedback Form</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -256,15 +308,20 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
             <option value="created_at_asc">Oldest First</option>
             <option value="title_asc">Title A-Z</option>
             <option value="title_desc">Title Z-A</option>
-            <option value="view_count_desc">Most Views</option>
+            <option value="views_desc">Most Views</option>
           </select>
         </div>
       </div>
 
       {/* Posts List */}
       <div className="space-y-4">
-        {filteredPosts.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
+        {loading ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+            <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-green-600" />
+            <p className="text-gray-500">Loading posts...</p>
+          </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
               <Edit3 className="text-gray-400" size={24} />
             </div>
@@ -277,155 +334,34 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
             <p className="text-gray-400 text-sm mt-2">
               {searchTerm || selectedTag || statusFilter !== "all" 
                 ? "Try adjusting your search or filters"
-                : "Be the first to share something with your organization!"
+                : isAdviser
+                  ? "Contact an administrator to create posts for your organization"
+                  : "Be the first to share something with your organization!"
               }
             </p>
           </div>
         ) : (
           filteredPosts.map((post: Posts) => (
-            <div
+            <PostCard
               key={post.id}
-              className={`bg-white rounded-lg shadow border hover:shadow-md transition-all duration-200 p-6 ${post.is_pinned ? 'ring-2 ring-green-200 bg-green-50' : ''}`}
-              onClick={() => incrementViewCount(post.id)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    {post.is_pinned && (
-                      <Pin size={16} className="text-green-600 fill-current" />
-                    )}
-                    <h3 className="text-xl font-semibold text-gray-900 hover:text-green-600 transition-colors cursor-pointer">
-                      {post.title}
-                    </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(post.status)}`}>
-                      {post.status}
-                    </span>
-                  </div>
-                  <p className="text-gray-600 leading-relaxed">{post.content}</p>
-                </div>
-                
-                {/* Actions Menu */}
-                <div className="flex items-center gap-2">
-                  {isPostOwner(post) && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        togglePin(post.id, post.is_pinned || false);
-                      }}
-                      className={`p-2 rounded-lg transition-colors ${post.is_pinned ? 'text-green-600 hover:bg-green-100' : 'text-gray-400 hover:bg-gray-100'}`}
-                      title={post.is_pinned ? 'Unpin post' : 'Pin post'}
-                    >
-                      <Pin size={16} className={post.is_pinned ? 'fill-current' : ''} />
-                    </button>
-                  )}
-                  
-                  {isPostOwner(post) && (
-                    <DropdownMenu.Root>
-                      <DropdownMenu.Trigger asChild>
-                        <button
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
-                          title="More actions"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                      </DropdownMenu.Trigger>
-                      <DropdownMenu.Portal>
-                        <DropdownMenu.Content 
-                          className="min-w-[160px] bg-white rounded-lg shadow-lg border border-gray-200 p-1 z-50"
-                          sideOffset={5}
-                        >
-                          <DropdownMenu.Item
-                            onClick={() => handleEditPost(post)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md cursor-pointer outline-none"
-                          >
-                            <Edit3 size={14} />
-                            Edit Post
-                          </DropdownMenu.Item>
-                          <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
-                          <DropdownMenu.Item
-                            onClick={() => handleDeletePost(post)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md cursor-pointer outline-none"
-                          >
-                            <Trash2 size={14} />
-                            Delete Post
-                          </DropdownMenu.Item>
-                        </DropdownMenu.Content>
-                      </DropdownMenu.Portal>
-                    </DropdownMenu.Root>
-                  )}
-                </div>
-              </div>
-
-              {post.tags && post.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {post.tags.map((tag: string, index: number) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium hover:bg-green-200 transition-colors cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedTag(tag);
-                      }}
-                    >
-                      <Tag size={12} />
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <div className="flex items-center space-x-6 text-sm text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <User size={14} />
-                    <span>{post.user_id.slice(0, 8)}...</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar size={14} />
-                    <span>{formatDate(post.created_at)}</span>
-                  </div>
-                  {post.updated_at && post.updated_at !== post.created_at && (
-                    <span className="text-xs">
-                      (edited {formatDate(post.updated_at)})
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <Eye size={14} />
-                    <span>{post.view_count || 0}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+              post={post}
+              onView={(postId) => {
+                window.location.href = `/admin/dashboard/posts/${postId}`;
+              }}
+              onEdit={handleEditPost}
+              onDelete={handleDeletePost}
+              onPin={togglePin}
+              onTagClick={setSelectedTag}
+              onViewResponses={handleViewResponses}
+              isOwner={isPostOwner(post)}
+              isAdmin={isAdmin() || isOfficer}
+              isOfficer={isOfficer}
+              showOrgInfo={false}
+              poster={(post as any).users}
+            />
           ))
         )}
       </div>
-
-      {/* Stats 
-      {posts.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{posts.length}</div>
-              <div className="text-sm text-gray-500">Total Posts</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{posts.filter(p => p.status === 'published').length}</div>
-              <div className="text-sm text-gray-500">Published</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{allTags.length}</div>
-              <div className="text-sm text-gray-500">Unique Tags</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{posts.reduce((sum, p) => sum + (p.view_count || 0), 0)}</div>
-              <div className="text-sm text-gray-500">Total Views</div>
-            </div>
-          </div>
-        </div>
-      )}*/}
 
       {/* Modals */}
       <CreatePostModal
@@ -433,6 +369,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
         onOpenChange={setCreateModalOpen}
         onPostCreated={fetchPosts}
         currentUser={currentUser}
+        defaultPostType={selectedPostType}
         organizationId={organizationId}
       />
       
@@ -448,6 +385,12 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
         open={deleteModalOpen}
         onOpenChange={setDeleteModalOpen}
         onPostDeleted={fetchPosts}
+      />
+
+      <ResponsesModal
+        open={responsesModalOpen}
+        onOpenChange={setResponsesModalOpen}
+        post={selectedPost}
       />
     </div>
   );

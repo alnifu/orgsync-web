@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Trash2, AlertTriangle } from "lucide-react";
 import type { Posts } from '../../types/database.types';
+import { deleteFile } from '../../lib/media';
 
 interface DeletePostModalProps {
   post: Posts | null;
@@ -19,18 +20,78 @@ export default function DeletePostModal({ post, open, onOpenChange, onPostDelete
     
     setLoading(true);
 
-    const { error } = await supabase
-      .from("posts")
-      .delete()
-      .eq('id', post.id);
+    try {
+      // Delete related data based on post type
+      if (post.post_type === 'event') {
+        // Delete all RSVPs for this event
+        const { error: rsvpError } = await supabase
+          .from("rsvps")
+          .delete()
+          .eq('post_id', post.id);
+        
+        if (rsvpError) {
+          console.error("Error deleting RSVPs:", rsvpError);
+          alert("Error deleting event RSVPs: " + rsvpError.message);
+          setLoading(false);
+          return;
+        }
+      } else if (post.post_type === 'poll') {
+        // Delete all votes for this poll
+        const { error: voteError } = await supabase
+          .from("poll_votes")
+          .delete()
+          .eq('post_id', post.id);
+        
+        if (voteError) {
+          console.error("Error deleting votes:", voteError);
+          alert("Error deleting poll votes: " + voteError.message);
+          setLoading(false);
+          return;
+        }
+      } else if (post.post_type === 'feedback') {
+        // Delete all form responses for this feedback post
+        const { error: responseError } = await supabase
+          .from("form_responses")
+          .delete()
+          .eq('post_id', post.id);
+        
+        if (responseError) {
+          console.error("Error deleting responses:", responseError);
+          alert("Error deleting form responses: " + responseError.message);
+          setLoading(false);
+          return;
+        }
+      }
 
-    if (error) {
-      console.error(error);
-      alert("Error deleting post: " + error.message);
-    } else {
-      onOpenChange(false);
-      onPostDeleted();
+      // Delete media files if they exist
+      if (post.media && post.media.length > 0) {
+        for (const mediaItem of post.media) {
+          const deleteResult = await deleteFile(mediaItem.filename);
+          if (!deleteResult.success) {
+            console.error("Error deleting media file:", mediaItem.filename, deleteResult.error);
+            // Continue with post deletion even if media deletion fails
+          }
+        }
+      }
+
+      // Finally delete the post itself
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq('id', post.id);
+
+      if (error) {
+        console.error("Error deleting post:", error);
+        alert("Error deleting post: " + error.message);
+      } else {
+        onOpenChange(false);
+        onPostDeleted();
+      }
+    } catch (error) {
+      console.error("Unexpected error during deletion:", error);
+      alert("An unexpected error occurred during deletion");
     }
+    
     setLoading(false);
   }
 

@@ -1,23 +1,36 @@
 // OrganizationDetails.tsx
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { supabase } from '../../../lib/supabase';
-import type { Organization, Adviser } from '../../../types/database.types';
+import { useAuth } from '../../../context/AuthContext';
+import { useUserRoles, canManageOrg } from '../../../utils/roles';
+import AccessDenied from '../../../components/AccessDenied';
+import type { Organization, User } from '../../../types/database.types';
 import OrganizationOverview from '../../components/OrganizationOverview';
 import OrganizationMembers from '../../components/OrganizationMembers';
 import OrganizationPosts from '../../components/OrganizationPosts';
+import OrganizationReports from '../../components/OrganizationReports';
 import SelectAdviser from '../../components/SelectAdviser';
 import EditOrganizationModal from '../../components/EditOrganizationModal';
 import DeleteOrganizationModal from '../../components/DeleteOrganizationModal';
-import { Pencil, Trash2, UserPlus2 } from 'lucide-react';
+import OrganizationLeaderboard from '../../components/OrganizationLeaderboard';
+import OrganizationQuizzes from '../../components/OrganizationQuizzes';
+import OrganizationOfficers from '../../components/OrganizationOfficers';
+import FlappyConfigUploader from './FlappyConfigUploader';
+import FlappyCommunityGoalsManager from './FlappyCommunityGoalsManager';
+import CommunityGoalsManager from './CommunityGoalsManager';
+import { Pencil, Trash2, ArrowLeft } from 'lucide-react';
 
 export default function OrganizationDetails() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { roles, orgManagers, loading: rolesLoading, isAdmin } = useUserRoles(user?.id);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [adviser, setAdviser] = useState<Adviser | null>(null);
+  const [adviser, setAdviser] = useState<User | null>(null);
   const [isSelectAdviserOpen, setIsSelectAdviserOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -32,7 +45,7 @@ export default function OrganizationDetails() {
           .select('*')
           .eq('id', id)
           .single();
-        
+
         if (error) throw error;
         setOrganization(data);
       } catch (err) {
@@ -51,47 +64,44 @@ export default function OrganizationDetails() {
       if (!id) return;
       try {
         const { data, error } = await supabase
-          .from('advisers')
+          .from('org_managers')
           .select(`
-            member_id,
+            user_id,
             org_id,
+            manager_role,
             assigned_at,
-            member:members!inner(
+            users (
               id,
-              name,
+              first_name,
+              last_name,
               avatar_url,
-              email,
-              department,
-              year,
-              course,
+              points,
+              preferences,
               created_at,
-              updated_at
+              updated_at,
+              student_number,
+              program,
+              year_level,
+              employee_id,
+              department,
+              position,
+              user_type,
+              email
             )
           `)
           .eq('org_id', id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows returned"
+          .eq('manager_role', 'adviser')
+          .maybeSingle();
+        console.log('Adviser data:', data, 'Error:', error);
+        if (error) throw error;
         if (data) {
-          setAdviser({
-            id: data.member.id,
-            org_id: data.org_id,
-            assigned_at: data.assigned_at,
-            name: data.member.name,
-            avatar_url: data.member.avatar_url,
-            email: data.member.email,
-            department: data.member.department,
-            year: data.member.year,
-            course: data.member.course,
-            created_at: data.member.created_at,
-            updated_at: data.member.updated_at
-          });
+          setAdviser(data.users as unknown as User);
+        } else {
+          setAdviser(null);
         }
       } catch (err) {
-        if (!(err instanceof Error && err.message.includes('PGRST116'))) {
-          setError(err instanceof Error ? err.message : 'Failed to load adviser');
-          console.log('error:', err);
-        }
+        console.error('Error fetching adviser:', err);
+        setAdviser(null);
       }
     };
 
@@ -101,12 +111,32 @@ export default function OrganizationDetails() {
   const handleRemoveAdviser = async (memberId: string, orgId: string) => {
     try {
       const { error: removeError } = await supabase
-        .rpc('remove_adviser', {
-          m_id: memberId,
-          o_id: orgId
-        });
+        .from('org_managers')
+        .delete()
+        .eq('user_id', memberId)
+        .eq('org_id', orgId)
+        .eq('manager_role', 'adviser');
 
       if (removeError) throw removeError;
+
+      // Check if user has any remaining manager roles
+      const { data: remainingRoles, error: checkError } = await supabase
+        .from('org_managers')
+        .select('manager_role')
+        .eq('user_id', memberId);
+
+      if (checkError) throw checkError;
+
+      // If no remaining roles, demote back to member
+      if (!remainingRoles || remainingRoles.length === 0) {
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .update({ role: 'member' })
+          .eq('user_id', memberId);
+
+        if (roleUpdateError) throw roleUpdateError;
+      }
+
       setAdviser(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove adviser');
@@ -116,7 +146,21 @@ export default function OrganizationDetails() {
 
   const handleError = (errorMessage: string) => {
     setError(errorMessage);
+    console.log('Error:', errorMessage);
   };
+
+  // Check if user has access to this organization
+  if (rolesLoading) {
+    return (
+      <div className="p-6 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (!canManageOrg(roles?.role || null, orgManagers, id || '', rolesLoading)) {
+    return <AccessDenied />;
+  }
 
   if (loading) return (
     <div className="p-6 flex justify-center">
@@ -134,126 +178,201 @@ export default function OrganizationDetails() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Navigation Header */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center bg-white px-3 py-2 text-md font-semibold text-gray-900 hover:bg-gray-50"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </button>
+      </div>
+
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{organization.name}</h1>
-          <p className="text-sm text-gray-500">{organization.org_code} • {organization.abbrev_name}</p>
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </button>
-          <button
-            onClick={() => setIsDeleteModalOpen(true)}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </button>
-        </div>
-      </div>
+      <div className="space-y-4">
+        {/* Banner Picture */}
+        {organization.banner_pic && (
+          <div className="w-full h-40 sm:h-60 md:h-72 lg:h-120 bg-gray-100 rounded-lg overflow-hidden">
+            <img
+              src={organization.banner_pic}
+              alt={`${organization.name} banner`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
 
-      {/* Organization Adviser */}
-      <div className="bg-white shadow sm:rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-base font-semibold leading-6 text-gray-900">Organization Adviser</h3>
-          
-          {adviser ? (
-            <div className="mt-2 max-w-xl text-sm text-gray-500">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {adviser.avatar_url ? (
-                    <img
-                      src={adviser.avatar_url}
-                      alt={adviser.name}
-                      className="h-10 w-10 rounded-full"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                      <span className="text-green-700 font-medium text-sm">
-                        {adviser.name.slice(0, 2).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-medium text-gray-900">{adviser.name}</div>
-                    <div className="text-sm text-gray-500">{adviser.email}</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleRemoveAdviser(adviser.id, organization.id)}
-                  className="inline-flex items-center text-sm font-medium text-red-600 hover:text-red-500"
-                >
-                  Remove adviser
-                </button>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-4">
+            {/* Organization Picture */}
+            {organization.org_pic ? (
+              <img
+                src={organization.org_pic}
+                alt={`${organization.name} logo`}
+                className="h-16 w-16 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="h-16 w-16 rounded-lg bg-green-100 flex items-center justify-center">
+                <span className="text-green-700 font-bold text-xl">
+                  {organization.abbrev_name?.charAt(0)?.toUpperCase() || organization.name.charAt(0).toUpperCase()}
+                </span>
               </div>
-            </div>
-          ) : (
+            )}
             <div>
-              <p className="mt-2 text-sm text-gray-500">
-                No adviser assigned to this organization yet.
-              </p>
-              <div className="mt-5">
-                <button
-                  onClick={() => setIsSelectAdviserOpen(true)}
-                  className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
-                >
-                  <UserPlus2 className="h-4 w-4 mr-2" />
-                  Assign Adviser
-                </button>
-              </div>
+              <h1 className="text-2xl font-semibold text-gray-900">{organization.name}</h1>
+              <p className="text-sm text-gray-500">{organization.abbrev_name}</p>
             </div>
-          )}
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </button>
+            {isAdmin() && (
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="inline-flex items-center rounded-md bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm ring-1 ring-inset ring-red-300 hover:bg-red-100"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="border-b border-gray-200">
+<TabsList className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap border-b border-gray-200 bg-white p-1 rounded-lg shadow-sm">
           <TabsTrigger
             value="overview"
-            className="px-4 py-2 -mb-px transition transform active:scale-95 hover:bg-gray-100 focus:outline-none rounded-md"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="members"
-            className="px-4 py-2 -mb-px transition transform active:scale-95 hover:bg-gray-100 focus:outline-none rounded-md"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Members
           </TabsTrigger>
           <TabsTrigger
+            value="officers"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Officers
+          </TabsTrigger>
+          <TabsTrigger
             value="posts"
-            className="px-4 py-2 -mb-px transition transform active:scale-95 hover:bg-gray-100 focus:outline-none rounded-md"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Posts
+          </TabsTrigger>
+          <TabsTrigger
+            value="reports"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Reports
+          </TabsTrigger>
+          <TabsTrigger
+            value="quizzes"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Quizzes
+          </TabsTrigger>
+          <TabsTrigger
+            value="flappy"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Flappy
+          </TabsTrigger>
+          <TabsTrigger
+            value="leaderboard"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Leaderboard
+          </TabsTrigger>
+          <TabsTrigger
+            value="quiz-goals"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Quiz Goals
+          </TabsTrigger>
+          <TabsTrigger
+            value="flappy-goals"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Flappy Goals
           </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
-          <OrganizationOverview organization={organization} />
+          <OrganizationOverview
+            organization={organization}
+            adviser={adviser}
+            onAssignAdviser={() => setIsSelectAdviserOpen(true)}
+            onRemoveAdviser={handleRemoveAdviser}
+          />
         </TabsContent>
 
         {/* Members Tab */}
         <TabsContent value="members" className="space-y-4">
-          <OrganizationMembers 
-            organizationId={id!} 
+          <OrganizationMembers
+            organizationId={id!}
+            onError={handleError}
+          />
+        </TabsContent>
+
+        {/* Officers Tab */}
+        <TabsContent value="officers" className="space-y-4">
+          <OrganizationOfficers
+            organizationId={id!}
             onError={handleError}
           />
         </TabsContent>
 
         {/* Posts Tab */}
         <TabsContent value="posts" className="space-y-4">
-          <OrganizationPosts 
-            organizationId={id!} 
+          <OrganizationPosts
+            organizationId={id!}
             onError={handleError}
           />
+        </TabsContent>
+
+        {/* Reports Tab */}
+        <TabsContent value="reports" className="space-y-4">
+          <OrganizationReports
+            organizationId={id!}
+            onError={handleError}
+          />
+        </TabsContent>
+
+        {/* Quizzes Tab */}
+        <TabsContent value="quizzes" className="space-y-4">
+          <OrganizationQuizzes organizationId={id!} />
+        </TabsContent>
+
+        {/* Flappy Tab */}
+        <TabsContent value="flappy" className="space-y-4">
+          <FlappyConfigUploader orgId={id!} />
+        </TabsContent>
+
+        {/* Leaderboard Tab */}
+        <TabsContent value="leaderboard" className="space-y-4">
+          <OrganizationLeaderboard organizationId={id!} />
+        </TabsContent>
+
+        {/* Quiz Goals Tab */}
+        <TabsContent value="quiz-goals" className="space-y-4">
+          <CommunityGoalsManager />
+        </TabsContent>
+
+        {/* Flappy Goals Tab */}
+        <TabsContent value="flappy-goals" className="space-y-4">
+          <FlappyCommunityGoalsManager />
         </TabsContent>
       </Tabs>
 

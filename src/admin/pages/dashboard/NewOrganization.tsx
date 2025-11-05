@@ -32,7 +32,7 @@ export default function NewOrganization() {
       if (error) throw error;
 
       // Navigate to the new organization's page
-      navigate(`/dashboard/organizations/${data.id}`);
+      navigate(`/admin/dashboard/organizations/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create organization');
     } finally {
@@ -40,14 +40,14 @@ export default function NewOrganization() {
     }
   };
 
-  const generateOrgCode = (name) => {
+  const generateOrgCode = (name: string): string => {
     if (!name) return "";
 
     const ignoreWords = ["THE", "OF", "AND", "&"];
     return name
       .split(" ")
-      .filter(word => word.trim() !== "" && !ignoreWords.includes(word.toUpperCase()))
-      .map(word => word[0].toUpperCase())
+      .filter((word: string) => word.trim() !== "" && !ignoreWords.includes(word.toUpperCase()))
+      .map((word: string) => word[0].toUpperCase())
       .join("");
   };
 
@@ -74,35 +74,35 @@ export default function NewOrganization() {
       <form onSubmit={handleSubmit} className="mt-6 space-y-6 max-w-2xl">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
-  <label htmlFor="org_code" className="block text-sm font-medium text-gray-700">
-    Organization Code
-  </label>
-  <input
-    type="text"
-    name="org_code"
-    id="org_code"
-    required
-    value={formData.org_code}
-    onChange={handleChange}
-    className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-  />
+            <label htmlFor="org_code" className="block text-sm font-medium text-gray-700">
+              Organization Code
+            </label>
+            <input
+              type="text"
+              name="org_code"
+              id="org_code"
+              required
+              value={formData.org_code}
+              onChange={handleChange}
+              className="mt-1 p-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+            />
 
-  {/* Suggested code button */}
-  {formData.name && (
-    <button
-      type="button"
-      onClick={() =>
-        setFormData({
-          ...formData,
-          org_code: generateOrgCode(formData.name),
-        })
-      }
-      className="mt-2 p-1  w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-200"
-    >
-      {generateOrgCode(formData.name) || "N/A"}
-    </button>
-  )}
-</div>
+            {/* Suggested code button */}
+            {formData.name && (
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    org_code: generateOrgCode(formData.name),
+                  })
+                }
+                className="mt-2 p-1  w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-200"
+              >
+                {generateOrgCode(formData.name) || "N/A"}
+              </button>
+            )}
+          </div>
 
 
 
@@ -165,9 +165,9 @@ export default function NewOrganization() {
               className="mt-1 p-1  block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
             >
               <option value="">Select a type</option>
-              <option value="Prof">Professional</option>
+              <option value="PROF">Professional</option>
               <option value="SPIN">Special Interest</option>
-              <option value="Socio-Civic">Socio-Civic</option>
+              <option value="SCRO">Socio-Civic</option>
             </select>
           </div>
 
@@ -184,12 +184,13 @@ export default function NewOrganization() {
               className="mt-1 p-1  block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
             >
               <option value="">Select a department</option>
-              <option value="CITE">CITE</option>
-              <option value="CBEAM">CBEAM</option>
-              <option value="COL">COL</option>
-              <option value="CON">CON</option>
-              <option value="CEAS">CEAS</option>
-              <option value="OTHERS">OTHERS</option>
+              <option value="CBEAM">CBEAM - College of Business, Economics, Accountancy and Management</option>
+              <option value="CEAS">CEAS - College of Education, Arts and Sciences</option>
+              <option value="CIHTM">CIHTM - College of International Hospitality and Tourism Management</option>
+              <option value="CITE">CITE - College of Information Technology and Engineering</option>
+              <option value="CON">CON - College of Nursing</option>
+              <option value="COL">COL - College of Law</option>
+              <option value="OTHERS">Others</option>
             </select>
           </div>
 
@@ -232,7 +233,7 @@ export default function NewOrganization() {
         <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => navigate('/dashboard/organizations')}
+            onClick={() => navigate('/admin/dashboard/organizations')}
             className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
             Cancel

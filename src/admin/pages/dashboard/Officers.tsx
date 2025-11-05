@@ -1,18 +1,26 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import {
   ChevronDown,
   ChevronUp,
   Search,
-  UserMinus
+  UserMinus,
+  User as UserIcon
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import type { Officer } from '../../../types/database.types';
+import type { OrgManager, User, Organization } from '../../../types/database.types';
 
-type SortField = 'name' | 'email' | 'department' | 'position' | 'assigned_at';
+type SortField = 'first_name' | 'last_name' | 'email' | 'department' | 'manager_role' | 'position' | 'assigned_at';
 type SortDirection = 'asc' | 'desc';
 
+type OfficerWithDetails = OrgManager & {
+  users: User;
+  organizations: Organization;
+};
+
 export default function Officers() {
-  const [officers, setOfficers] = useState<Officer[]>([]);
+  const navigate = useNavigate();
+  const [officers, setOfficers] = useState<OfficerWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +30,7 @@ export default function Officers() {
   const [filterPosition, setFilterPosition] = useState<string>('');
 
   // Sorting states
-  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortField, setSortField] = useState<SortField>('first_name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   // Pagination states
@@ -36,111 +44,124 @@ export default function Officers() {
       setLoading(true);
       setError(null);
 
-      // Since officers.id = members.id, we join them properly
+      // First get the org_managers data
       let query = supabase
-        .from('officers')
-        .select(`
-          id,
-          org_id,
-          position,
-          assigned_at,
-          members!inner(
-            name,
-            avatar_url,
-            email,
-            department,
-            year,
-            course
-          ),
-          organizations!officers_org_id_fkey(
-            name,
-            abbrev_name
-          )
-        `, { count: 'exact' });
+        .from('org_managers')
+        .select('*', { count: 'exact' });
 
-      // Apply search filters - search in member data
+      // Apply search filters - search in manager data only for now
       if (searchQuery.trim()) {
-        query = query.or(`
-          members.name.ilike.%${searchQuery}%,
-          members.email.ilike.%${searchQuery}%,
-          position.ilike.%${searchQuery}%
-        `);
+        query = query.or(`manager_role.ilike.%${searchQuery}%,position.ilike.%${searchQuery}%`);
       }
 
       // Apply specific filters
       if (filterDepartment) {
-        query = query.eq('members.department', filterDepartment);
+        // We'll filter by department after fetching users
       }
       if (filterPosition) {
-        query = query.eq('position', filterPosition);
+        if (filterPosition === 'adviser') {
+          query = query.eq('manager_role', 'adviser');
+        } else {
+          query = query.eq('position', filterPosition);
+        }
       }
 
       // Apply sorting
       let orderColumn: string;
-      let orderTable: string | undefined;
-
-      switch (sortField) {
-        case 'name':
-        case 'email':
-        case 'department':
-          orderColumn = sortField;
-          orderTable = 'members';
-          break;
-        case 'position':
-        case 'assigned_at':
-          orderColumn = sortField;
-          orderTable = undefined; // officers table
-          break;
-        default:
-          orderColumn = 'name';
-          orderTable = 'members';
-      }
-
-      if (orderTable) {
-        query = query.order(orderColumn, {
-          ascending: sortDirection === 'asc',
-          foreignTable: orderTable
-        });
+      if (sortField === 'manager_role' || sortField === 'position' || sortField === 'assigned_at') {
+        orderColumn = sortField;
       } else {
-        query = query.order(orderColumn, { ascending: sortDirection === 'asc' });
+        // For user fields, we'll sort after fetching
+        orderColumn = 'assigned_at';
       }
+
+      query = query.order(orderColumn, { ascending: sortDirection === 'asc' });
 
       // Apply pagination
       const start = (currentPage - 1) * itemsPerPage;
       query = query.range(start, start + itemsPerPage - 1);
 
-      const { data, error: fetchError, count } = await query;
+      const { data: managersData, error: managersError, count } = await query;
 
-      if (fetchError) {
-        console.error('Fetch error:', fetchError);
-        throw fetchError;
+      if (managersError) {
+        console.error('Managers fetch error:', managersError);
+        throw managersError;
       }
 
-      // Transform the data to match our Officer type
-      const transformedData: Officer[] = data.map(row => ({
-        id: row.id,
-        org_id: row.org_id,
-        position: row.position,
-        assigned_at: row.assigned_at,
-        // Flatten member data
-        member: {
-          name: row.members.name,
-          avatar_url: row.members.avatar_url,
-          email: row.members.email,
-          department: row.members.department,
-          year: row.members.year,
-          course: row.members.course,
-        },
-        // Add organization data
-        organization: {
-          id: row.org_id, // We have the org_id from officers
-          name: row.organizations.name,
-          abbrev_name: row.organizations.abbrev_name,
-          // Other org fields would need to be selected if needed
-        }
-      } as Officer)) || [];
+      if (!managersData || managersData.length === 0) {
+        setOfficers([]);
+        setTotalCount(0);
+        return;
+      }
 
-      setOfficers(transformedData);
+      // Get unique user IDs and org IDs
+      const userIds = [...new Set(managersData.map(m => m.user_id))];
+      const orgIds = [...new Set(managersData.map(m => m.org_id))];
+
+      // Fetch users
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, avatar_url, points, preferences, created_at, updated_at, student_number, program, department, year_level, employee_id, position, user_type, email')
+        .in('id', userIds);
+
+      if (usersError) {
+        console.error('Users fetch error:', usersError);
+        throw usersError;
+      }
+
+      // Fetch organizations
+      const { data: orgsData, error: orgsError } = await supabase
+        .from('organizations')
+        .select('id, org_code, name, abbrev_name, org_pic, email, description, department, status, date_established, org_type, created_at, updated_at, adviser_id')
+        .in('id', orgIds);
+
+      if (orgsError) {
+        console.error('Organizations fetch error:', orgsError);
+        throw orgsError;
+      }
+
+      // Create lookup maps
+      const usersMap = new Map(usersData?.map(user => [user.id, user]) || []);
+      const orgsMap = new Map(orgsData?.map(org => [org.id, org]) || []);
+
+      // Apply additional filters and sorting
+      let filteredManagers = managersData.map(manager => ({
+        ...manager,
+        users: usersMap.get(manager.user_id),
+        organizations: orgsMap.get(manager.org_id)
+      }));
+
+      // Apply department filter
+      if (filterDepartment) {
+        filteredManagers = filteredManagers.filter(manager => 
+          manager.users?.department === filterDepartment
+        );
+      }
+
+      // Apply search on user data
+      if (searchQuery.trim()) {
+        filteredManagers = filteredManagers.filter(manager => {
+          const user = manager.users;
+          if (!user) return false;
+          return (
+            user.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        });
+      }
+
+      // Apply sorting for user fields
+      if (['first_name', 'last_name', 'email', 'department'].includes(sortField)) {
+        filteredManagers.sort((a, b) => {
+          const aVal = a.users?.[sortField as keyof typeof a.users] || '';
+          const bVal = b.users?.[sortField as keyof typeof b.users] || '';
+          const comparison = String(aVal).localeCompare(String(bVal));
+          return sortDirection === 'asc' ? comparison : -comparison;
+        });
+      }
+
+      setOfficers(filteredManagers);
       setTotalCount(count || 0);
 
     } catch (err) {
@@ -153,19 +174,37 @@ export default function Officers() {
   };
 
   // Demote officer to member
-  const demoteOfficer = async (officerId?: string, orgId?: string) => {
+  const demoteOfficer = async (userId?: string, orgId?: string) => {
     try {
       setError(null);
 
-      const { error: rpcError } = await supabase
-        .rpc('demote_to_member', {
-          officer_id: officerId,
-          organization_id: orgId
-        });
+      const { error: deleteError } = await supabase
+        .from('org_managers')
+        .delete()
+        .eq('user_id', userId)
+        .eq('org_id', orgId);
 
-      if (rpcError) {
-        console.error('RPC error:', rpcError);
-        throw rpcError;
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw deleteError;
+      }
+
+      // Check if user has any remaining manager roles
+      const { data: remainingRoles, error: checkError } = await supabase
+        .from('org_managers')
+        .select('manager_role')
+        .eq('user_id', userId);
+
+      if (checkError) throw checkError;
+
+      // If no remaining roles, demote back to member
+      if (!remainingRoles || remainingRoles.length === 0) {
+        const { error: roleUpdateError } = await supabase
+          .from('user_roles')
+          .update({ role: 'member' })
+          .eq('user_id', userId);
+
+        if (roleUpdateError) throw roleUpdateError;
       }
 
       // Refresh the list
@@ -246,12 +285,13 @@ export default function Officers() {
           className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
         >
           <option value="">All Positions</option>
-          <option value="President">President</option>
-          <option value="Vice President">Vice President</option>
-          <option value="Secretary">Secretary</option>
-          <option value="Treasurer">Treasurer</option>
-          <option value="Auditor">Auditor</option>
-          <option value="Public Relations Officer">Public Relations Officer</option>
+          <option value="adviser">Adviser</option>
+          <option value="president">President</option>
+          <option value="vice_president">Vice President</option>
+          <option value="secretary">Secretary</option>
+          <option value="treasurer">Treasurer</option>
+          <option value="auditor">Auditor</option>
+          <option value="pro">Public Relations Officer</option>
         </select>
       </div>
 
@@ -283,11 +323,21 @@ export default function Officers() {
                     <th
                       scope="col"
                       className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('name')}
+                      onClick={() => handleSort('first_name')}
                     >
                       <div className="group inline-flex">
                         Name
-                        <span className="ml-2 flex-none rounded"><SortIcon field="name" /></span>
+                        <span className="ml-2 flex-none rounded"><SortIcon field="first_name" /></span>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('manager_role')}
+                    >
+                      <div className="group inline-flex">
+                        Role
+                        <span className="ml-2 flex-none rounded"><SortIcon field="manager_role" /></span>
                       </div>
                     </th>
                     <th
@@ -353,13 +403,13 @@ export default function Officers() {
                   ) : (
                     officers.map((officer) => (
 
-                      <tr key={`${officer.member?.id}-${officer.org_id}`} className="hover:bg-gray-50">
+                      <tr key={`${officer.user_id}-${officer.org_id}`} className="hover:bg-gray-50">
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                           <div className="flex items-center">
-                            {officer.member?.avatar_url ? (
+                            {officer.users?.avatar_url ? (
                               <img
-                                src={officer.member.avatar_url}
-                                alt={`${officer.member?.name} avatar`}
+                                src={officer.users.avatar_url}
+                                alt={`${officer.users?.first_name} ${officer.users?.last_name} avatar`}
                                 className="h-10 w-10 rounded-full mr-3 object-cover"
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none';
@@ -369,32 +419,29 @@ export default function Officers() {
                             ) : (
                               <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
                                 <span className="text-sm font-medium text-green-600">
-                                  {officer.member?.name?.charAt(0).toUpperCase() || '?'}
+                                  {officer.users?.first_name?.charAt(0).toUpperCase() || '?'}
                                 </span>
                               </div>
                             )}
                             <div>
-                              <div className="font-medium">{officer.member?.name}</div>
-                              <div className="text-gray-500 text-xs">{officer.member?.email}</div>
+                              <div className="font-medium">{officer.users?.first_name} {officer.users?.last_name}</div>
+                              <div className="text-gray-500 text-xs">{officer.users?.email}</div>
                             </div>
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                            {officer.position}
+                          <span className="inline-flex items-center px-2.5 py-0.5 text-s font-medium text-green-800">
+                            {officer.manager_role ? officer.manager_role.charAt(0).toUpperCase() + officer.manager_role.slice(1) : 'N/A'}
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          <div className="font-medium">{officer.organization?.name}</div>
-                          <div className="text-xs text-gray-400">
-                            {officer.organization?.abbrev_name}
-                          </div>
+                          {officer.position || 'N/A'}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {officer.member?.department}
-                          <div className="text-xs text-gray-400">
-                            {officer.member?.year} - {officer.member?.course}
-                          </div>
+                          <div className="font-medium">{officer.organizations?.abbrev_name || officer.organizations?.name}</div>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {officer.users?.department}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                           {new Date(officer.assigned_at).toLocaleDateString('en-US', {
@@ -404,13 +451,22 @@ export default function Officers() {
                           })}
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <button
-                            onClick={() => demoteOfficer(officer.member?.id, officer.org_id)}
-                            className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors"
-                            title="Demote to member"
-                          >
-                            <UserMinus className="h-5 w-5" />
-                          </button>
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
+                              onClick={() => navigate(`/admin/dashboard/profile/${officer.user_id}`)}
+                              className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-full transition-colors"
+                              title="View Profile"
+                            >
+                              <UserIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => demoteOfficer(officer.user_id, officer.org_id)}
+                              className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors"
+                              title="Demote to member"
+                            >
+                              <UserMinus className="h-5 w-5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
