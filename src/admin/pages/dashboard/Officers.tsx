@@ -312,169 +312,194 @@ export default function Officers() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="mt-8 flow-root">
-        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('first_name')}
-                    >
-                      <div className="group inline-flex">
-                        Name
-                        <span className="ml-2 flex-none rounded"><SortIcon field="first_name" /></span>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('manager_role')}
-                    >
-                      <div className="group inline-flex">
-                        Role
-                        <span className="ml-2 flex-none rounded"><SortIcon field="manager_role" /></span>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('position')}
-                    >
-                      <div className="group inline-flex">
-                        Position
-                        <span className="ml-2 flex-none rounded"><SortIcon field="position" /></span>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                    >
-                      Organization
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('department')}
-                    >
-                      <div className="group inline-flex">
-                        Department
-                        <span className="ml-2 flex-none rounded"><SortIcon field="department" /></span>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('assigned_at')}
-                    >
-                      <div className="group inline-flex">
-                        Assigned Date
-                        <span className="ml-2 flex-none rounded"><SortIcon field="assigned_at" /></span>
-                      </div>
-                    </th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8">
-                        <div className="flex justify-center items-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-                          <span className="ml-2 text-gray-500">Loading officers...</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : officers.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8 text-gray-500">
+      {/* Modern Table */}
+      <div className="mt-8 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gradient-to-r from-green-50 to-green-100">
+              <tr>
+                <th
+                  scope="col"
+                  className="py-4 pl-6 pr-3 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('first_name')}
+                >
+                  <div className="flex items-center gap-2">
+                    Officer
+                    <SortIcon field="first_name" />
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('manager_role')}
+                >
+                  <div className="flex items-center gap-2">
+                    Role
+                    <SortIcon field="manager_role" />
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('position')}
+                >
+                  <div className="flex items-center gap-2">
+                    Position
+                    <SortIcon field="position" />
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900"
+                >
+                  Organization
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('department')}
+                >
+                  <div className="flex items-center gap-2">
+                    Dept
+                    <SortIcon field="department" />
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('assigned_at')}
+                >
+                  <div className="flex items-center gap-2">
+                    Assigned
+                    <SortIcon field="assigned_at" />
+                  </div>
+                </th>
+                <th scope="col" className="relative py-4 pl-4 pr-6">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                      <p className="text-sm text-gray-500">Loading officers...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : officers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <UserIcon className="h-12 w-12 text-gray-300" />
+                      <p className="text-sm text-gray-500">
                         {searchQuery || filterDepartment || filterPosition ?
                           'No officers match your search criteria' :
                           'No officers found'
                         }
-                      </td>
-                    </tr>
-                  ) : (
-                    officers.map((officer) => (
-
-                      <tr key={`${officer.user_id}-${officer.org_id}`} className="hover:bg-gray-50">
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                          <div className="flex items-center">
-                            {officer.users?.avatar_url ? (
-                              <img
-                                src={officer.users.avatar_url}
-                                alt={`${officer.users?.first_name} ${officer.users?.last_name} avatar`}
-                                className="h-10 w-10 rounded-full mr-3 object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
-                                }}
-                              />
-                            ) : (
-                              <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                <span className="text-sm font-medium text-green-600">
-                                  {officer.users?.first_name?.charAt(0).toUpperCase() || '?'}
-                                </span>
-                              </div>
-                            )}
-                            <div>
-                              <div className="font-medium">{officer.users?.first_name} {officer.users?.last_name}</div>
-                              <div className="text-gray-500 text-xs">{officer.users?.email}</div>
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                officers.map((officer) => (
+                  <tr key={`${officer.user_id}-${officer.org_id}`} className="hover:bg-green-50/50 transition-colors">
+                    <td className="py-4 pl-6 pr-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          {officer.users?.avatar_url ? (
+                            <img
+                              src={officer.users.avatar_url}
+                              alt={`${officer.users?.first_name} ${officer.users?.last_name}`}
+                              className="h-10 w-10 rounded-full object-cover border-2 border-green-100"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center border-2 border-green-200">
+                              <span className="text-sm font-semibold text-green-700">
+                                {officer.users?.first_name?.charAt(0).toUpperCase() || '?'}
+                              </span>
                             </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-gray-900 truncate">
+                            {officer.users?.first_name} {officer.users?.last_name}
                           </div>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          <span className="inline-flex items-center px-2.5 py-0.5 text-s font-medium text-green-800">
-                            {officer.manager_role ? officer.manager_role.charAt(0).toUpperCase() + officer.manager_role.slice(1) : 'N/A'}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {officer.position || 'N/A'}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          <div className="font-medium">{officer.organizations?.abbrev_name || officer.organizations?.name}</div>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {officer.users?.department}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {new Date(officer.assigned_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <div className="flex items-center justify-end space-x-2">
-                            <button
-                              onClick={() => navigate(`/admin/dashboard/profile/${officer.user_id}`)}
-                              className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-full transition-colors"
-                              title="View Profile"
-                            >
-                              <UserIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => demoteOfficer(officer.user_id, officer.org_id)}
-                              className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-full transition-colors"
-                              title="Demote to member"
-                            >
-                              <UserMinus className="h-5 w-5" />
-                            </button>
+                          <div className="text-sm text-gray-500 truncate">
+                            {officer.users?.email}
                           </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        officer.manager_role === 'adviser'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {officer.manager_role?.charAt(0).toUpperCase() + officer.manager_role?.slice(1) || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm font-medium text-gray-900">
+                        {officer.position || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        {officer.organizations?.org_pic && (
+                          <img
+                            src={officer.organizations.org_pic}
+                            alt={officer.organizations.name}
+                            className="h-6 w-6 rounded object-cover"
+                          />
+                        )}
+                        <span className="text-sm font-medium text-gray-900 truncate">
+                          {officer.organizations?.abbrev_name || officer.organizations?.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm text-gray-600 font-medium">
+                        {officer.users?.department}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm text-gray-600">
+                        {new Date(officer.assigned_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </td>
+                    <td className="pl-4 pr-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => navigate(`/admin/dashboard/profile/${officer.user_id}`)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                          title="View Profile"
+                        >
+                          <UserIcon className="h-3.5 w-3.5" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => demoteOfficer(officer.user_id, officer.org_id)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 transition-colors"
+                          title="Demote to member"
+                        >
+                          <UserMinus className="h-3.5 w-3.5" />
+                          Demote
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

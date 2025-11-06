@@ -229,44 +229,82 @@ export default function Organizations() {
             <Link
               key={org.id}
               to={org.id}
-              className="group relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white hover:shadow-md transition-shadow"
+              className="group relative bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-green-300 transition-all duration-200 overflow-hidden"
             >
-              <div className="flex-1 p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
+              {/* Header with gradient background */}
+              <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+                <div className="flex items-center space-x-4">
+                  {/* Organization Logo */}
+                  <div className="flex-shrink-0">
+                    {org.org_pic ? (
+                      <img
+                        src={org.org_pic}
+                        alt={`${org.name} logo`}
+                        className="w-24 h-24 rounded-lg object-cover border-2 border-white/20 shadow-sm"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    {/* Fallback icon */}
+                    <div className={`w-24 h-24 rounded-lg bg-white/20 flex items-center justify-center border-2 border-white/20 shadow-sm ${org.org_pic ? 'hidden' : ''}`}>
+                      <Building className="w-12 h-12 text-white/80" />
+                    </div>
+                  </div>
+
+                  {/* Organization Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl font-bold text-white truncate">
                       {org.abbrev_name || org.name}
                     </h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {org.org_code} • {org.name}
+                    <p className="text-green-100 text-sm font-medium">
+                      {org.org_code}
                     </p>
+                    <div className="flex items-center mt-1">
+                      <span className={
+                        "inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold " +
+                        (org.status === 'active'
+                          ? "bg-green-100 text-green-800"
+                          : org.status === 'inactive'
+                          ? "bg-gray-100 text-gray-800"
+                          : "bg-yellow-100 text-yellow-800"
+                        )
+                      }>
+                        {org.status}
+                      </span>
+                    </div>
                   </div>
-                  <span className={
-                    "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium " + 
-                    (org.status === 'active' 
-                      ? "bg-green-100 text-green-700"
-                      : org.status === 'inactive'
-                      ? "bg-gray-100 text-gray-700"
-                      : "bg-yellow-100 text-yellow-700"
-                    )
-                  }>
-                    {org.status}
-                  </span>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  {org.description || 'No description available'}
+                </p>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center text-gray-500">
+                    <Building className="w-4 h-4 mr-2 text-gray-400" />
+                    <span className="truncate">{org.department}</span>
+                  </div>
+                  <div className="flex items-center text-gray-500">
+                    <Filter className="w-4 h-4 mr-2 text-gray-400" />
+                    <span>{org.org_type}</span>
+                  </div>
+                  <div className="flex items-center text-gray-500 col-span-2">
+                    <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                    <span>Established: {new Date(org.date_established).toLocaleDateString()}</span>
+                  </div>
                 </div>
 
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Building className="h-4 w-4 mr-2" />
-                    {org.department}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Est. {new Date(org.date_established).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Filter className="h-4 w-4 mr-2" />
-                    {org.org_type}
-                  </div>
+                {/* Hover indicator */}
+                <div className="mt-4 flex items-center text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-sm font-medium">View Details</span>
+                  <ChevronDown className="w-4 h-4 ml-1 rotate-[-90deg]" />
                 </div>
               </div>
             </Link>

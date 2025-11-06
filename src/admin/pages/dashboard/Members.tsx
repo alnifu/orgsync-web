@@ -166,6 +166,7 @@ export default function Members() {
           <option value="2nd">2nd Year</option>
           <option value="3rd">3rd Year</option>
           <option value="4th">4th Year</option>
+          <option value="5th">5th Year</option>
         </select>
 
         <select
@@ -173,150 +174,224 @@ export default function Members() {
           onChange={(e) => setFilterCourse(e.target.value)}
           className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
         >
-          <option value="">All Courses</option>
-          <option value="BSIT">More to Come Soon</option>
-          {/* Add more courses */}
+          <option value="">All Programs</option>
+
+          <optgroup label="College of Business, Economics, Accountancy and Management">
+            <option value="BS Accountancy">BS Accountancy</option>
+            <option value="BS Accounting Information System">BS Accounting Information System</option>
+            <option value="BS Legal Management">BS Legal Management</option>
+            <option value="BS Entrepreneurship">BS Entrepreneurship</option>
+            <option value="BS Management Technology">BS Management Technology</option>
+            <option value="BSBA Financial Management">BSBA Financial Management</option>
+            <option value="BSBA Marketing Management">BSBA Marketing Management</option>
+            <option value="Certificate in Entrepreneurship">Certificate in Entrepreneurship</option>
+          </optgroup>
+
+          <optgroup label="College of Education, Arts and Sciences">
+            <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
+            <option value="Bachelor of Secondary Education">Bachelor of Secondary Education</option>
+            <option value="AB Communication">AB Communication</option>
+            <option value="Bachelor of Multimedia Arts">Bachelor of Multimedia Arts</option>
+            <option value="BS Biology">BS Biology</option>
+            <option value="BS Forensic Science">BS Forensic Science</option>
+            <option value="BS Mathematics">BS Mathematics</option>
+            <option value="BS Psychology">BS Psychology</option>
+          </optgroup>
+
+          <optgroup label="College of International Hospitality and Tourism Management">
+            <option value="BS Hospitality Management">BS Hospitality Management</option>
+            <option value="BS Tourism Management">BS Tourism Management</option>
+            <option value="Certificate in Culinary Arts">Certificate in Culinary Arts</option>
+          </optgroup>
+
+          <optgroup label="College of Information Technology and Engineering">
+            <option value="BS Architecture">BS Architecture</option>
+            <option value="BS Computer Engineering">BS Computer Engineering</option>
+            <option value="BS Computer Science">BS Computer Science</option>
+            <option value="BS Electrical Engineering">BS Electrical Engineering</option>
+            <option value="BS Electronics Engineering">BS Electronics Engineering</option>
+            <option value="BS Entertainment and Multimedia Computing">BS Entertainment and Multimedia Computing</option>
+            <option value="BS Industrial Engineering">BS Industrial Engineering</option>
+            <option value="BS Information Technology">BS Information Technology</option>
+            <option value="Associate in Computer Technology">Associate in Computer Technology</option>
+          </optgroup>
+
+          <optgroup label="College of Nursing">
+            <option value="BS Nursing">BS Nursing</option>
+          </optgroup>
         </select>
       </div>
 
-      {/* Table */}
-      <div className="mt-8 flow-root">
-        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th 
-                      scope="col" 
-                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                      onClick={() => handleSort('first_name')}
-                    >
-                      <div className="group inline-flex cursor-pointer">
-                        Name
-                        <span className="ml-2 flex-none rounded"><SortIcon field="first_name" /></span>
-                      </div>
-                    </th>
-                    <th 
-                      scope="col" 
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                      onClick={() => handleSort('email')}
-                    >
-                      <div className="group inline-flex cursor-pointer">
-                        Email
-                        <span className="ml-2 flex-none rounded"><SortIcon field="email" /></span>
-                      </div>
-                    </th>
-                    <th 
-                      scope="col" 
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                      onClick={() => handleSort('department')}
-                    >
-                      <div className="group inline-flex cursor-pointer">
-                        Department
-                        <span className="ml-2 flex-none rounded"><SortIcon field="department" /></span>
-                      </div>
-                    </th>
-                    <th 
-                      scope="col" 
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                      onClick={() => handleSort('year_level')}
-                    >
-                      <div className="group inline-flex cursor-pointer">
-                        Year
-                        <span className="ml-2 flex-none rounded"><SortIcon field="year_level" /></span>
-                      </div>
-                    </th>
-                    <th 
-                      scope="col" 
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                      onClick={() => handleSort('program')}
-                    >
-                      <div className="group inline-flex cursor-pointer">
-                        Course
-                        <span className="ml-2 flex-none rounded"><SortIcon field="program" /></span>
-                      </div>
-                    </th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-4">
-                        <div className="flex justify-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : members.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-4 text-gray-500">
-                        No members found
-                      </td>
-                    </tr>
-                  ) : (
-                    members.map((member) => (
-                      <tr key={member.id}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                          <div className="flex items-center">
-                            {member.avatar_url ? (<img
-                              src={member.avatar_url || 'https://via.placeholder.com/40'}
-                              alt=""
-                              className="h-10 w-10 rounded-full mr-3"
+      {/* Modern Table */}
+      <div className="mt-8 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gradient-to-r from-green-50 to-green-100">
+              <tr>
+                <th
+                  scope="col"
+                  className="py-4 pl-6 pr-3 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('first_name')}
+                >
+                  <div className="flex items-center gap-2">
+                    Member
+                    <SortIcon field="first_name" />
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('email')}
+                >
+                  <div className="flex items-center gap-2">
+                    Email
+                    <SortIcon field="email" />
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('department')}
+                >
+                  <div className="flex items-center gap-2">
+                    Dept
+                    <SortIcon field="department" />
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('year_level')}
+                >
+                  <div className="flex items-center gap-2">
+                    Year
+                    <SortIcon field="year_level" />
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
+                  onClick={() => handleSort('program')}
+                >
+                  <div className="flex items-center gap-2">
+                    Program
+                    <SortIcon field="program" />
+                  </div>
+                </th>
+                <th scope="col" className="relative py-4 pl-4 pr-6">
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                      <p className="text-sm text-gray-500">Loading members...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : members.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <UserIcon className="h-12 w-12 text-gray-300" />
+                      <p className="text-sm text-gray-500">
+                        {searchQuery || filterDepartment || filterYear || filterCourse ?
+                          'No members match your search criteria' :
+                          'No members found'
+                        }
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                members.map((member) => (
+                  <tr key={member.id} className="hover:bg-green-50/50 transition-colors">
+                    <td className="py-4 pl-6 pr-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          {member.avatar_url ? (
+                            <img
+                              src={member.avatar_url}
+                              alt={`${member.first_name} ${member.last_name}`}
+                              className="h-10 w-10 rounded-full object-cover border-2 border-green-100"
                             />
-                            ) : (
-                              <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                <span className="text-sm font-medium text-green-600">
-                                  {member.first_name ? member.first_name.charAt(0).toUpperCase() : '?'}
-                                </span>
-                              </div>
-                            )}
+                          ) : (
+                            <div className="h-10 w-10 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center border-2 border-green-200">
+                              <span className="text-sm font-semibold text-green-700">
+                                {member.first_name?.charAt(0).toUpperCase() || '?'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-gray-900 truncate">
                             {member.first_name} {member.last_name}
                           </div>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {member.email}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {member.department}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {member.year_level}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {member.program}
-                        </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <div className="flex items-center justify-end space-x-2">
-                            <button 
-                              onClick={() => navigate(`/admin/dashboard/profile/${member.id}`)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="View Profile"
-                            >
-                              <UserIcon className="h-5 w-5" />
-                            </button>
-                            <button 
-                              onClick={() => {
-                                setSelectedMember(member);
-                                setShowPromoteModal(true);
-                              }}
-                              className="text-green-600 hover:text-green-900"
-                              title="Promote to Officer"
-                            >
-                              <Shield className="h-5 w-5" />
-                            </button>
+                          <div className="text-sm text-gray-500 truncate">
+                            ID: {member.student_number || 'N/A'}
                           </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm font-medium text-gray-900">
+                        {member.email}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm text-gray-600 font-medium">
+                        {member.department}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        String(member.year_level) === '1' ? 'bg-blue-100 text-blue-800' :
+                        String(member.year_level) === '2' ? 'bg-green-100 text-green-800' :
+                        String(member.year_level) === '3' ? 'bg-yellow-100 text-yellow-800' :
+                        String(member.year_level) === '4' ? 'bg-purple-100 text-purple-800' :
+                        String(member.year_level) === '5' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {member.year_level ? `${member.year_level}${member.year_level === 1 ? 'st' : member.year_level === 2 ? 'nd' : member.year_level === 3 ? 'rd' : 'th'} Year` : 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-sm text-gray-600 font-medium truncate max-w-xs">
+                        {member.program || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="pl-4 pr-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => navigate(`/admin/dashboard/profile/${member.id}`)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                          title="View Profile"
+                        >
+                          <UserIcon className="h-3.5 w-3.5" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setShowPromoteModal(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 hover:border-green-300 transition-colors"
+                          title="Promote to Officer"
+                        >
+                          <Shield className="h-3.5 w-3.5" />
+                          Promote
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

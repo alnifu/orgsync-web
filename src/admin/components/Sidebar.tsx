@@ -35,8 +35,6 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
         { to: "officers", label: "Officers", icon: Users },
         { to: "members", label: "Members", icon: User },
         { to: "posts", label: "Posts", icon: FileText },
-        { to: "contests", label: "Contests", icon: Trophy },
-        { to: "submissions", label: "Submissions", icon: Image },
         { to: "reports", label: "Reports", icon: BarChart3 },
         ...baseLinks.slice(1) // Return to Portal
       ];

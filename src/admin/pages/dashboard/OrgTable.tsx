@@ -65,24 +65,24 @@ export default function OrgTable() {
         </div>
       </div>
 
-      <div className="mt-8 bg-white shadow ring-1 ring-black ring-opacity-5 rounded-lg overflow-hidden">
+      <div className="mt-8 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-300">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gradient-to-r from-green-50 to-green-100">
               <tr>
-                <th 
-                  scope="col" 
-                  className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 cursor-pointer group"
+                <th
+                  scope="col"
+                  className="py-4 pl-6 pr-3 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-2">
-                    Name
+                    Organization
                     <SortIcon field="name" />
                   </div>
                 </th>
-                <th 
-                  scope="col" 
-                  className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer group"
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
                   onClick={() => handleSort('org_type')}
                 >
                   <div className="flex items-center gap-2">
@@ -90,76 +90,103 @@ export default function OrgTable() {
                     <SortIcon field="org_type" />
                   </div>
                 </th>
-                <th 
-                  scope="col" 
-                  className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer group"
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900 cursor-pointer hover:bg-green-200/50 transition-colors"
                   onClick={() => handleSort('department')}
                 >
                   <div className="flex items-center gap-2">
-                    Department
+                    Dept
                     <SortIcon field="department" />
                   </div>
                 </th>
-                <th 
-                  scope="col" 
-                  className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                <th
+                  scope="col"
+                  className="px-4 py-4 text-left text-sm font-bold text-gray-900"
                 >
                   Status
                 </th>
-                <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                <th scope="col" className="relative py-4 pl-4 pr-6">
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-gray-100 bg-white">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-4 text-sm text-gray-500 text-center">
-                    <div className="flex justify-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+                      <p className="text-sm text-gray-500">Loading organizations...</p>
                     </div>
                   </td>
                 </tr>
               ) : organizations.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-4 text-sm text-gray-500 text-center">
-                    No organizations found
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-12 w-12 text-gray-300" />
+                      <p className="text-sm text-gray-500">No organizations found</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 organizations.map((org) => (
-                  <tr key={org.id}>
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm">
-                      <div>
-                        <div className="font-medium text-gray-900">{org.abbrev_name || org.name}</div>
-                        <div className="text-gray-500">{org.org_code} • {org.name}</div>
+                  <tr key={org.id} className="hover:bg-green-50/50 transition-colors">
+                    <td className="py-4 pl-6 pr-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          {org.org_pic ? (
+                            <img
+                              src={org.org_pic}
+                              alt={org.name}
+                              className="h-10 w-10 rounded-lg object-cover border-2 border-green-100"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center border-2 border-green-200">
+                              <span className="text-sm font-semibold text-green-700">
+                                {org.abbrev_name?.charAt(0).toUpperCase() || org.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-gray-900 truncate">
+                            {org.abbrev_name || org.name}
+                          </div>
+                          <div className="text-sm text-gray-500 truncate">
+                            {org.org_code} • {org.name}
+                          </div>
+                        </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {org.org_type}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {org.department}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      <span className={
-                        "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium " + 
-                        (org.status === 'active' 
-                          ? "bg-green-100 text-green-700"
-                          : org.status === 'inactive'
-                          ? "bg-gray-100 text-gray-700"
-                          : "bg-yellow-100 text-yellow-700"
-                        )
-                      }>
-                        {org.status}
+                    <td className="px-4 py-4">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                        {org.org_type}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                    <td className="px-4 py-4">
+                      <span className="text-sm font-medium text-gray-900">
+                        {org.department}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        org.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : org.status === 'inactive'
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {org.status?.charAt(0).toUpperCase() + org.status?.slice(1)}
+                      </span>
+                    </td>
+                    <td className="pl-4 pr-6 py-4 text-right">
                       <Link
                         to={`/admin/dashboard/organizations/${org.id}`}
-                        className="text-green-600 hover:text-green-900"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 hover:border-green-300 transition-colors"
                       >
-                        View<span className="sr-only">, {org.name}</span>
+                        View Details
                       </Link>
                     </td>
                   </tr>
