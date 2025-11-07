@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Users, Building2, FileText, TrendingUp, Calendar, RefreshCw } from 'lucide-react';
+import { Users, Building2, FileText, TrendingUp, Calendar, RefreshCw, BarChart3, Filter } from 'lucide-react';
 
 interface ReportStats {
   totalUsers: number;
@@ -12,6 +12,33 @@ interface ReportStats {
   recentPosts: number;
   totalViews: number;
   recentViews: number;
+  // User engagement metrics
+  totalLikes: number;
+  totalRsvps: number;
+  totalPollVotes: number;
+  totalEvaluations: number;
+  totalRegistrations: number;
+  engagementRate: number;
+  activeUsers: number;
+}
+
+interface EngagementStats {
+  totalInteractions: number;
+  averageInteractionsPerUser: number;
+  topEngagedUsers: Array<{
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    totalInteractions: number;
+  }>;
+  interactionBreakdown: {
+    views: number;
+    likes: number;
+    rsvps: number;
+    pollVotes: number;
+    evaluations: number;
+    registrations: number;
+  };
 }
 
 type TimeRange = '7d' | '30d' | '90d' | 'all';
@@ -32,7 +59,28 @@ export default function Reports() {
     facultyCount: 0,
     recentPosts: 0,
     totalViews: 0,
-    recentViews: 0
+    recentViews: 0,
+    // User engagement metrics
+    totalLikes: 0,
+    totalRsvps: 0,
+    totalPollVotes: 0,
+    totalEvaluations: 0,
+    totalRegistrations: 0,
+    engagementRate: 0,
+    activeUsers: 0
+  });
+  const [engagementStats, setEngagementStats] = useState<EngagementStats>({
+    totalInteractions: 0,
+    averageInteractionsPerUser: 0,
+    topEngagedUsers: [],
+    interactionBreakdown: {
+      views: 0,
+      likes: 0,
+      rsvps: 0,
+      pollVotes: 0,
+      evaluations: 0,
+      registrations: 0
+    }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +118,10 @@ export default function Reports() {
         userTypesResult,
         recentPostsResult,
         totalViewsResult,
-        recentViewsResult
+        recentViewsResult,
+        // Engagement metrics
+        engagementResult,
+        topUsersResult
       ] = await Promise.all([
         // Total users
         supabase.from('users').select('id', { count: 'exact', head: true }),
@@ -111,7 +162,27 @@ export default function Reports() {
 
         // Recent views (last 30 days)
         supabase.from('posts').select('post_views(user_id)')
-          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+
+        // Engagement data from reward_log
+        dateFilter
+          ? supabase.from('reward_log').select('action, user_id').gte('created_at', dateFilter)
+          : supabase.from('reward_log').select('action, user_id'),
+
+        // Top engaged users
+        (() => {
+          let baseQuery = supabase
+            .from('reward_log')
+            .select(`
+              user_id,
+              users!inner (
+                first_name,
+                last_name
+              )
+            `);
+          if (dateFilter) baseQuery = baseQuery.gte('created_at', dateFilter);
+          return baseQuery;
+        })()
       ]);
 
       // Process user types
@@ -123,6 +194,38 @@ export default function Reports() {
       const totalViews = totalViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
       const recentViews = recentViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
 
+      // Process engagement data
+      const engagementData = engagementResult.data || [];
+      const totalLikes = engagementData.filter(e => e.action === 'like').length;
+      const totalRsvps = engagementData.filter(e => e.action === 'rsvp').length;
+      const totalPollVotes = engagementData.filter(e => e.action === 'poll').length;
+      const totalEvaluations = engagementData.filter(e => e.action === 'evaluate').length;
+      const totalRegistrations = engagementData.filter(e => e.action === 'register').length;
+      const totalEngagementViews = engagementData.filter(e => e.action === 'view').length;
+
+      // Calculate engagement metrics
+      const totalInteractions = engagementData.length;
+      const activeUsers = new Set(engagementData.map(e => e.user_id)).size;
+      const engagementRate = stats.totalUsers > 0 ? (activeUsers / stats.totalUsers) * 100 : 0;
+
+      // Process top engaged users
+      const userInteractionMap = new Map<string, { count: number; user: any }>();
+      topUsersResult.data?.forEach((record: any) => {
+        const userId = record.user_id;
+        const current = userInteractionMap.get(userId) || { count: 0, user: record.users };
+        userInteractionMap.set(userId, { count: current.count + 1, user: record.users });
+      });
+
+      const topEngagedUsers = Array.from(userInteractionMap.entries())
+        .map(([userId, data]) => ({
+          user_id: userId,
+          first_name: data.user?.first_name || '',
+          last_name: data.user?.last_name || '',
+          totalInteractions: data.count
+        }))
+        .sort((a, b) => b.totalInteractions - a.totalInteractions)
+        .slice(0, 10);
+
       setStats({
         totalUsers: usersResult.count || 0,
         totalOrganizations: organizationsResult.count || 0,
@@ -132,7 +235,28 @@ export default function Reports() {
         facultyCount,
         recentPosts: recentPostsResult.count || 0,
         totalViews,
-        recentViews
+        recentViews,
+        totalLikes,
+        totalRsvps,
+        totalPollVotes,
+        totalEvaluations,
+        totalRegistrations,
+        engagementRate,
+        activeUsers
+      });
+
+      setEngagementStats({
+        totalInteractions,
+        averageInteractionsPerUser: activeUsers > 0 ? totalInteractions / activeUsers : 0,
+        topEngagedUsers,
+        interactionBreakdown: {
+          views: totalEngagementViews,
+          likes: totalLikes,
+          rsvps: totalRsvps,
+          pollVotes: totalPollVotes,
+          evaluations: totalEvaluations,
+          registrations: totalRegistrations
+        }
       });
 
     } catch (err) {
@@ -175,24 +299,23 @@ export default function Reports() {
   //   window.URL.revokeObjectURL(url);
   // };
 
-  const StatCard = ({ title, value, icon: Icon, color }: {
+  const StatCard = ({ title, value, icon: Icon, color, gradient }: {
     title: string;
     value: number | string;
     icon: any;
     color: string;
+    gradient?: string;
   }) => (
-    <div className="bg-white overflow-hidden shadow rounded-lg">
-      <div className="p-5">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <Icon className={`h-6 w-6 text-${color}-600`} />
+    <div className={`bg-white rounded-lg border border-gray-200 p-4 ${gradient || ''}`}>
+      <div className="flex items-center">
+        <div className="flex-shrink-0">
+          <div className={`p-2 rounded-lg ${color}`}>
+            <Icon className="h-4 w-4 text-white" />
           </div>
-          <div className="ml-5 w-0 flex-1">
-            <dl>
-              <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-              <dd className="text-lg font-medium text-gray-900">{value}</dd>
-            </dl>
-          </div>
+        </div>
+        <div className="ml-3 w-0 flex-1">
+          <p className="text-xs font-medium text-gray-600 truncate">{title}</p>
+          <p className="text-lg font-semibold text-gray-900">{value}</p>
         </div>
       </div>
     </div>
@@ -219,171 +342,208 @@ export default function Reports() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Reports & Analytics</h1>
-            <p className="mt-2 text-sm text-gray-700">
-              Overview of system statistics and key metrics
-            </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Enhanced Header */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-6 sm:mb-0">
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="p-2 bg-green-600 rounded-lg">
+                  <BarChart3 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+                  <p className="text-sm text-gray-600">Platform performance and user engagement insights</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              >
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="all">All time</option>
+              </select>
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 inline ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
-              <option value="all">All time</option>
-            </select>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-            {/* <button
-              onClick={exportToCSV}
-              className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </button> */}
+
+          {/* Organization Filters */}
+          <div className="mt-6 bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <h3 className="text-sm font-medium text-gray-900">Filters</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Department</label>
+                <select
+                  value={filters.department}
+                  onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm bg-white focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="all">All Departments</option>
+                  <option value="CITE">CITE</option>
+                  <option value="CBEAM">CBEAM</option>
+                  <option value="COL">COL</option>
+                  <option value="CON">CON</option>
+                  <option value="CEAS">CEAS</option>
+                  <option value="OTHERS">Others</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                <select
+                  value={filters.orgType}
+                  onChange={(e) => setFilters({ ...filters, orgType: e.target.value })}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm bg-white focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="all">All Types</option>
+                  <option value="PROF">Professional</option>
+                  <option value="SPIN">Special Interest</option>
+                  <option value="SCRO">Socio-Civic</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm bg-white focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={() => setFilters({ department: 'all', orgType: 'all', status: 'all' })}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Organization Filters */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label htmlFor="department-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Department
-            </label>
-            <select
-              id="department-filter"
-              value={filters.department}
-              onChange={(e) => setFilters({ ...filters, department: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="all">All Departments</option>
-              <option value="CITE">CITE</option>
-              <option value="CBEAM">CBEAM</option>
-              <option value="COL">COL</option>
-              <option value="CON">CON</option>
-              <option value="CEAS">CEAS</option>
-              <option value="OTHERS">Others</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="org-type-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Organization Type
-            </label>
-            <select
-              id="org-type-filter"
-              value={filters.orgType}
-              onChange={(e) => setFilters({ ...filters, orgType: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="all">All Types</option>
-              <option value="PROF">Professional</option>
-              <option value="SPIN">Special Interest</option>
-              <option value="SCRO">Socio-Civic</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              id="status-filter"
-              value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => setFilters({ department: 'all', orgType: 'all', status: 'all' })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5 mb-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
         <StatCard
           title="Total Users"
           value={stats.totalUsers}
           icon={Users}
-          color="green"
+          color="bg-green-600"
         />
         <StatCard
           title="Organizations"
           value={`${stats.activeOrganizations}/${stats.totalOrganizations}`}
           icon={Building2}
-          color="emerald"
+          color="bg-green-600"
         />
         <StatCard
           title="Total Posts"
           value={stats.totalPosts}
           icon={FileText}
-          color="teal"
+          color="bg-green-600"
         />
         <StatCard
           title="Total Views"
           value={stats.totalViews.toLocaleString()}
           icon={TrendingUp}
-          color="blue"
+          color="bg-green-600"
         />
         <StatCard
           title="Recent Activity"
           value={`${stats.recentPosts} posts • ${stats.recentViews.toLocaleString()} views`}
           icon={Calendar}
-          color="lime"
+          color="bg-green-600"
         />
       </div>
 
+      {/* Engagement Stats Grid */}
+      <div className="mb-8">
+        <div className="flex items-center space-x-2 mb-4">
+          <TrendingUp className="h-4 w-4 text-green-600" />
+          <h2 className="text-lg font-semibold text-gray-900">User Engagement</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="Active Users"
+            value={`${stats.activeUsers} (${stats.engagementRate.toFixed(1)}%)`}
+            icon={Users}
+            color="bg-green-600"
+          />
+          <StatCard
+            title="Total Interactions"
+            value={engagementStats.totalInteractions.toLocaleString()}
+            icon={TrendingUp}
+            color="bg-green-600"
+          />
+          <StatCard
+            title="Avg per Active User"
+            value={engagementStats.averageInteractionsPerUser.toFixed(1)}
+            icon={FileText}
+            color="bg-green-600"
+          />
+          <StatCard
+            title="Top Engaged Users"
+            value={engagementStats.topEngagedUsers.length}
+            icon={Users}
+            color="bg-green-600"
+          />
+        </div>
+      </div>
+
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* User Distribution Chart */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">User Distribution</h3>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 bg-green-600">
+            <h3 className="text-sm font-semibold text-white flex items-center">
+              <Users className="h-4 w-4 mr-2" />
+              User Distribution
+            </h3>
+          </div>
+          <div className="p-4">
             <div className="space-y-4">
               <div>
-                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <div className="flex justify-between text-sm mb-1">
                   <span>Students</span>
-                  <span>{stats.studentCount} ({stats.totalUsers > 0 ? Math.round((stats.studentCount / stats.totalUsers) * 100) : 0}%)</span>
+                  <span className="font-medium">{stats.studentCount} ({stats.totalUsers > 0 ? Math.round((stats.studentCount / stats.totalUsers) * 100) : 0}%)</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
-                    className="bg-green-600 h-3 rounded-full transition-all duration-300"
+                    className="bg-green-600 h-3 rounded-full"
                     style={{ width: `${stats.totalUsers > 0 ? (stats.studentCount / stats.totalUsers) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
               <div>
-                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <div className="flex justify-between text-sm mb-1">
                   <span>Faculty</span>
-                  <span>{stats.facultyCount} ({stats.totalUsers > 0 ? Math.round((stats.facultyCount / stats.totalUsers) * 100) : 0}%)</span>
+                  <span className="font-medium">{stats.facultyCount} ({stats.totalUsers > 0 ? Math.round((stats.facultyCount / stats.totalUsers) * 100) : 0}%)</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
-                    className="bg-emerald-600 h-3 rounded-full transition-all duration-300"
+                    className="bg-green-600 h-3 rounded-full"
                     style={{ width: `${stats.totalUsers > 0 ? (stats.facultyCount / stats.totalUsers) * 100 : 0}%` }}
                   ></div>
                 </div>
@@ -421,6 +581,133 @@ export default function Reports() {
             </div>
           </div>
         </div> */}
+      </div>
+
+      {/* Engagement Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+        {/* Interaction Breakdown Chart */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 bg-green-600">
+            <h3 className="text-sm font-semibold text-white flex items-center">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Interaction Breakdown
+            </h3>
+          </div>
+          <div className="p-4">
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Views</span>
+                  <span className="font-medium">{engagementStats.interactionBreakdown.views.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.views / engagementStats.totalInteractions) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Likes</span>
+                  <span className="font-medium">{engagementStats.interactionBreakdown.likes.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.likes / engagementStats.totalInteractions) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>RSVPs</span>
+                  <span className="font-medium">{engagementStats.interactionBreakdown.rsvps.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.rsvps / engagementStats.totalInteractions) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Poll Votes</span>
+                  <span className="font-medium">{engagementStats.interactionBreakdown.pollVotes.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.pollVotes / engagementStats.totalInteractions) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Evaluations</span>
+                  <span className="font-medium">{engagementStats.interactionBreakdown.evaluations.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.evaluations / engagementStats.totalInteractions) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Registrations</span>
+                  <span className="font-medium">{engagementStats.interactionBreakdown.registrations.toLocaleString()}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-600 h-2 rounded-full"
+                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.registrations / engagementStats.totalInteractions) * 100 : 0}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Top Engaged Users */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 bg-green-600">
+            <h3 className="text-sm font-semibold text-white flex items-center">
+              <Users className="h-4 w-4 mr-2" />
+              Top Engaged Users
+            </h3>
+          </div>
+          <div className="p-4">
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {engagementStats.topEngagedUsers.length > 0 ? (
+                engagementStats.topEngagedUsers.map((user, index) => (
+                  <div key={user.user_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-xs font-medium text-green-800">{index + 1}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {user.first_name} {user.last_name}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">{user.totalInteractions.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">interactions</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  <p className="text-sm">No engagement data available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* User Type Breakdown 
@@ -488,6 +775,7 @@ export default function Reports() {
           Future features may include detailed charts, user engagement metrics, organization performance analytics, and more.
         </p>
       </div> */}
+      </div>
     </div>
   );
 }

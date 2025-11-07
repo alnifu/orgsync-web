@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";
-import { Plus, Search, Edit3, Loader2 } from "lucide-react";
+import { Plus, Search, Loader2, Edit3 } from "lucide-react";
 import type { Posts, PostType } from '../../../types/database.types';
 import { useUserRoles } from '../../../utils/roles';
 import CreatePostModal from '../../components/CreatePostModal';
@@ -20,13 +20,14 @@ export default function PostsComponent() {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<Posts[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Posts[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedTag, setSelectedTag] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Modal states
   const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
@@ -37,7 +38,9 @@ export default function PostsComponent() {
   const [selectedPostType, setSelectedPostType] = useState<PostType>("general");
 
   // Get user roles
-  const { isAdmin, isOfficer } = useUserRoles(currentUser?.id);
+  const { isAdmin, loading: rolesLoading } = useUserRoles(currentUser?.id);
+  const [isAdviser, setIsAdviser] = useState(false);
+  const [isOfficer, setIsOfficer] = useState(false);
 
   // Get all unique tags from posts
   const allTags: string[] = [...new Set(posts.flatMap(post => post.tags || []))];
@@ -52,13 +55,37 @@ export default function PostsComponent() {
   }, [posts, searchTerm, selectedTag, sortBy, sortOrder, statusFilter]);
 
   async function getCurrentUser(): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    setCurrentUser(user);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+      
+      if (user) {
+        // For admin posts, check if user has any officer or adviser roles
+        const { data: managerRoles, error } = await supabase
+          .from('org_managers')
+          .select('manager_role')
+          .eq('user_id', user.id);
+        
+        if (!error && managerRoles) {
+          const roles = managerRoles.map(role => role.manager_role);
+          setIsAdviser(roles.includes('adviser'));
+          setIsOfficer(roles.includes('officer'));
+        } else {
+          setIsAdviser(false);
+          setIsOfficer(false);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to get current user:', err);
+      setIsAdviser(false);
+      setIsOfficer(false);
+    }
   }
 
   async function fetchPosts(): Promise<void> {
-    setIsLoading(true);
     try {
+      setLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from("posts")
         .select(`
@@ -70,11 +97,14 @@ export default function PostsComponent() {
         .order("is_pinned", { ascending: false })
         .order("created_at", { ascending: false });
       
-      if (!error && data) {
-        setPosts(data as Posts[]);
-      }
+      if (error) throw error;
+      setPosts(data as Posts[] || []);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch posts';
+      console.error('Error fetching posts:', err);
+      setError(errorMessage);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }  function filterAndSortPosts(): void {
     let filtered: Posts[] = [...posts];
@@ -129,13 +159,20 @@ export default function PostsComponent() {
   async function togglePin(postId: string, currentPinned: boolean): Promise<void> {
     if (!currentUser) return;
     
-    const { error } = await supabase
-      .from('posts')
-      .update({ is_pinned: !currentPinned })
-      .eq('id', postId)
-      .eq('user_id', currentUser.id);
-    
-    if (!error) fetchPosts();
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ is_pinned: !currentPinned })
+        .eq('id', postId)
+        .eq('user_id', currentUser.id);
+      
+      if (error) throw error;
+      fetchPosts();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle pin';
+      console.error('Error toggling pin:', err);
+      setError(errorMessage);
+    }
   }
 
   function handleEditPost(post: Posts): void {
@@ -157,6 +194,26 @@ export default function PostsComponent() {
     setResponsesModalOpen(true);
   }
 
+  // Handle create post button clicks
+  const handleCreatePost = (postType: PostType) => {
+    setSelectedPostType(postType);
+    // Use setTimeout to ensure state update before opening modal
+    setTimeout(() => setCreateModalOpen(true), 0);
+  };
+
+  if (loading || rolesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+            <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-green-600" />
+            <p className="text-gray-500">Loading posts...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -169,40 +226,28 @@ export default function PostsComponent() {
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <button 
-                onClick={() => {
-                  setSelectedPostType("general");
-                  setCreateModalOpen(true);
-                }}
+                onClick={() => handleCreatePost("general")}
                 className="flex flex-col items-center gap-2 p-4 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md hover:scale-105"
               >
                 <Plus size={24} />
                 <span className="text-sm font-medium">General Post</span>
               </button>
               <button 
-                onClick={() => {
-                  setSelectedPostType("event");
-                  setCreateModalOpen(true);
-                }}
+                onClick={() => handleCreatePost("event")}
                 className="flex flex-col items-center gap-2 p-4 bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
               >
                 <Plus size={24} />
                 <span className="text-sm font-medium">Event</span>
               </button>
               <button 
-                onClick={() => {
-                  setSelectedPostType("poll");
-                  setCreateModalOpen(true);
-                }}
+                onClick={() => handleCreatePost("poll")}
                 className="flex flex-col items-center gap-2 p-4 bg-purple-600 text-white rounded-xl shadow-sm hover:bg-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
               >
                 <Plus size={24} />
                 <span className="text-sm font-medium">Poll</span>
               </button>
               <button 
-                onClick={() => {
-                  setSelectedPostType("feedback");
-                  setCreateModalOpen(true);
-                }}
+                onClick={() => handleCreatePost("feedback")}
                 className="flex flex-col items-center gap-2 p-4 bg-orange-600 text-white rounded-xl shadow-sm hover:bg-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
               >
                 <Plus size={24} />
@@ -268,7 +313,7 @@ export default function PostsComponent() {
 
         {/* Posts List */}
         <div className="space-y-4">
-          {isLoading ? (
+          {loading ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
               <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-green-600" />
               <p className="text-gray-500">Loading posts...</p>
@@ -304,7 +349,7 @@ export default function PostsComponent() {
                 onViewResponses={handleViewResponses}
                 isOwner={isPostOwner(post)}
                 isAdmin={isAdmin()}
-                isOfficer={isOfficer()}
+                isOfficer={isOfficer}
                 showOrgInfo={true}
                 organization={(post as any).organizations}
                 poster={(post as any).users}
@@ -313,8 +358,25 @@ export default function PostsComponent() {
           )}
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="flex">
+              <div className="ml-3">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="text-sm text-red-600 underline hover:text-red-800 mt-1"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats */}
-        {!isLoading && posts.length > 0 && (
+        {!loading && posts.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">

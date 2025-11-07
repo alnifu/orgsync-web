@@ -23,7 +23,7 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   // New state for enhanced member management
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [currentMemberSearch, setCurrentMemberSearch] = useState('');
-  const [collegeFilter, setCollegeFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const [programFilter, setProgramFilter] = useState('');
   const [yearLevelFilter, setYearLevelFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -104,9 +104,18 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
   };
 
   // Get unique values for filters
-  const colleges = [...new Set(availableMembers.map(m => m.college).filter(Boolean))].sort() as string[];
+  const departments = [...new Set(availableMembers.map(m => m.department).filter(Boolean))].sort() as string[];
   const programs = [...new Set(availableMembers.map(m => m.program).filter(Boolean))].sort() as string[];
   const yearLevels = [...new Set(availableMembers.map(m => m.year_level).filter(Boolean))].sort() as number[];
+
+  // Helper function to format year level with correct ordinal
+  const formatYearLevel = (year: number | null) => {
+    if (!year) return 'N/A';
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const lastDigit = year % 10;
+    const suffix = (year > 10 && year < 20) ? 'th' : suffixes[lastDigit] || 'th';
+    return `${year}${suffix} Year`;
+  };
 
   // Filter available members with search and filters
   const filteredAvailableMembers = availableMembers.filter(m => {
@@ -114,14 +123,14 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
       (m.first_name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
       (m.last_name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
       (m.email?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
-      (m.college?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
+      (m.department?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false) ||
       (m.program?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ?? false);
 
-    const matchesCollege = !collegeFilter || m.college === collegeFilter;
+    const matchesDepartment = !departmentFilter || m.department === departmentFilter;
     const matchesProgram = !programFilter || m.program === programFilter;
     const matchesYearLevel = !yearLevelFilter || m.year_level?.toString() === yearLevelFilter;
 
-    return matchesSearch && matchesCollege && matchesProgram && matchesYearLevel;
+    return matchesSearch && matchesDepartment && matchesProgram && matchesYearLevel;
   });
 
   // Filter current members
@@ -130,7 +139,7 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
       (m.users?.first_name?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
       (m.users?.last_name?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
       (m.users?.email?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
-      (m.users?.college?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
+      (m.users?.department?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false) ||
       (m.users?.program?.toLowerCase().includes(currentMemberSearch.toLowerCase()) ?? false);
 
     return matchesSearch;
@@ -210,7 +219,7 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
                   <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search by name, email, college, or program..."
+                    placeholder="Search by name, email, department, or program..."
                     value={memberSearchQuery}
                     onChange={e => setMemberSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -229,13 +238,13 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
               {showFilters && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 rounded-md">
                   <select
-                    value={collegeFilter}
-                    onChange={e => setCollegeFilter(e.target.value)}
+                    value={departmentFilter}
+                    onChange={e => setDepartmentFilter(e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   >
-                    <option value="">All Colleges</option>
-                    {colleges.map(college => (
-                      <option key={college} value={college}>{college}</option>
+                    <option value="">All Departments</option>
+                    {departments.map(department => (
+                      <option key={department} value={department}>{department}</option>
                     ))}
                   </select>
 
@@ -257,7 +266,7 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
                   >
                     <option value="">All Year Levels</option>
                     {yearLevels.map(level => (
-                      <option key={level} value={level.toString()}>{level}st Year</option>
+                      <option key={level} value={level.toString()}>{formatYearLevel(level)}</option>
                     ))}
                   </select>
                 </div>
@@ -300,12 +309,12 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
                             {member.first_name || 'Unknown'} {member.last_name || 'User'}
                           </p>
                           <span className="text-xs text-gray-500">
-                            {member.year_level ? `${member.year_level}st Year` : ''}
+                            {formatYearLevel(member.year_level)}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500">{member.email}</p>
                         <p className="text-xs text-gray-500">
-                          {member.college} - {member.program}
+                          {member.department} - {member.program}
                         </p>
                       </div>
                     </div>
@@ -377,7 +386,7 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
                   Email
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  College
+                  Department
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Program
@@ -422,13 +431,13 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
                       {m.users?.email || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {m.users?.college || 'N/A'}
+                      {m.users?.department || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {m.users?.program || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {m.users?.year_level ? `${m.users.year_level}st Year` : 'N/A'}
+                      {formatYearLevel(m.users?.year_level)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(m.joined_at).toLocaleDateString()}

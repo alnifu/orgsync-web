@@ -32,7 +32,13 @@ export default function PrivateRoute({ children }: PrivateRouteProps) {
           setProfileComplete(false);
         } else {
           // Profile is complete if all required fields are filled
-          setProfileComplete(!!(userProfile.first_name && userProfile.last_name && userProfile.department));
+          // Allow "NONE" as a valid department value (for faculty not associated with a specific department)
+          const hasBasicInfo = userProfile.first_name && userProfile.last_name;
+          const hasValidDepartment = userProfile.department && 
+            userProfile.department.trim() !== '' && 
+            userProfile.department !== null;
+          
+          setProfileComplete(hasBasicInfo && hasValidDepartment);
         }
       } catch (err) {
         console.error('Unexpected error checking profile:', err);

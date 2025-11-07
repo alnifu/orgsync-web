@@ -26,6 +26,7 @@ export default function ProfileSetup() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [userProfile, setUserProfile] = useState<User | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [profileData, setProfileData] = useState<ProfileSetupData>({
         firstName: "",
@@ -118,8 +119,31 @@ export default function ProfileSetup() {
             });
 
             // If user already has completed profile, redirect to dashboard
-            if (data.first_name && data.last_name && data.department) {
-                navigate("/dashboard");
+            // For students: require first_name, last_name, department (auto-set from program, never "NONE")
+            // For faculty: require first_name, last_name, department (manually selected, can be "NONE")
+            const hasBasicInfo = data.first_name && data.last_name;
+            const hasValidDepartment = data.department && data.department.trim() !== '' &&
+                (data.user_type === 'faculty' ? true : data.department !== 'NONE');
+
+            if (hasBasicInfo && hasValidDepartment) {
+                console.log('Profile complete, redirecting to dashboard:', {
+                    first_name: data.first_name,
+                    last_name: data.last_name,
+                    department: data.department,
+                    user_type: data.user_type
+                });
+                // Add a small delay to prevent rapid redirects
+                setTimeout(() => navigate("/dashboard"), 100);
+                return;
+            } else {
+                console.log('Profile incomplete:', {
+                    hasBasicInfo,
+                    hasValidDepartment,
+                    first_name: !!data.first_name,
+                    last_name: !!data.last_name,
+                    department: data.department,
+                    user_type: data.user_type
+                });
             }
         };
 
@@ -203,9 +227,33 @@ export default function ProfileSetup() {
     };
 
     const handleComplete = async () => {
-        if (!authUser || !userProfile) return;
+        if (!authUser || !userProfile || isSubmitting) return;
+
+        // Validate required fields
+        if (!profileData.firstName.trim() || !profileData.lastName.trim()) {
+            setError("First name and last name are required");
+            return;
+        }
+
+        if (!profileData.department || (userProfile.user_type === 'student' && profileData.department === 'NONE')) {
+            setError("Please select a valid department");
+            return;
+        }
+
+        if (userProfile.user_type === "student") {
+            if (!profileData.program || !profileData.studentNumber || !profileData.yearLevel) {
+                setError("All academic information fields are required for students");
+                return;
+            }
+        } else {
+            if (!profileData.employeeId || !profileData.position) {
+                setError("Employee ID and position are required for faculty");
+                return;
+            }
+        }
 
         try {
+            setIsSubmitting(true);
             setLoading(true);
             setError(null);
 
@@ -289,12 +337,14 @@ export default function ProfileSetup() {
             }
 
             // Finally, redirect to dashboard
+            console.log('Profile setup completed successfully, redirecting to dashboard');
             navigate("/dashboard");
 
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to complete profile setup");
         } finally {
             setLoading(false);
+            setIsSubmitting(false);
         }
     };
 
@@ -406,19 +456,41 @@ export default function ProfileSetup() {
                             </select>
                         </div>
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
-                                    {profileData.department ? (
-                                        profileData.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
-                                            profileData.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
-                                                profileData.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
-                                                    profileData.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
-                                                        profileData.department === "CON" ? "CON - College of Nursing" :
-                                                            profileData.department
-                                    ) : "Not specified"}
+                            {userProfile?.user_type === "faculty" ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                                    <select
+                                        name="department"
+                                        value={profileData.department}
+                                        onChange={handleInputChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                                        required
+                                    >
+                                        <option value="">Select department</option>
+                                        <option value="NONE">None - Not associated with a specific department</option>
+                                        <option value="CBEAM">CBEAM - College of Business, Economics, Accountancy and Management</option>
+                                        <option value="CEAS">CEAS - College of Education, Arts and Sciences</option>
+                                        <option value="CIHTM">CIHTM - College of International Hospitality and Tourism Management</option>
+                                        <option value="CITE">CITE - College of Information Technology and Engineering</option>
+                                        <option value="CON">CON - College of Nursing</option>
+                                    </select>
                                 </div>
-                            </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                                    <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                                        {profileData.department ? (
+                                            profileData.department === "NONE" ? "None - Not associated with a specific department" :
+                                            profileData.department === "CBEAM" ? "CBEAM - College of Business, Economics, Accountancy and Management" :
+                                                profileData.department === "CEAS" ? "CEAS - College of Education, Arts and Sciences" :
+                                                    profileData.department === "CIHTM" ? "CIHTM - College of International Hospitality and Tourism Management" :
+                                                        profileData.department === "CITE" ? "CITE - College of Information Technology and Engineering" :
+                                                            profileData.department === "CON" ? "CON - College of Nursing" :
+                                                                profileData.department
+                                        ) : "Not specified"}
+                                    </div>
+                                </div>
+                            )}
 
                             {userProfile?.user_type === "student" ? (
                                 <>
@@ -623,10 +695,10 @@ export default function ProfileSetup() {
                             ) : (
                                 <button
                                     onClick={handleComplete}
-                                    disabled={loading}
+                                    disabled={loading || isSubmitting}
                                     className="flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
                                 >
-                                    {loading ? "Completing..." : "Complete Setup"}
+                                    {loading || isSubmitting ? "Completing..." : "Complete Setup"}
                                     <Check className="w-4 h-4 ml-2" />
                                 </button>
                             )}
