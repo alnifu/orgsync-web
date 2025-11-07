@@ -193,6 +193,13 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
     setResponsesModalOpen(true);
   }
 
+  // Handle create post button clicks
+  const handleCreatePost = (postType: PostType) => {
+    setSelectedPostType(postType);
+    // Use setTimeout to ensure state update before opening modal
+    setTimeout(() => setCreateModalOpen(true), 0);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -214,40 +221,28 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
             { (isAdmin() || isOfficer) && (
               <>
                 <button 
-                  onClick={() => {
-                    setSelectedPostType("general");
-                    setCreateModalOpen(true);
-                  }}
+                  onClick={() => handleCreatePost("general")}
                   className="flex flex-col items-center gap-2 p-4 bg-green-600 text-white rounded-xl shadow-sm hover:bg-green-700 transition-all duration-200 hover:shadow-md hover:scale-105"
                 >
                   <Plus size={24} />
                   <span className="text-sm font-medium">General Post</span>
                 </button>
                 <button 
-                  onClick={() => {
-                    setSelectedPostType("event");
-                    setCreateModalOpen(true);
-                  }}
+                  onClick={() => handleCreatePost("event")}
                   className="flex flex-col items-center gap-2 p-4 bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700 transition-all duration-200 hover:shadow-md hover:scale-105"
                 >
                   <Plus size={24} />
                   <span className="text-sm font-medium">Event</span>
                 </button>
                 <button 
-                  onClick={() => {
-                    setSelectedPostType("poll");
-                    setCreateModalOpen(true);
-                  }}
+                  onClick={() => handleCreatePost("poll")}
                   className="flex flex-col items-center gap-2 p-4 bg-purple-600 text-white rounded-xl shadow-sm hover:bg-purple-700 transition-all duration-200 hover:shadow-md hover:scale-105"
                 >
                   <Plus size={24} />
                   <span className="text-sm font-medium">Poll</span>
                 </button>
                 <button 
-                  onClick={() => {
-                    setSelectedPostType("feedback");
-                    setCreateModalOpen(true);
-                  }}
+                  onClick={() => handleCreatePost("feedback")}
                   className="flex flex-col items-center gap-2 p-4 bg-orange-600 text-white rounded-xl shadow-sm hover:bg-orange-700 transition-all duration-200 hover:shadow-md hover:scale-105"
                 >
                   <Plus size={24} />

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { supabase } from '../../../lib/supabase';
 import type { Organization } from '../../../types/database.types';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Filter } from 'lucide-react';
 
 type SortField = 'name' | 'org_code' | 'date_established' | 'org_type' | 'department';
 type SortDirection = 'asc' | 'desc';
@@ -14,19 +14,86 @@ export default function OrgTable() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Fetch organizations with sorting
+  // New state for filter options
+  const [filterOptions, setFilterOptions] = useState({
+    departments: [] as string[],
+    orgTypes: [] as string[],
+    statuses: ['active', 'inactive', 'pending'] as string[]
+  });
+
+  // New state for search, filter, and pagination
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const itemsPerPage = 10;
+
+  // Fetch filter options (all unique values)
+  const fetchFilterOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('department, org_type, status');
+
+      if (error) throw error;
+
+      const departments = [...new Set(data?.map(org => org.department).filter(Boolean))].sort() as string[];
+      const orgTypes = [...new Set(data?.map(org => org.org_type).filter(Boolean))].sort() as string[];
+
+      setFilterOptions({
+        departments,
+        orgTypes,
+        statuses: ['active', 'inactive', 'pending']
+      });
+    } catch (err) {
+      console.error('Failed to fetch filter options:', err);
+    }
+  };
+
+  // Fetch organizations with search, filters, sorting, and pagination
   const fetchOrganizations = async () => {
     try {
       setLoading(true);
-      
-      const { data, error: fetchError } = await supabase
+      setError(null);
+
+      let query = supabase
         .from('organizations')
-        .select('*')
-        .order(sortField, { ascending: sortDirection === 'asc' });
+        .select('*', { count: 'exact' });
+
+      // Apply search filters
+      if (searchQuery.trim()) {
+        query = query.or(
+          `name.ilike.%${searchQuery}%,abbrev_name.ilike.%${searchQuery}%,org_code.ilike.%${searchQuery}%,department.ilike.%${searchQuery}%`
+        );
+      }
+
+      // Apply specific filters
+      if (statusFilter) {
+        query = query.eq('status', statusFilter);
+      }
+      if (departmentFilter) {
+        query = query.eq('department', departmentFilter);
+      }
+      if (typeFilter) {
+        query = query.eq('org_type', typeFilter);
+      }
+
+      // Apply sorting
+      query = query.order(sortField, { ascending: sortDirection === 'asc' });
+
+      // Apply pagination
+      const start = (currentPage - 1) * itemsPerPage;
+      query = query.range(start, start + itemsPerPage - 1);
+
+      const { data, error: fetchError, count } = await query;
 
       if (fetchError) throw fetchError;
 
       setOrganizations(data || []);
+      setTotalCount(count || 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -35,8 +102,14 @@ export default function OrgTable() {
   };
 
   useEffect(() => {
+    fetchFilterOptions();
     fetchOrganizations();
-  }, [sortField, sortDirection]);
+  }, [searchQuery, statusFilter, departmentFilter, typeFilter, sortField, sortDirection, currentPage]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, departmentFilter, typeFilter]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -54,15 +127,80 @@ export default function OrgTable() {
       <ChevronDown className="h-4 w-4 text-green-600" />;
   };
 
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
   return (
     <div className="p-6">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Organizations</h1>
           <p className="mt-2 text-sm text-gray-700">
-            A list of all registered organizations in the system
+            A list of all registered organizations in the system ({totalCount} total)
           </p>
         </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="mt-6 space-y-4">
+        <div className="flex items-center space-x-4">
+          <div className="flex-1 relative">
+            <Search className="h-4 w-4 absolute left-3 top-3 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search organizations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {showFilters ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+          </button>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-md">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+            >
+              <option value="">All Statuses</option>
+              {filterOptions.statuses.map(status => (
+                <option key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+            >
+              <option value="">All Departments</option>
+              {filterOptions.departments.map(dept => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
+
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+            >
+              <option value="">All Types</option>
+              {filterOptions.orgTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="mt-8 bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
@@ -196,6 +334,40 @@ export default function OrgTable() {
           </table>
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between">
+          <div className="flex items-center">
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{Math.min(((currentPage - 1) * itemsPerPage) + 1, totalCount)}</span> to{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * itemsPerPage, totalCount)}
+              </span>{' '}
+              of <span className="font-medium">{totalCount}</span> results
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="relative inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mt-4 rounded-md bg-red-50 p-4">

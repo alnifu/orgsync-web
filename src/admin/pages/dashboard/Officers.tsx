@@ -26,8 +26,15 @@ export default function Officers() {
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterOrganization, setFilterOrganization] = useState<string>('');
+  const [filterRole, setFilterRole] = useState<string>('');
   const [filterDepartment, setFilterDepartment] = useState<string>('');
-  const [filterPosition, setFilterPosition] = useState<string>('');
+
+  // Filter options state
+  const [filterOptions, setFilterOptions] = useState({
+    organizations: [] as { id: string; name: string; abbrev_name: string | null }[],
+    roles: ['officer', 'adviser'] as string[]
+  });
 
   // Sorting states
   const [sortField, setSortField] = useState<SortField>('first_name');
@@ -37,6 +44,51 @@ export default function Officers() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 10;
+
+  // Fetch filter options (organizations with officers/advisers)
+  const fetchFilterOptions = async () => {
+    try {
+      // Get all org_ids that have managers
+      const { data: managersData, error: managersError } = await supabase
+        .from('org_managers')
+        .select('org_id');
+
+      if (managersError) {
+        console.error('Error fetching managers for filter options:', managersError);
+        return;
+      }
+
+      if (!managersData || managersData.length === 0) {
+        setFilterOptions(prev => ({ ...prev, organizations: [] }));
+        return;
+      }
+
+      // Get unique org_ids
+      const uniqueOrgIds = [...new Set(managersData.map(m => m.org_id))];
+
+      // Fetch organization details
+      const { data: orgsData, error: orgsError } = await supabase
+        .from('organizations')
+        .select('id, name, abbrev_name')
+        .in('id', uniqueOrgIds);
+
+      if (orgsError) {
+        console.error('Error fetching organizations for filter options:', orgsError);
+        return;
+      }
+
+      const organizations = (orgsData || []).sort((a, b) => 
+        (a.abbrev_name || a.name).localeCompare(b.abbrev_name || b.name)
+      );
+
+      setFilterOptions(prev => ({
+        ...prev,
+        organizations
+      }));
+    } catch (err) {
+      console.error('Error fetching filter options:', err);
+    }
+  };
 
   // Fetch officers with their member details
   const fetchOfficers = async () => {
@@ -55,14 +107,14 @@ export default function Officers() {
       }
 
       // Apply specific filters
-      if (filterDepartment) {
-        // We'll filter by department after fetching users
+      if (filterOrganization) {
+        query = query.eq('org_id', filterOrganization);
       }
-      if (filterPosition) {
-        if (filterPosition === 'adviser') {
+      if (filterRole) {
+        if (filterRole === 'adviser') {
           query = query.eq('manager_role', 'adviser');
-        } else {
-          query = query.eq('position', filterPosition);
+        } else if (filterRole === 'officer') {
+          query = query.neq('manager_role', 'adviser');
         }
       }
 
@@ -138,15 +190,18 @@ export default function Officers() {
         );
       }
 
-      // Apply search on user data
+      // Apply search on user data and position
       if (searchQuery.trim()) {
         filteredManagers = filteredManagers.filter(manager => {
           const user = manager.users;
           if (!user) return false;
+          const searchLower = searchQuery.toLowerCase();
           return (
-            user.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+            user.first_name?.toLowerCase().includes(searchLower) ||
+            user.last_name?.toLowerCase().includes(searchLower) ||
+            user.email?.toLowerCase().includes(searchLower) ||
+            manager.position?.toLowerCase().includes(searchLower) ||
+            manager.manager_role?.toLowerCase().includes(searchLower)
           );
         });
       }
@@ -218,12 +273,17 @@ export default function Officers() {
 
   useEffect(() => {
     fetchOfficers();
-  }, [searchQuery, filterDepartment, filterPosition, sortField, sortDirection, currentPage]);
+  }, [searchQuery, filterOrganization, filterRole, filterDepartment, sortField, sortDirection, currentPage]);
+
+  // Fetch filter options on mount
+  useEffect(() => {
+    fetchFilterOptions();
+  }, []);
 
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterDepartment, filterPosition]);
+  }, [searchQuery, filterOrganization, filterRole, filterDepartment]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -254,7 +314,7 @@ export default function Officers() {
       </div>
 
       {/* Search and filters */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -267,6 +327,29 @@ export default function Officers() {
         </div>
 
         <select
+          value={filterOrganization}
+          onChange={(e) => setFilterOrganization(e.target.value)}
+          className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
+        >
+          <option value="">All Organizations</option>
+          {filterOptions.organizations.map((org) => (
+            <option key={org.id} value={org.id}>
+              {org.abbrev_name || org.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={filterRole}
+          onChange={(e) => setFilterRole(e.target.value)}
+          className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
+        >
+          <option value="">All Roles</option>
+          <option value="officer">Officer</option>
+          <option value="adviser">Adviser</option>
+        </select>
+
+        <select
           value={filterDepartment}
           onChange={(e) => setFilterDepartment(e.target.value)}
           className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
@@ -277,21 +360,6 @@ export default function Officers() {
           <option value="COL">COL</option>
           <option value="CON">CON</option>
           <option value="CEAS">CEAS</option>
-        </select>
-
-        <select
-          value={filterPosition}
-          onChange={(e) => setFilterPosition(e.target.value)}
-          className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
-        >
-          <option value="">All Positions</option>
-          <option value="adviser">Adviser</option>
-          <option value="president">President</option>
-          <option value="vice_president">Vice President</option>
-          <option value="secretary">Secretary</option>
-          <option value="treasurer">Treasurer</option>
-          <option value="auditor">Auditor</option>
-          <option value="pro">Public Relations Officer</option>
         </select>
       </div>
 
@@ -395,7 +463,7 @@ export default function Officers() {
                     <div className="flex flex-col items-center gap-2">
                       <UserIcon className="h-12 w-12 text-gray-300" />
                       <p className="text-sm text-gray-500">
-                        {searchQuery || filterDepartment || filterPosition ?
+                        {searchQuery || filterOrganization || filterRole || filterDepartment ?
                           'No officers match your search criteria' :
                           'No officers found'
                         }
