@@ -219,8 +219,15 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
         post_type: postType,
         media: uploadedMedia.length > 0 ? uploadedMedia : null,
         visibility,
-        game_route: selectedGame ? (selectedGame === 'quiz' ? '/user/dashboard/quiz-selection' : '/user/dashboard/room-game') : null,
-        ...(postType === 'event' && {
+        game_route:
+          selectedGame === "quiz"
+            ? "/user/dashboard/quiz-selection"
+            : selectedGame === "room"
+            ? "/user/dashboard/room-game"
+            : selectedGame === "flappy"
+            ? "/user/dashboard/flappy-challenges"
+            : null,
+          ...(postType === 'event' && {
           event_date: eventDate,
           start_time: startTime,
           end_time: endTime || null,
@@ -409,6 +416,7 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
                   <option value="">No Game</option>
                   <option value="quiz">Quiz Game</option>
                   <option value="room">Room Game</option>
+                  <option value="flappy">Flappy Challenge</option>
                 </select>
               </div>
             )}

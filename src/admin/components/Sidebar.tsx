@@ -35,14 +35,12 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
         { to: "officers", label: "Officers", icon: Users },
         { to: "members", label: "Members", icon: User },
         { to: "posts", label: "Posts", icon: FileText },
-        { to: "contests", label: "Contests", icon: Trophy },
-        { to: "submissions", label: "Submissions", icon: Image },
         { to: "reports", label: "Reports", icon: BarChart3 },
         ...baseLinks.slice(1) // Return to Portal
       ];
     }
 
-    // Officers and advisers see contest management links
+    // Officers and advisers see contest management links + officer tools
     if (isOfficer() || isAdviser()) {
       const links = [
         ...baseLinks.slice(0, 1), // My Profile
@@ -50,12 +48,20 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
 
       // Add organization link if they have assigned organizations
       if (orgManagers && orgManagers.length > 0) {
-        links.push({ to: `organizations/${orgManagers[0].org_id}`, label: "My Organization", icon: Building2 });
-        links.push({ to: `organizations/${orgManagers[0].org_id}/ml-dashboard`, label: "ML Analytics", icon: Brain });
+        links.push(
+          { to: `organizations/${orgManagers[0].org_id}`, label: "My Organization", icon: Building2 },
+          { to: `organizations/${orgManagers[0].org_id}/ml-dashboard`, label: "ML Analytics", icon: Brain }
+        );
       }
 
+      // Officer Tools landing page
+      links.push({
+        to: "/admin/dashboard/officer-tools",
+        label: "Game Creators",
+        icon: LayoutDashboard
+      });
+
       links.push(
-        { to: "contests", label: "Contests", icon: Trophy },
         { to: "submissions", label: "Submissions", icon: Image },
         ...baseLinks.slice(1) // Return to Portal
       );

@@ -32,58 +32,57 @@ const RoomGame: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLandscape, setIsLandscape] = useState(window.matchMedia("(orientation: landscape)").matches);
   const [isIOS, setIsIOS] = useState(false);
-
+  const [showHowToPlay, setShowHowToPlay] = useState(true); 
   // Fix iOS safe area and viewport cut-off globally
-useEffect(() => {
-  const style = document.createElement("style");
-  style.innerHTML = `
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: black;
-      overscroll-behavior: none;
-      height: 100%;
-      width: 100%;
-      touch-action: none;
-    }
-    body {
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-    }
-  `;
-  document.head.appendChild(style);
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = `
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: black;
+        overscroll-behavior: none;
+        height: 100%;
+        width: 100%;
+        touch-action: none;
+      }
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+    `;
+    document.head.appendChild(style);
 
-  return () => {
-    if (document.head.contains(style)) {
-      document.head.removeChild(style);
-    }
-  };
-}, []);
-
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
 
   useEffect(() => {
-  const setVH = () => {
-    const viewportHeight = window.visualViewport
-      ? window.visualViewport.height
-      : window.innerHeight;
+    const setVH = () => {
+      const viewportHeight = window.visualViewport
+        ? window.visualViewport.height
+        : window.innerHeight;
 
-    const safeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("env(safe-area-inset-top)") || "0");
-    const vh = (viewportHeight + safeTop) * 0.01;
+      const safeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("env(safe-area-inset-top)") || "0");
+      const vh = (viewportHeight + safeTop) * 0.01;
 
-    document.documentElement.style.setProperty("--vh", `${vh}px`);
-  };
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    };
 
-  setVH();
-  window.addEventListener("resize", setVH);
-  window.visualViewport?.addEventListener("resize", setVH);
+    setVH();
+    window.addEventListener("resize", setVH);
+    window.visualViewport?.addEventListener("resize", setVH);
 
-  return () => {
-    window.removeEventListener("resize", setVH);
-    window.visualViewport?.removeEventListener("resize", setVH);
-  };
-}, []);
+    return () => {
+      window.removeEventListener("resize", setVH);
+      window.visualViewport?.removeEventListener("resize", setVH);
+    };
+  }, []);
 
   // Auto fullscreen + landscape lock
   useEffect(() => {
@@ -110,7 +109,7 @@ useEffect(() => {
   // Unity → React callbacks
   useEffect(() => {
     (window as any).NotifyReactUserReady = (userId: string) => {
-      console.log("✅ Unity ready:", userId);
+      console.log("Unity ready:", userId);
       setUnityReady(true);
     };
 
@@ -142,7 +141,7 @@ useEffect(() => {
         .eq("is_active", true);
 
       if (error) {
-        console.error("❌ Error fetching org_members:", error);
+        console.error(" Error fetching org_members:", error);
         return;
       }
 
@@ -163,19 +162,35 @@ useEffect(() => {
 
   // Fetch contests
   useEffect(() => {
-    const fetchContests = async () => {
-      if (!resolvedOrgId) return;
-      setLoadingContests(true);
-      const { data, error } = await supabase
-        .from("room_contests")
-        .select("id, title")
-        .eq("org_id", resolvedOrgId)
-        .eq("is_active", true);
-      setLoadingContests(false);
-      if (!error) setContests(data || []);
-    };
-    fetchContests();
-  }, [resolvedOrgId]);
+  const fetchContests = async () => {
+    if (!resolvedOrgId) return;
+    setLoadingContests(true);
+
+    const now = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("room_contests")
+      .select("id, title, start_date, end_date")
+      .eq("org_id", resolvedOrgId)
+      .eq("is_active", true)
+      .or(
+        // 1. Both start and end dates
+        `and(start_date.lte.${now},end_date.gte.${now}),` +
+        // 2. Only start date
+        `and(start_date.lte.${now},end_date.is.null),` +
+        // 3. Only end date
+        `and(start_date.is.null,end_date.gte.${now}),` +
+        // 4. No dates
+        `and(start_date.is.null,end_date.is.null)`
+      );
+
+    setLoadingContests(false);
+
+    if (!error) setContests(data || []);
+  };
+
+  fetchContests();
+}, [resolvedOrgId]);
 
   // Screenshot functions
   const handleScreenshot = () => {
@@ -213,38 +228,52 @@ useEffect(() => {
       setScreenshot(null);
       setSelectedContest("");
     } catch (err) {
-      console.error("❌ Upload failed:", err);
+      console.error(" Upload failed:", err);
       toast.error("Upload failed.");
     }
   };
 
   useEffect(() => {
-  // Detect if user is on iOS
-  const ua = window.navigator.userAgent;
-  setIsIOS(/iPad|iPhone|iPod/.test(ua) && !("MSStream" in window));
+    // Detect if user is on iOS
+    const ua = window.navigator.userAgent;
+    setIsIOS(/iPad|iPhone|iPod/.test(ua) && !("MSStream" in window));
 
-  // Listen for orientation changes
-  const mql = window.matchMedia("(orientation: landscape)");
-  const handleChange = (e: MediaQueryListEvent) => setIsLandscape(e.matches);
-  mql.addEventListener("change", handleChange);
+    // Listen for orientation changes
+    const mql = window.matchMedia("(orientation: landscape)");
+    const handleChange = (e: MediaQueryListEvent) => setIsLandscape(e.matches);
+    mql.addEventListener("change", handleChange);
 
-  return () => mql.removeEventListener("change", handleChange);
-}, []);
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
+
+  // Auto-select org if only one available
+useEffect(() => {
+  if (orgOptions.length === 1) setResolvedOrgId(orgOptions[0].id);
+}, [orgOptions]);
+
+// Auto-select first contest when contests load
+useEffect(() => {
+  if (contests.length > 0) setSelectedContest(contests[0].id);
+}, [contests]);
+
+useEffect(() => {
+  if (contests.length > 0 && resolvedOrgId) setSelectedContest(contests[0].id);
+}, [contests, resolvedOrgId]);
 
   return (
     <div
-  style={{
-    position: "fixed",
-    top: "env(safe-area-inset-top)",
-    left: "env(safe-area-inset-left)",
-    width: "calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right))",
-    height: "calc(var(--vh, 1vh) * 100)",
-    display: "flex",
-    flexDirection: "column",
-    background: "#000",
-    overflow: "hidden",
-  }}
->
+      style={{
+        position: "fixed",
+        top: "env(safe-area-inset-top)",
+        left: "env(safe-area-inset-left)",
+        width: "calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right))",
+        height: "calc(var(--vh, 1vh) * 100)",
+        display: "flex",
+        flexDirection: "column",
+        background: "#000",
+        overflow: "hidden",
+      }}
+    >
       {/* Burger Menu */}
       <div
         style={{
@@ -315,10 +344,23 @@ useEffect(() => {
                 borderRadius: "6px",
               }}
             >
-              📸 Screenshot
+               Screenshot
             </button>
 
-            {orgOptions.length > 1 && (
+            <button
+              onClick={() => setShowHowToPlay(true)}
+              style={{
+                padding: "8px",
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+              }}
+            >
+               How to Play
+            </button>
+
+            {orgOptions.length > 0 && (
               <select
                 value={resolvedOrgId || ""}
                 onChange={(e) => setResolvedOrgId(e.target.value)}
@@ -343,106 +385,104 @@ useEffect(() => {
       </div>
 
       {/* Unity Game */}
-<div
-  style={{
-    flex: 1,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "#000",
-    overflow: "hidden",
-    position: "relative",
-  }}
->
-  {/* iOS Portrait Overlay */}
-  {isIOS && !isLandscape && (
-    <div
-      style={{
-        position: "fixed", 
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100dvh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "black",
-        color: "white",
-        fontSize: "20px",
-        textAlign: "center",
-        zIndex: 3000,
-        padding: "20px",
-      }}
-    >
-      Please rotate your device to landscape to play the game.
-    </div>
-  )}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "#000",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {isIOS && !isLandscape && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100dvh",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              background: "black",
+              color: "white",
+              fontSize: "20px",
+              textAlign: "center",
+              zIndex: 3000,
+              padding: "20px",
+            }}
+          >
+            Please rotate your device to landscape to play the game.
+          </div>
+        )}
 
-  {/* Unity container with safe-area + 16:9 ratio */}
-  <div
-  style={{
-    width: "100vw",
-    height: "calc(var(--vh, 1vh) * 100)",
-    paddingTop: "env(safe-area-inset-top)",
-    paddingBottom: "env(safe-area-inset-bottom)",
-    paddingLeft: "env(safe-area-inset-left)",
-    paddingRight: "env(safe-area-inset-right)",
-    background: "#000",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-  }}
->
-    <div
-  style={{
-    width: "100%",
-    maxWidth: "calc(100vh * (16 / 9))", 
-    aspectRatio: "16 / 9",
-    background: "#000",
-    position: "relative",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-  }}
->
-  {!isLoaded && (
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        background: "black",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 10,
-      }}
-    >
-      <p style={{ color: "#fff", fontSize: "18px" }}>
-        Loading... {Math.round(loadingProgression * 100)}%
-      </p>
-    </div>
-  )}
+        <div
+          style={{
+            width: "100vw",
+            height: "calc(var(--vh, 1vh) * 100)",
+            paddingTop: "env(safe-area-inset-top)",
+            paddingBottom: "env(safe-area-inset-bottom)",
+            paddingLeft: "env(safe-area-inset-left)",
+            paddingRight: "env(safe-area-inset-right)",
+            background: "#000",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "calc(100vh * (16 / 9))",
+              aspectRatio: "16 / 9",
+              background: "#000",
+              position: "relative",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              overflow: "hidden",
+            }}
+          >
+            {!isLoaded && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  background: "black",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  zIndex: 10,
+                }}
+              >
+                <p style={{ color: "#fff", fontSize: "18px" }}>
+                  Loading... {Math.round(loadingProgression * 100)}%
+                </p>
+              </div>
+            )}
 
-  <Unity
-    unityProvider={unityProvider}
-    style={{
-      position: "absolute",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      objectFit: "contain",
-      background: "#000",
-    }}
-  />
-</div>
-  </div>
-</div>
+            <Unity
+              unityProvider={unityProvider}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                background: "#000",
+              }}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Screenshot Preview */}
       {screenshot && (
@@ -489,9 +529,7 @@ useEffect(() => {
           >
             {contests.length === 0 && (
               <option value="">
-                {loadingContests
-                  ? "Loading contests..."
-                  : "No active contests"}
+                {loadingContests ? "Loading contests..." : "No active contests"}
               </option>
             )}
             {contests.map((c) => (
@@ -531,16 +569,74 @@ useEffect(() => {
           </div>
         </div>
       )}
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          style: {
-            background: "rgba(0,0,0,0.85)",
+
+      {/* How to Play Overlay */}
+      {showHowToPlay && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.9)",
             color: "#fff",
-            borderRadius: "8px",
-          },
-        }}
-      />
+            zIndex: 3000,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#111",
+              borderRadius: "12px",
+              padding: "30px",
+              maxWidth: "600px",
+              width: "90%",
+              textAlign: "center",
+              boxShadow: "0 0 15px rgba(0,0,0,0.6)",
+            }}
+          >
+            <h2 style={{ fontSize: "24px", marginBottom: "16px" }}>
+              How to Play 
+            </h2>
+            <p style={{ fontSize: "16px", lineHeight: 1.6, marginBottom: "20px" }}>
+              Welcome to <b>Room Builder!</b>  Your goal is to decorate and
+              manage your virtual room.
+            </p>
+            <ul
+              style={{
+                textAlign: "left",
+                fontSize: "15px",
+                marginBottom: "20px",
+                lineHeight: 1.6,
+              }}
+            >
+              <li> -Use the <b>Build</b> button to add furniture and decorations.</li>
+              <li> -Visit the <b>Shop</b> to buy new items using coins.</li>
+              <li> -Your room automatically saves between sessions.</li>
+              <li> -Take a screenshot to join room design contests!</li>
+            </ul>
+            <button
+              onClick={() => setShowHowToPlay(false)}
+              style={{
+                background: "#16a34a",
+                color: "#fff",
+                border: "none",
+                padding: "10px 20px",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
+
+      <Toaster position="bottom-center" />
     </div>
   );
 };
