@@ -22,6 +22,9 @@ import AdminReports from "./admin/pages/Reports";
 import OfficerContestManager from "./admin/pages/OfficerContestManager";
 import OfficerSubmissions from "./admin/pages/OfficerSubmissions";
 import MLDashboard from "./admin/components/MLDashboard";
+import OfficerLandingPage from "./admin/pages/dashboard/OfficerLandingPage";
+import { FlappyConfigUploaderWrapper } from "./admin/pages/dashboard/GameWrapper";
+import { CreateQuizWrapper } from "./admin/pages/dashboard/GameWrapper";
 
 // User Routes
 import UserDashboard from "./user/pages/Dashboard";
@@ -65,6 +68,15 @@ const DashboardRedirect = () => {
   const showAdminPortal = isAdmin() || isOfficer() || isAdviser();
   const showUserPortal = !isAdmin() || true; // Always show user portal, or show it for non-admins
 
+  let adminPortalLabel = "";
+  if (isAdmin()) {
+    adminPortalLabel = "Admin Portal";
+  } else if (isOfficer()) {
+    adminPortalLabel = "Officer Portal";
+  } else if (isAdviser()) {
+    adminPortalLabel = "Adviser Portal";
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-2xl w-full space-y-8 p-8">
@@ -73,14 +85,14 @@ const DashboardRedirect = () => {
           {showUserPortal && (
             <Link to="/user/dashboard"
               className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-green-500 flex flex-col items-center">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">User Portal</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Member Portal</h3>
               <p className="text-gray-600 text-center">Access news feed, events, organizations, and games</p>
             </Link>
           )}
           {showAdminPortal && (
             <Link to="/admin/dashboard"
               className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-blue-500 flex flex-col items-center">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Admin Portal</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{adminPortalLabel}</h3>
               <p className="text-gray-600 text-center">Manage organizations, officers, members, and posts</p>
             </Link>
           )}
@@ -145,7 +157,11 @@ const router = createBrowserRouter([
       { path: "profile/:id", element: <AdminUserProfile /> },
       { path: "posts/:postId", element: <PostDetail /> },
       { path: "contests", element: <OfficerContestManager /> },
-      { path: "submissions", element: <OfficerSubmissions /> }
+      { path: "submissions", element: <OfficerSubmissions /> },
+      { path: "officer-tools", element: <OfficerLandingPage /> },
+      { path: "flappy-config/:orgId", element: <FlappyConfigUploaderWrapper /> },
+      { path: "contests/:orgId", element: <OfficerContestManager /> },
+      { path: "create-quiz/:orgId", element: <CreateQuizWrapper /> }, 
     ]
   },
   // User Routes

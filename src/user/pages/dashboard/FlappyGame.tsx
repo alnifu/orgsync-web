@@ -10,6 +10,7 @@ const FlappyGame: React.FC = () => {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [unityReady, setUnityReady] = useState(false);
   const [configSent, setConfigSent] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(true); // New state for instructions
 
   const { unityProvider, isLoaded, loadingProgression, sendMessage, addEventListener, removeEventListener } = useUnityContext({
     loaderUrl: "/unity/game3/Build/Flappy.loader.js",
@@ -75,15 +76,40 @@ const FlappyGame: React.FC = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-black">
-      <div className="p-3 bg-black/70 text-left z-10">
+      {/* Top bar */}
+      <div className="p-3 bg-black/70 text-left z-10 flex justify-between items-center">
         <button
           onClick={() => navigate(-1)}
           className="px-4 py-2 bg-green-600 rounded-lg text-white hover:bg-green-700"
         >
           ← Back
         </button>
+
+        <button
+          onClick={() => setShowInstructions(!showInstructions)}
+          className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700"
+        >
+          {showInstructions ? "Hide Instructions" : "How to Play"}
+        </button>
       </div>
 
+      {/* How to Play Overlay */}
+      {showInstructions && (
+        <div className="absolute inset-0 bg-black/80 z-20 flex flex-col justify-center items-center text-white p-6 text-center">
+          <h2 className="text-2xl font-bold mb-4">How to Play Flappy</h2>
+          <p className="mb-2">1. Tap or click the screen to make your bird flap.</p>
+          <p className="mb-2">2. Avoid hitting the pipes and the ground.</p>
+          <p className="mb-4">3. The longer you survive, the higher your score!</p>
+          <button
+            onClick={() => setShowInstructions(false)}
+            className="px-6 py-2 bg-green-600 rounded-lg text-white hover:bg-green-700"
+          >
+            Start Game
+          </button>
+        </div>
+      )}
+
+      {/* Unity Game */}
       <div className="flex-1 flex justify-center items-center bg-black">
         {!isLoaded && (
           <p className="text-white mb-3">

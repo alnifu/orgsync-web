@@ -106,33 +106,50 @@ const CommunityGoalsPage: React.FC = () => {
           }));
           setGoals(goalsWithTitles);
         } else if (selectedGame === "flappy") {
-          const { data: goalsData, error: goalsError } = await supabase
-            .from("community_goals_flappy")
-            .select("*")
-            .eq("org_id", selectedOrg)
-            .order("created_at", { ascending: false });
+  const { data: goalsData, error: goalsError } = await supabase
+    .from("community_goals_flappy")
+    .select("*")
+    .eq("org_id", selectedOrg)
+    .order("created_at", { ascending: false });
 
-          if (goalsError) throw goalsError;
-          if (!goalsData) {
-            setGoals([]);
-            return;
-          }
+  if (goalsError) throw goalsError;
+  if (!goalsData || goalsData.length === 0) {
+    setGoals([]);
+    return;
+  }
 
-          const challengeIds = goalsData.map((g) => g.challenge_id);
-          const { data: challengeData, error: challengeError } = await supabase
-            .from("flappy_config")
-            .select("id, name")
-            .in("id", challengeIds);
+  // ✅ Collect valid challenge IDs only
+  const challengeIds = goalsData
+    .map((g) => g.challenge_id)
+    .filter((id): id is string => !!id && id.trim() !== "");
 
-          if (challengeError) throw challengeError;
+  console.log("Challenge IDs:", challengeIds);
 
-          const challengeMap = new Map(challengeData.map((c) => [c.id, c.name]));
-          const goalsWithNames = goalsData.map((g) => ({
-            ...g,
-            title: challengeMap.get(g.challenge_id!) || `Challenge ${g.challenge_id}`,
-          }));
-          setGoals(goalsWithNames);
-        }
+  // ✅ Fetch flappy config names by challenge_id
+  const { data: challengeData, error: challengeError } = await supabase
+    .from("flappy_config")
+    .select("challenge_id, name")
+    .in("challenge_id", challengeIds);
+
+  if (challengeError) throw challengeError;
+
+  console.log("Challenge Data:", challengeData);
+
+  // ✅ Map challenge_id → name
+  const challengeMap = new Map(
+    (challengeData || []).map((c) => [c.challenge_id, c.name])
+  );
+
+  // ✅ Assign names to each goal
+  const goalsWithNames = goalsData.map((g) => ({
+    ...g,
+    title:
+      challengeMap.get(g.challenge_id?.trim() || "") ||
+      `Challenge ${g.challenge_id}`,
+  }));
+
+  setGoals(goalsWithNames);
+}
       } catch (err) {
         console.error("❌ Error fetching goals:", err);
       } finally {
