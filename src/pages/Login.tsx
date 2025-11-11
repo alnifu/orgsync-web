@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { Eye, EyeOff } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 
 type LoginProps = {
     onLoginSuccess?: (user: any) => void;
@@ -11,7 +12,6 @@ type LoginProps = {
 export default function Login({ onLoginSuccess }: LoginProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
     const { signInUser } = useAuth();
@@ -26,9 +26,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         });
         console.log("Sign-in response:", { success, error, data });
         if (!success) {
-            setError(error || 'An error occurred during log in');
+            toast.error(error || 'An error occurred during log in');
         } else {
-            setError(null);
             if (onLoginSuccess) {
                 onLoginSuccess(data.user);
             }
@@ -60,7 +59,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     const handleForgotPassword = async () => {
     if (!email) {
-        setError("Please enter your email to reset your password.");
+        toast.error("Please enter your email to reset your password.");
         return;
     }
 
@@ -69,10 +68,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     });
 
     if (error) {
-        setError(error.message);
+        toast.error(error.message);
     } else {
-        setError(null);
-        alert("Password reset email sent. Check your inbox.");
+        toast.success("Password reset email sent. Check your inbox.");
     }
 };
 
@@ -162,19 +160,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 Sign up here
               </Link>
             </p>
-
-            {error && (
-              <div className="rounded-md bg-red-50 p-4">
-                <div className="flex">
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-red-800">{error}</p>
-                  </div>
-                </div>
-              </div>
-            )}
           </form>
         </div>
       </div>
+      <Toaster position="top-center" reverseOrder={false} />
     </div>
   );
 }

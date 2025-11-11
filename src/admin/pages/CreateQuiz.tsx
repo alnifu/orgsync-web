@@ -23,7 +23,6 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
   const [timeLimit, setTimeLimit] = useState(30);
   const [points, setPoints] = useState(10);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [hasTimeSpan, setHasTimeSpan] = useState(false);
@@ -108,7 +107,9 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
       });
     });
 
-    setErrors(errs);
+    // Show validation errors as toasts instead of on-screen display
+    errs.forEach(err => toast.error(err));
+
     return errs.length === 0;
   };
 
@@ -176,14 +177,6 @@ export default function CreateQuiz({ orgId, existingQuiz, onClose }: CreateQuizP
       <Toaster position="top-center" reverseOrder={false} />
 
       <div className="bg-white rounded-xl shadow-md p-8 w-full max-w-3xl">
-        {errors.length > 0 && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {errors.map((err, i) => (
-              <p key={i}>⚠️ {err}</p>
-            ))}
-          </div>
-        )}
-
         {/* Quiz Info */}
         <div className="mb-4">
           <label className="block font-semibold mb-1 text-gray-700">
