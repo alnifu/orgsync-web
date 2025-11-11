@@ -21,6 +21,7 @@ import FlappyCommunityGoalsManager from './FlappyCommunityGoalsManager';
 import CommunityGoalsManager from './CommunityGoalsManager';
 import OrganizationAttendance from '../../components/OrganizationAttendance';
 import { Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 
 export default function OrganizationDetails() {
   const { id } = useParams<{ id: string }>();
@@ -306,12 +307,6 @@ export default function OrganizationDetails() {
           >
             Flappy Goals
           </TabsTrigger>
-          <TabsTrigger
-            value="attendance"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-          >
-            Attendance
-          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -328,7 +323,6 @@ export default function OrganizationDetails() {
         <TabsContent value="members" className="space-y-4">
           <OrganizationMembers
             organizationId={id!}
-            onError={handleError}
           />
         </TabsContent>
 
@@ -336,7 +330,6 @@ export default function OrganizationDetails() {
         <TabsContent value="officers" className="space-y-4">
           <OrganizationOfficers
             organizationId={id!}
-            onError={handleError}
           />
         </TabsContent>
 
@@ -344,7 +337,6 @@ export default function OrganizationDetails() {
         <TabsContent value="posts" className="space-y-4">
           <OrganizationPosts
             organizationId={id!}
-            onError={handleError}
           />
         </TabsContent>
 
@@ -352,7 +344,6 @@ export default function OrganizationDetails() {
         <TabsContent value="reports" className="space-y-4">
           <OrganizationReports
             organizationId={id!}
-            onError={handleError}
           />
         </TabsContent>
 
@@ -360,7 +351,6 @@ export default function OrganizationDetails() {
         <TabsContent value="attendance" className="space-y-4">
           <OrganizationAttendance
             orgId={id!}
-            onError={handleError}
           />
         </TabsContent>
 
@@ -383,14 +373,6 @@ export default function OrganizationDetails() {
         <TabsContent value="flappy-goals" className="space-y-4">
           <FlappyCommunityGoalsManager />
         </TabsContent>
-
-        {/* Attendance Tab */}
-        <TabsContent value="attendance" className="space-y-4">
-          <OrganizationAttendance
-            orgId={id!}
-            onError={handleError}
-          />
-        </TabsContent>
       </Tabs>
 
       {/* Error Display */}
@@ -405,22 +387,20 @@ export default function OrganizationDetails() {
         isOpen={isSelectAdviserOpen}
         onClose={() => setIsSelectAdviserOpen(false)}
         orgId={id!}
-        onError={handleError}
       />
 
       <EditOrganizationModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         organization={organization}
-        onError={handleError}
       />
 
       <DeleteOrganizationModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         organization={organization}
-        onError={handleError}
       />
+      <Toaster position="top-center" />
     </div>
   );
 }

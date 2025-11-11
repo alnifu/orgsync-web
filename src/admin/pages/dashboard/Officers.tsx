@@ -101,11 +101,6 @@ export default function Officers() {
         .from('org_managers')
         .select('*', { count: 'exact' });
 
-      // Apply search filters - search in manager data only for now
-      if (searchQuery.trim()) {
-        query = query.or(`manager_role.ilike.%${searchQuery}%,position.ilike.%${searchQuery}%`);
-      }
-
       // Apply specific filters
       if (filterOrganization) {
         query = query.eq('org_id', filterOrganization);
@@ -129,9 +124,8 @@ export default function Officers() {
 
       query = query.order(orderColumn, { ascending: sortDirection === 'asc' });
 
-      // Apply pagination
-      const start = (currentPage - 1) * itemsPerPage;
-      query = query.range(start, start + itemsPerPage - 1);
+      // Always fetch all data for client-side filtering and pagination
+      // Remove server-side pagination
 
       const { data: managersData, error: managersError, count } = await query;
 
@@ -216,8 +210,12 @@ export default function Officers() {
         });
       }
 
-      setOfficers(filteredManagers);
-      setTotalCount(count || 0);
+      // Apply client-side pagination
+      const start = (currentPage - 1) * itemsPerPage;
+      const paginatedManagers = filteredManagers.slice(start, start + itemsPerPage);
+
+      setOfficers(paginatedManagers);
+      setTotalCount(filteredManagers.length);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching officers';

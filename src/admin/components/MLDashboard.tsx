@@ -325,7 +325,7 @@ const MLDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {predictions.slice(0, 20).map((prediction) => (
+                  {predictions.map((prediction) => (
                     <tr key={prediction.userId} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{prediction.userName}</div>

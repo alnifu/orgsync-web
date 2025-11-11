@@ -65,14 +65,35 @@ export default function PromoteModal({
   };
 
   const fetchOrganizations = async () => {
+    if (!selectedMember) return;
+
     try {
+      // First, get organizations where the user is a member
+      const { data: memberOrgs, error: memberError } = await supabase
+        .from('org_members')
+        .select('org_id')
+        .eq('user_id', selectedMember.id)
+        .eq('is_active', true);
+
+      if (memberError) throw memberError;
+
+      if (!memberOrgs || memberOrgs.length === 0) {
+        setOrganizations([]);
+        setError('This user is not a member of any organizations and cannot be promoted.');
+        return;
+      }
+
+      const orgIds = memberOrgs.map(m => m.org_id);
+
+      // Fetch the organization details
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
+        .in('id', orgIds)
         .order('name');
 
       if (error) throw error;
-      
+
       setOrganizations(data || []);
     } catch (err) {
       console.error('Error fetching organizations:', err);

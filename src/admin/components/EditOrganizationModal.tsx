@@ -5,19 +5,18 @@ import { supabase } from '../../lib/supabase';
 import { uploadFile, validateFile } from '../../lib/media';
 import type { Organization } from '../../types/database.types';
 import { Edit3, Upload, X, CheckCircle, AlertCircle, Image as ImageIcon, FileText, Building } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 type EditOrganizationProps = {
   isOpen: boolean;
   onClose: () => void;
   organization: Organization;
-  onError?: (error: string) => void;
 };
 
 export default function EditOrganization({
   isOpen,
   onClose,
-  organization,
-  onError
+  organization
 }: EditOrganizationProps) {
   const [activeTab, setActiveTab] = useState('basic');
   const [formData, setFormData] = useState({
@@ -105,8 +104,9 @@ export default function EditOrganization({
 
       if (error) throw error;
       onClose();
+      toast.success('Organization updated successfully!');
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : 'Failed to update organization');
+      toast.error(err instanceof Error ? err.message : 'Failed to update organization');
     } finally {
       setLoading(false);
     }
@@ -358,7 +358,7 @@ export default function EditOrganization({
                           if (file) {
                             const validation = validateFile(file);
                             if (!validation.valid) {
-                              onError?.(validation.error || 'Invalid file');
+                              toast.error(validation.error || 'Invalid file');
                               return;
                             }
                             setOrgPicFile(file);
@@ -432,7 +432,7 @@ export default function EditOrganization({
                           if (file) {
                             const validation = validateFile(file);
                             if (!validation.valid) {
-                              onError?.(validation.error || 'Invalid file');
+                              toast.error(validation.error || 'Invalid file');
                               return;
                             }
                             setBannerPicFile(file);

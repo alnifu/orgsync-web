@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Users, FileText, TrendingUp, Calendar, RefreshCw, BarChart3 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // Types
 export interface OrganizationStats {
@@ -47,7 +48,6 @@ export interface EventRating {
 
 interface OrganizationReportsProps {
   organizationId: string;
-  onError: (error: string) => void;
 }
 
 type TimeRange = '7d' | '30d' | '90d' | 'all';
@@ -318,15 +318,15 @@ function ContentDistributionChart({ stats }: { stats: OrganizationStats }) {
 }
 
 // Main component
-export default function OrganizationReports({ organizationId, onError }: OrganizationReportsProps) {
+export default function OrganizationReports({ organizationId }: OrganizationReportsProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const { stats, loading, error, refetch } = useOrganizationStats(organizationId, timeRange);
 
   useEffect(() => {
     if (error) {
-      onError(error);
+      toast.error(error);
     }
-  }, [error, onError]);
+  }, [error]);
 
   if (loading) {
     return (

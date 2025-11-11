@@ -71,6 +71,8 @@ export default function UserProfile() {
   const [cropImageSrc, setCropImageSrc] = useState<string>('');
   const [coins, setCoins] = useState<number>(0);
   const [badges, setBadges] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [officerPositions, setOfficerPositions] = useState<any[]>([]);
 
   // Fetch user profile
   useEffect(() => {
@@ -144,6 +146,52 @@ export default function UserProfile() {
           }
         } catch (innerErr) {
           console.error('Unexpected error fetching badges:', innerErr);
+        }
+
+        // Fetch organizations the user is a member of
+        const { data: orgData, error: orgError } = await supabase
+          .from('org_members')
+          .select(`
+            joined_at,
+            org_id,
+            organizations (
+              id,
+              name,
+              abbrev_name,
+              department,
+              org_type,
+              status
+            )
+          `)
+          .eq('user_id', authUser.id)
+          .eq('is_active', true);
+
+        if (orgError) {
+          console.error("Error fetching organizations:", orgError);
+        } else {
+          setOrganizations(orgData || []);
+        }
+
+        // Fetch officer positions
+        const { data: officerData, error: officerError } = await supabase
+          .from('org_managers')
+          .select(`
+            position,
+            manager_role,
+            assigned_at,
+            org_id,
+            organizations (
+              id,
+              name,
+              abbrev_name
+            )
+          `)
+          .eq('user_id', authUser.id);
+
+        if (officerError) {
+          console.error("Error fetching officer positions:", officerError);
+        } else {
+          setOfficerPositions(officerData || []);
         }
       } catch (err) {
         console.log('Error in fetchUser:', err);
@@ -687,6 +735,94 @@ export default function UserProfile() {
                     </dd>
                   </div>
                 </dl>
+              </div>
+            </div>
+
+            {/* Organization Information */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Organization Membership</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* Member Organizations */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <h4 className="text-md font-semibold text-gray-900">Member Organizations</h4>
+                  </div>
+
+                  {organizations.length > 0 ? (
+                    <div className="space-y-3">
+                      {organizations.map((membership) => (
+                        <div key={membership.org_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <span className="text-xs font-semibold text-blue-600">
+                                {membership.organizations?.abbrev_name?.charAt(0) || membership.organizations?.name?.charAt(0) || 'O'}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {membership.organizations?.abbrev_name || membership.organizations?.name || 'Unknown Organization'}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {membership.organizations?.department && `${membership.organizations.department} • `}
+                                {membership.organizations?.org_type}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Joined {(membership.joined_at || membership.organizations?.created_at) ? new Date(membership.joined_at || membership.organizations?.created_at).toLocaleDateString() : 'Date not available'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">Not a member of any organizations</p>
+                  )}
+                </div>
+
+                {/* Officer Positions */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-md font-semibold text-gray-900">Officer Positions</h4>
+                  </div>
+
+                  {officerPositions.length > 0 ? (
+                    <div className="space-y-3">
+                      {officerPositions.map((position, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{position.position} {position.manager_role && `(${position.manager_role})`}</div>
+                              <div className="text-xs text-gray-600">
+                                {position.organizations?.abbrev_name || position.organizations?.name || 'Unknown Organization'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Since {position.assigned_at ? new Date(position.assigned_at).toLocaleDateString() : 'Date not available'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">No officer positions</p>
+                  )}
+                </div>
               </div>
             </div>
 

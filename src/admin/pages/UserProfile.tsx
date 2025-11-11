@@ -77,6 +77,8 @@ export default function AdminUserProfile() {
   const [showCropModal, setShowCropModal] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string>('');
   const [coins, setCoins] = useState<number>(0);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [officerPositions, setOfficerPositions] = useState<any[]>([]);
   const hasFetchedRef = useRef(false);
 
   // Reset fetch flag when user ID changes
@@ -133,6 +135,52 @@ export default function AdminUserProfile() {
           console.error("Error fetching coins:", coinError);
         } else {
           setCoins(coinData?.coins ?? 0);
+        }
+
+        // Fetch organizations the user is a member of
+        const { data: orgData, error: orgError } = await supabase
+          .from('org_members')
+          .select(`
+            joined_at,
+            org_id,
+            organizations (
+              id,
+              name,
+              abbrev_name,
+              department,
+              org_type,
+              status
+            )
+          `)
+          .eq('user_id', id)
+          .eq('is_active', true);
+
+        if (orgError) {
+          console.error("Error fetching organizations:", orgError);
+        } else {
+          setOrganizations(orgData || []);
+        }
+
+        // Fetch officer positions
+        const { data: officerData, error: officerError } = await supabase
+          .from('org_managers')
+          .select(`
+            position,
+            manager_role,
+            assigned_at,
+            org_id,
+            organizations (
+              id,
+              name,
+              abbrev_name
+            )
+          `)
+          .eq('user_id', id);
+
+        if (officerError) {
+          console.error("Error fetching officer positions:", officerError);
+        } else {
+          setOfficerPositions(officerData || []);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load user profile');
@@ -650,6 +698,81 @@ export default function AdminUserProfile() {
                   </div>
                 </dl>
               </div>
+            </div>
+
+            {/* Organization Information */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <div className="flex items-center mb-6">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Organization Membership</h3>
+              </div>
+
+              {/* Organizations */}
+              <div className="mb-6">
+                <h4 className="text-lg font-medium text-gray-900 mb-3">Member Organizations</h4>
+                {organizations.length > 0 ? (
+                  <div className="grid gap-3">
+                    {organizations.map((membership) => (
+                      <div key={membership.org_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span className="text-sm font-semibold text-blue-600">
+                              {membership.organizations?.abbrev_name?.charAt(0) || membership.organizations?.name?.charAt(0) || 'O'}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {membership.organizations?.abbrev_name || membership.organizations?.name || 'Unknown Organization'}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {membership.organizations?.department && `${membership.organizations.department} • `}
+                              {membership.organizations?.org_type} • {membership.organizations?.status}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Joined {(membership.joined_at || membership.organizations?.created_at) ? new Date(membership.joined_at || membership.organizations?.created_at).toLocaleDateString() : 'Date not available'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">Not a member of any organizations</p>
+                )}
+              </div>
+
+              {/* Officer Positions */}
+              {officerPositions.length > 0 && (
+                <div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Officer Positions</h4>
+                  <div className="grid gap-3">
+                    {officerPositions.map((position, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{position.position || position.manager_role}</div>
+                            <div className="text-sm text-gray-600">
+                              {position.organizations?.abbrev_name || position.organizations?.name || 'Unknown Organization'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Since {position.assigned_at ? new Date(position.assigned_at).toLocaleDateString() : 'Date not available'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Edit Actions */}

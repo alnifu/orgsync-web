@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";
 import { Heart, Search, ChevronLeft, ChevronRight, Filter, Share2 } from "lucide-react";
@@ -155,7 +155,7 @@ export default function UserNewsFeed() {
   const [pollVotes, setPollVotes] = useState<{ [key: string]: boolean }>({});
   const [pollUserVotes, setPollUserVotes] = useState<{ [key: string]: number | null }>({});
 
-  const [feedbackResponses, setFeedbackResponses] = useState<{ [key: string]: string }>({});
+  const [feedbackResponses, setFeedbackResponses] = useState<{ [key: string]: { [key: string]: string } }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: string]: boolean }>({});
 
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -277,7 +277,7 @@ export default function UserNewsFeed() {
     const rsvpState: { [key: string]: boolean } = {};
     const registeredState: { [key: string]: boolean } = {};
     const likedState: { [key: string]: boolean } = {};
-    const feedbackResponsesState: { [key: string]: string } = {};
+    const feedbackResponsesState: { [key: string]: { [key: string]: string } } = {};
     const feedbackSubmittedState: { [key: string]: boolean } = {};
     const newPollUserVotes: { [key: string]: number | null } = {};
     const evaluatedState: { [key: string]: boolean } = {};
@@ -292,10 +292,10 @@ export default function UserNewsFeed() {
 
       const feedback = feedbackData?.find((f: any) => f.post_id.toString() === postIdStr);
       if (feedback) {
-        feedbackResponsesState[postIdStr] = feedback.responses?.answer || "";
+        feedbackResponsesState[postIdStr] = feedback.responses || {};
         feedbackSubmittedState[postIdStr] = true;
       } else {
-        feedbackResponsesState[postIdStr] = "";
+        feedbackResponsesState[postIdStr] = {};
         feedbackSubmittedState[postIdStr] = false;
       }
     });
@@ -464,15 +464,15 @@ export default function UserNewsFeed() {
   setFeedbackSubmitted,
 }: {
   post: any;
-  feedbackResponses: { [key: string]: string };
-  setFeedbackResponses: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+  feedbackResponses: { [key: string]: { [key: string]: string } };
+  setFeedbackResponses: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: string } }>>;
   feedbackSubmitted: { [key: string]: boolean };
   setFeedbackSubmitted: React.Dispatch<React.SetStateAction<{ [key: string]: boolean }>>;
 }) {
   const [showButtons, setShowButtons] = useState(false);
   const [localValues, setLocalValues] = useState<{ [key: string]: string }>({});
 
-  const parsed = JSON.parse(post.content);
+  const parsed = useMemo(() => JSON.parse(post.content), [post.content]);
   const hasSubmitted = feedbackSubmitted[post.id] ?? false;
 
   // Initialize localValues with existing responses

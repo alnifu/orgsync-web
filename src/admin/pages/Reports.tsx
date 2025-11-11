@@ -24,6 +24,7 @@ interface ReportStats {
   rsvpConversionRate: number;
   dailyRetentionRate: number;
   thirtyDayRetentionRate: number;
+  eventAttendanceRate: number;
 }
 
 interface EngagementStats {
@@ -45,7 +46,7 @@ interface EngagementStats {
   };
 }
 
-type TimeRange = '7d' | '30d' | '90d' | 'all';
+type TimeRange = '7d' | '30d' | '90d' | 'all' | 'custom';
 
 interface OrganizationFilters {
   department: string;
@@ -75,7 +76,8 @@ export default function Reports() {
     // New analytics metrics
     rsvpConversionRate: 0,
     dailyRetentionRate: 0,
-    thirtyDayRetentionRate: 0
+    thirtyDayRetentionRate: 0,
+    eventAttendanceRate: 0
   });
   const [engagementStats, setEngagementStats] = useState<EngagementStats>({
     totalInteractions: 0,
@@ -99,6 +101,8 @@ export default function Reports() {
     orgType: 'all',
     status: 'all'
   });
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   useEffect(() => {
     fetchReportStats();
@@ -106,6 +110,13 @@ export default function Reports() {
 
   const getDateRange = (range: TimeRange) => {
     if (range === 'all') return null;
+    if (range === 'custom') {
+      if (!customStartDate || !customEndDate) return null;
+      return {
+        start: new Date(customStartDate).toISOString(),
+        end: new Date(customEndDate).toISOString()
+      };
+    }
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
     return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
   };
@@ -116,6 +127,40 @@ export default function Reports() {
       setError(null);
 
       const dateFilter = getDateRange(timeRange);
+
+      // First, get filtered organization IDs if filters are applied
+      let filteredOrgIds: string[] | null = null;
+      if (filters.department !== 'all' || filters.orgType !== 'all' || filters.status !== 'all') {
+        const orgQuery = supabase.from('organizations').select('id');
+        if (filters.department !== 'all') orgQuery.eq('department', filters.department);
+        if (filters.orgType !== 'all') orgQuery.eq('org_type', filters.orgType);
+        if (filters.status !== 'all') orgQuery.eq('status', filters.status);
+        
+        const { data: orgData, error: orgError } = await orgQuery;
+        if (orgError) throw orgError;
+        filteredOrgIds = orgData?.map(org => org.id) || [];
+      }
+
+      // Get filtered post IDs for organization filtering
+      let filteredPostIds: string[] | null = null;
+      if (filteredOrgIds && filteredOrgIds.length > 0) {
+        const { data: posts } = await supabase
+          .from('posts')
+          .select('id')
+          .in('org_id', filteredOrgIds);
+        filteredPostIds = posts?.map(p => p.id) || [];
+      }
+
+      // Get event post IDs for organization filtering
+      let eventPostIds: string[] | null = null;
+      if (filteredOrgIds && filteredOrgIds.length > 0) {
+        const { data: eventPosts } = await supabase
+          .from('posts')
+          .select('id')
+          .eq('post_type', 'event')
+          .in('org_id', filteredOrgIds);
+        eventPostIds = eventPosts?.map(p => p.id) || [];
+      }
 
       // Fetch all stats in parallel
       const [
@@ -133,10 +178,15 @@ export default function Reports() {
         // New analytics queries
         eventViewsResult,
         yesterdayEngagementResult,
-        lastMonthEngagementResult
+        todayEngagementResult,
+        lastMonthEngagementResult,
+        recentThirtyDayEngagementResult,
+        eventAttendanceResult
       ] = await Promise.all([
-        // Total users
-        supabase.from('users').select('id', { count: 'exact', head: true }),
+        // Total users (filtered by organization membership if filters applied)
+        filteredOrgIds
+          ? supabase.from('org_members').select('user_id', { count: 'exact', head: true }).in('org_id', filteredOrgIds)
+          : supabase.from('users').select('id', { count: 'exact', head: true }),
 
         // Total organizations (with filters)
         (() => {
@@ -147,10 +197,14 @@ export default function Reports() {
           return query;
         })(),
 
-        // Total posts
-        dateFilter
-          ? supabase.from('posts').select('id', { count: 'exact', head: true }).gte('created_at', dateFilter)
-          : supabase.from('posts').select('id', { count: 'exact', head: true }),
+        // Total posts (filtered by organization if filters applied)
+        (() => {
+          let query = dateFilter
+            ? supabase.from('posts').select('id', { count: 'exact', head: true }).gte('created_at', dateFilter)
+            : supabase.from('posts').select('id', { count: 'exact', head: true });
+          if (filteredOrgIds) query = query.in('org_id', filteredOrgIds);
+          return query;
+        })(),
 
         // Active organizations (with filters)
         (() => {
@@ -160,28 +214,50 @@ export default function Reports() {
           return query;
         })(),
 
-        // User types count
-        supabase.from('users').select('user_type'),
+        // User types count (filtered by organization membership if filters applied)
+        filteredOrgIds
+          ? supabase.from('org_members').select('users!inner(user_type)').in('org_id', filteredOrgIds)
+          : supabase.from('users').select('user_type'),
 
-        // Recent posts (last 30 days for comparison)
-        supabase.from('posts').select('id', { count: 'exact', head: true })
-          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        // Recent posts (last 30 days for comparison, filtered by organization)
+        (() => {
+          let query = supabase.from('posts').select('id', { count: 'exact', head: true })
+            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+          if (filteredOrgIds) query = query.in('org_id', filteredOrgIds);
+          return query;
+        })(),
 
-        // Total views
-        dateFilter
-          ? supabase.from('posts').select('post_views(user_id)').gte('created_at', dateFilter)
-          : supabase.from('posts').select('post_views(user_id)'),
+        // Total views (filtered by time and organization)
+        (() => {
+          let query = dateFilter
+            ? supabase.from('post_views').select('id', { count: 'exact', head: true }).gte('viewed_at', dateFilter)
+            : supabase.from('post_views').select('id', { count: 'exact', head: true });
+          if (filteredPostIds && filteredPostIds.length > 0) {
+            query = query.in('post_id', filteredPostIds);
+          }
+          return query;
+        })(),        // Recent views (last 30 days, filtered by organization)
+        (() => {
+          let query = supabase.from('post_views').select('id', { count: 'exact', head: true })
+            .gte('viewed_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+          if (filteredPostIds && filteredPostIds.length > 0) {
+            query = query.in('post_id', filteredPostIds);
+          }
+          return query;
+        })(),
 
-        // Recent views (last 30 days)
-        supabase.from('posts').select('post_views(user_id)')
-          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        // Engagement data from reward_log (filtered by organization)
+        (() => {
+          let query = dateFilter
+            ? supabase.from('reward_log').select('action, user_id').gte('created_at', dateFilter)
+            : supabase.from('reward_log').select('action, user_id');
+          if (filteredOrgIds) {
+            query = query.in('org_id', filteredOrgIds);
+          }
+          return query;
+        })(),
 
-        // Engagement data from reward_log
-        dateFilter
-          ? supabase.from('reward_log').select('action, user_id').gte('created_at', dateFilter)
-          : supabase.from('reward_log').select('action, user_id'),
-
-        // Top engaged users
+        // Top engaged users (filtered by organization)
         (() => {
           let baseQuery = supabase
             .from('reward_log')
@@ -193,33 +269,73 @@ export default function Reports() {
               )
             `);
           if (dateFilter) baseQuery = baseQuery.gte('created_at', dateFilter);
+          if (filteredOrgIds) baseQuery = baseQuery.in('org_id', filteredOrgIds);
           return baseQuery;
         })(),
 
-        // Views on event posts (for RSVP conversion rate)
-        dateFilter
-          ? supabase.from('posts').select('post_views(user_id)').eq('post_type', 'event').gte('created_at', dateFilter)
-          : supabase.from('posts').select('post_views(user_id)').eq('post_type', 'event'),
+        // Views on event posts (for RSVP conversion rate, filtered by organization)
+        (() => {
+          let query = dateFilter
+            ? supabase.from('post_views').select('id', { count: 'exact', head: true }).gte('viewed_at', dateFilter)
+            : supabase.from('post_views').select('id', { count: 'exact', head: true });
 
-        // Yesterday's engagement (for daily retention)
-        supabase.from('reward_log').select('user_id')
-          .gte('created_at', new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString())
-          .lt('created_at', new Date().toISOString()),
+          if (eventPostIds && eventPostIds.length > 0) {
+            query = query.in('post_id', eventPostIds);
+          }
 
-        // Last month's engagement (for 30-day retention)
-        supabase.from('reward_log').select('user_id')
-          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-          .lt('created_at', new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString())
+          return query;
+        })(),
+
+        // Yesterday's engagement (24-48 hours ago, for daily retention)
+        (() => {
+          let query = supabase.from('reward_log').select('user_id')
+            .gte('created_at', new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
+            .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+          if (filteredOrgIds) query = query.in('org_id', filteredOrgIds);
+          return query;
+        })(),
+
+        // Today's engagement (last 24 hours, for daily retention)
+        (() => {
+          let query = supabase.from('reward_log').select('user_id')
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+          if (filteredOrgIds) query = query.in('org_id', filteredOrgIds);
+          return query;
+        })(),
+
+        // 30-60 days ago engagement (for 30-day retention)
+        (() => {
+          let query = supabase.from('reward_log').select('user_id')
+            .gte('created_at', new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString())
+            .lt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+          if (filteredOrgIds) query = query.in('org_id', filteredOrgIds);
+          return query;
+        })(),
+
+        // Last 30 days engagement (for 30-day retention)
+        (() => {
+          let query = supabase.from('reward_log').select('user_id')
+            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+          if (filteredOrgIds) query = query.in('org_id', filteredOrgIds);
+          return query;
+        })(),
+
+        // Event attendance data (for attendance rate)
+        supabase.from('event_attendance').select('user_id, post_id').eq('attended', true)
       ]);
 
       // Process user types
       const userTypes = userTypesResult.data || [];
-      const studentCount = userTypes.filter(u => u.user_type === 'student').length;
-      const facultyCount = userTypes.filter(u => u.user_type === 'faculty').length;
+      const studentCount = filteredOrgIds
+        ? userTypes.filter((u: any) => u.users?.user_type === 'student').length
+        : userTypes.filter((u: any) => u.user_type === 'student').length;
+      const facultyCount = filteredOrgIds
+        ? userTypes.filter((u: any) => u.users?.user_type === 'faculty').length
+        : userTypes.filter((u: any) => u.user_type === 'faculty').length;
 
       // Calculate total views
-      const totalViews = totalViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
-      const recentViews = recentViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
+      const totalViews = totalViewsResult.count || 0;
+      const recentViews = recentViewsResult.count || 0;
 
       // Process engagement data
       const engagementData = engagementResult.data || [];
@@ -231,21 +347,31 @@ export default function Reports() {
       const totalEngagementViews = engagementData.filter(e => e.action === 'view').length;
 
       // Calculate engagement metrics
-      const totalInteractions = engagementData.length;
+      const totalInteractions = totalViews + totalLikes + totalRsvps + totalPollVotes + totalEvaluations + totalRegistrations;
       const activeUsers = new Set(engagementData.map(e => e.user_id)).size;
       const engagementRate = stats.totalUsers > 0 ? (activeUsers / stats.totalUsers) * 100 : 0;
 
       // Calculate new analytics metrics
-      const eventViews = eventViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
+      const eventViews = eventViewsResult.count || 0;
       const rsvpConversionRate = eventViews > 0 ? (totalRsvps / eventViews) * 100 : 0;
 
       // Calculate retention rates
       const yesterdayUsers = new Set(yesterdayEngagementResult.data?.map((e: any) => e.user_id) || []);
+      const todayUsers = new Set(todayEngagementResult.data?.map((e: any) => e.user_id) || []);
       const lastMonthUsers = new Set(lastMonthEngagementResult.data?.map((e: any) => e.user_id) || []);
-      const currentPeriodUsers = new Set(engagementData.map(e => e.user_id));
+      const recentThirtyDayUsers = new Set(recentThirtyDayEngagementResult.data?.map((e: any) => e.user_id) || []);
 
-      const dailyRetentionRate = yesterdayUsers.size > 0 ? (currentPeriodUsers.size / yesterdayUsers.size) * 100 : 0;
-      const thirtyDayRetentionRate = lastMonthUsers.size > 0 ? (currentPeriodUsers.size / lastMonthUsers.size) * 100 : 0;
+      // Daily retention: Users active yesterday who returned today
+      const retainedDailyUsers = new Set([...yesterdayUsers].filter(userId => todayUsers.has(userId)));
+      const dailyRetentionRate = yesterdayUsers.size > 0 ? (retainedDailyUsers.size / yesterdayUsers.size) * 100 : 0;
+
+      // 30-day retention: Users active 30-60 days ago who returned in last 30 days
+      const retainedThirtyDayUsers = new Set([...lastMonthUsers].filter(userId => recentThirtyDayUsers.has(userId)));
+      const thirtyDayRetentionRate = lastMonthUsers.size > 0 ? (retainedThirtyDayUsers.size / lastMonthUsers.size) * 100 : 0;
+
+      // Calculate event attendance rate
+      const totalAttended = eventAttendanceResult.data?.length || 0;
+      const eventAttendanceRate = totalRsvps > 0 ? (totalAttended / totalRsvps) * 100 : 0;
 
       // Process top engaged users
       const userInteractionMap = new Map<string, { count: number; user: any }>();
@@ -284,7 +410,8 @@ export default function Reports() {
         activeUsers,
         rsvpConversionRate: rsvpConversionRate,
         dailyRetentionRate: dailyRetentionRate,
-        thirtyDayRetentionRate: thirtyDayRetentionRate
+        thirtyDayRetentionRate: thirtyDayRetentionRate,
+        eventAttendanceRate: eventAttendanceRate
       });
 
       setEngagementStats({
@@ -292,7 +419,7 @@ export default function Reports() {
         averageInteractionsPerUser: activeUsers > 0 ? totalInteractions / activeUsers : 0,
         topEngagedUsers,
         interactionBreakdown: {
-          views: totalEngagementViews,
+          views: totalViews,
           likes: totalLikes,
           rsvps: totalRsvps,
           pollVotes: totalPollVotes,
@@ -411,7 +538,28 @@ export default function Reports() {
                 <option value="30d">Last 30 days</option>
                 <option value="90d">Last 90 days</option>
                 <option value="all">All time</option>
+                <option value="custom">Custom range</option>
               </select>
+              
+              {timeRange === 'custom' && (
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Start date"
+                  />
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="End date"
+                  />
+                </div>
+              )}
+              
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -567,6 +715,12 @@ export default function Reports() {
             title="30-Day Retention Rate"
             value={`${stats.thirtyDayRetentionRate.toFixed(1)}%`}
             icon={TrendingUp}
+            color="bg-green-600"
+          />
+          <StatCard
+            title="Event Attendance Rate"
+            value={`${stats.eventAttendanceRate.toFixed(1)}%`}
+            icon={Calendar}
             color="bg-green-600"
           />
         </div>

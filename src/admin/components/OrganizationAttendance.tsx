@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 interface OrganizationAttendanceProps {
   orgId: string;
-  onError: (error: string) => void;
 }
 
 interface AttendanceRow {
@@ -15,7 +15,7 @@ interface AttendanceRow {
   attended: boolean;
 }
 
-export default function OrganizationAttendance({ orgId, onError }: OrganizationAttendanceProps) {
+export default function OrganizationAttendance({ orgId }: OrganizationAttendanceProps) {
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [attendanceData, setAttendanceData] = useState<AttendanceRow[]>([]);
@@ -30,11 +30,11 @@ export default function OrganizationAttendance({ orgId, onError }: OrganizationA
         .select('id, title')
         .eq('org_id', orgId)
         .eq('post_type', 'event');
-      if (error) onError(error.message);
+      if (error) toast.error(error.message);
       else setEvents(data || []);
     };
     fetchEvents();
-  }, [orgId, onError]);
+  }, [orgId]);
 
   // Fetch attendance data when event is selected
   const fetchAttendanceData = async () => {
@@ -82,7 +82,7 @@ export default function OrganizationAttendance({ orgId, onError }: OrganizationA
       setAttendanceData(data);
       setChanges({});
     } catch (err: any) {
-      onError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export default function OrganizationAttendance({ orgId, onError }: OrganizationA
 
   useEffect(() => {
     fetchAttendanceData();
-  }, [selectedEventId, orgId, onError]);
+  }, [selectedEventId, orgId]);
 
   const handleAttendanceChange = (userId: string, attended: boolean) => {
     setChanges(prev => ({ ...prev, [userId]: attended }));
@@ -108,8 +108,9 @@ export default function OrganizationAttendance({ orgId, onError }: OrganizationA
       if (error) throw error;
       // Refresh data without full page reload
       await fetchAttendanceData();
+      toast.success('Attendance updated successfully!');
     } catch (err: any) {
-      onError(err.message);
+      toast.error(err.message);
     }
   };
 
