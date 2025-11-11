@@ -369,15 +369,24 @@ export default function EditOrganization({
                     </label>
 
                     {orgPicFile && (
-                      <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-md">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-700">{orgPicFile.name}</span>
-                        <button
-                          onClick={() => setOrgPicFile(null)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                      <div className="space-y-2">
+                        <div className="relative aspect-square max-w-40 mx-auto">
+                          <img
+                            src={URL.createObjectURL(orgPicFile)}
+                            alt="New organization logo preview"
+                            className="w-full h-full object-cover rounded-lg border border-gray-200"
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-md">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-sm text-green-700">{orgPicFile.name}</span>
+                          <button
+                            onClick={() => setOrgPicFile(null)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -434,15 +443,24 @@ export default function EditOrganization({
                     </label>
 
                     {bannerPicFile && (
-                      <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-md">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-700">{bannerPicFile.name}</span>
-                        <button
-                          onClick={() => setBannerPicFile(null)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <img
+                            src={URL.createObjectURL(bannerPicFile)}
+                            alt="New banner preview"
+                            className="w-full h-40 object-cover rounded-lg border border-gray-200"
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-md">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-sm text-green-700">{bannerPicFile.name}</span>
+                          <button
+                            onClick={() => setBannerPicFile(null)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

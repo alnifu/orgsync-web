@@ -706,9 +706,9 @@ export default function PostCard({
                 </>
               ) : displayUser ? (
                 <>
-                  {displayUser.avatar_url ? (
+                  {displayUser.profile_pic ? (
                     <img
-                      src={displayUser.avatar_url}
+                      src={displayUser.profile_pic}
                       alt={`${displayUser.first_name} ${displayUser.last_name}`}
                       className="w-4 h-4 rounded-full object-cover"
                     />

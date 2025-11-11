@@ -12,9 +12,6 @@ export default defineConfig({
   server: {
     allowedHosts: true,
   },
-  esbuild: {
-    drop: ['console', 'debugger'], // This drops all console and debugger statements
-  },
   build: {
     // Optimize chunk size for better loading performance
     rollupOptions: {

@@ -1,128 +1,108 @@
-import React, { useState, useEffect } from 'react';
-import { Users, TrendingUp, Calendar, Target, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Users, TrendingUp, Target, AlertTriangle, RefreshCw, Download } from 'lucide-react';
+import type { EventFeatures } from '../utils/MLService';
 import { MLService } from '../utils/MLService';
-import type { UserFeatures } from '../utils/MLService';
 import { useParams } from 'react-router';
 import toast from 'react-hot-toast';
+import { Scatter } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 
-interface ClusterData {
-  name: string;
-  users: UserFeatures[];
-  avgPosts: number;
-  avgRsvpRate: number;
-  color: string;
-}
+ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 const MLDashboard: React.FC = () => {
   const { orgId } = useParams<{ orgId: string }>();
-  const [clusters, setClusters] = useState<ClusterData[]>([]);
-  const [predictions, setPredictions] = useState<UserFeatures[]>([]);
-  const [timeWindow, setTimeWindow] = useState<'30d' | '90d' | 'all'>('30d');
+  const [predictions, setPredictions] = useState<EventFeatures[]>([]);
+  const [clusters, setClusters] = useState<{ [key: number]: EventFeatures[] }>({});
+  const [timeWindow, setTimeWindow] = useState<'30d' | '90d' | 'all' | 'custom'>('30d');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [trainingProgress, setTrainingProgress] = useState(0);
+  const [trainingMessage, setTrainingMessage] = useState('');
   const [showDataWarning, setShowDataWarning] = useState(false);
+  const [isTrained, setIsTrained] = useState(false);
   const mlService = MLService.getInstance();
-
-  useEffect(() => {
-    if (orgId) {
-      loadData();
-    }
-  }, [orgId, timeWindow]);
 
   const loadData = async () => {
     if (!orgId) return;
 
     setIsLoading(true);
     try {
-      await mlService.fetchUserData(orgId, timeWindow);
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+
+      if (timeWindow === 'custom') {
+        if (!customStartDate || !customEndDate) {
+          toast.error('Please select both start and end dates for custom range');
+          setIsLoading(false);
+          return;
+        }
+        startDate = new Date(customStartDate);
+        endDate = new Date(customEndDate);
+      }
+
+      await mlService.fetchUserData(orgId, timeWindow, startDate, endDate);
 
       if (!mlService.hasEnoughData()) {
         setShowDataWarning(true);
-        setClusters([]);
         setPredictions([]);
+        setClusters({});
+        setIsTrained(false);
         return;
       }
 
-      await mlService.trainModels();
+      setShowDataWarning(false);
+      // Data loaded, but models not trained yet
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Failed to load data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const trainModels = async () => {
+    setIsLoading(true);
+    setTrainingProgress(0);
+    setTrainingMessage('');
+    try {
+      await mlService.trainModels((progress, message) => {
+        setTrainingProgress(progress);
+        setTrainingMessage(message);
+      });
 
       const clusteredUsers = mlService.getClusteredUsers();
-      const clusterData: ClusterData[] = [
-        {
-          name: 'Low Engagement',
-          users: clusteredUsers.low,
-          avgPosts: clusteredUsers.low.reduce((sum, u) => sum + u.engagementFrequency, 0) / clusteredUsers.low.length || 0,
-          avgRsvpRate: clusteredUsers.low.reduce((sum, u) => sum + u.rsvpRate, 0) / clusteredUsers.low.length || 0,
-          color: 'bg-red-100 text-red-800'
-        },
-        {
-          name: 'Medium Engagement',
-          users: clusteredUsers.medium,
-          avgPosts: clusteredUsers.medium.reduce((sum, u) => sum + u.engagementFrequency, 0) / clusteredUsers.medium.length || 0,
-          avgRsvpRate: clusteredUsers.medium.reduce((sum, u) => sum + u.rsvpRate, 0) / clusteredUsers.medium.length || 0,
-          color: 'bg-yellow-100 text-yellow-800'
-        },
-        {
-          name: 'High Engagement',
-          users: clusteredUsers.high,
-          avgPosts: clusteredUsers.high.reduce((sum, u) => sum + u.engagementFrequency, 0) / clusteredUsers.high.length || 0,
-          avgRsvpRate: clusteredUsers.high.reduce((sum, u) => sum + u.rsvpRate, 0) / clusteredUsers.high.length || 0,
-          color: 'bg-green-100 text-green-800'
-        }
-      ];
-
-      setClusters(clusterData);
+      setClusters(clusteredUsers);
       setPredictions(mlService.getUserPredictions());
-      setShowDataWarning(false);
+      setIsTrained(true);
+      toast.success('Models trained successfully');
     } catch (error) {
-      console.error('Error loading ML data:', error);
-      toast.error('Failed to load analytics data');
+      console.error('Error training models:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to train models');
     } finally {
       setIsLoading(false);
+      setTrainingProgress(0);
+      setTrainingMessage('');
     }
   };
 
-  const handleRetrain = async () => {
-    setIsLoading(true);
-    try {
-      await loadData();
-      toast.success('Models retrained successfully');
-    } catch (error) {
-      toast.error('Failed to retrain models');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleProceedWithLowData = () => {
-    setShowDataWarning(false);
-    loadData();
-  };
-
-  const exportReport = () => {
-    const report = {
-      timestamp: new Date().toISOString(),
-      organizationId: orgId,
-      timeWindow,
-      clusters: clusters.map(c => ({
-        name: c.name,
-        userCount: c.users.length,
-        avgPosts: c.avgPosts,
-        avgRsvpRate: c.avgRsvpRate,
-        users: c.users.map(u => ({ name: u.userName, engagement: u.engagementFrequency }))
-      })),
-      predictions: predictions.slice(0, 20).map(p => ({
-        name: p.userName,
-        probability: Math.round((p.predictedRsvpProb || 0) * 100)
-      }))
-    };
-
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+  const exportToCSV = () => {
+    const csvContent = mlService.exportToCSV();
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ml-analytics-${orgId}-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `ml-data-${orgId}-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Report exported');
+    toast.success('CSV exported');
   };
 
   const getConfidenceColor = (probability: number) => {
@@ -137,6 +117,59 @@ const MLDashboard: React.FC = () => {
     return 'bg-red-500';
   };
 
+  const scatterData = {
+    datasets: Object.entries(clusters).map(([cluster, events]) => {
+      // Deduplicate by user for scatter plot
+      const userMap = new Map<string, EventFeatures>();
+      events.forEach(event => {
+        if (!userMap.has(event.userId)) {
+          userMap.set(event.userId, event);
+        }
+      });
+      const uniqueUsers = Array.from(userMap.values());
+
+      return {
+        label: `Cluster ${cluster}`,
+        data: uniqueUsers.map(event => ({
+          x: event.engagementScore,
+          y: event.rsvpRate,
+          userName: event.userName
+        })),
+        backgroundColor: cluster === '0' ? 'rgba(255, 99, 132, 0.6)' :
+                         cluster === '1' ? 'rgba(54, 162, 235, 0.6)' :
+                         'rgba(255, 205, 86, 0.6)',
+        borderColor: cluster === '0' ? 'rgba(255, 99, 132, 1)' :
+                     cluster === '1' ? 'rgba(54, 162, 235, 1)' :
+                     'rgba(255, 205, 86, 1)',
+        borderWidth: 1,
+      };
+    }),
+  };
+
+  const scatterOptions = {
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Engagement Score',
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'RSVP Rate (%)',
+        },
+      },
+    },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: (context: any) => `${context.raw.userName}: (${context.parsed.x}, ${context.parsed.y.toFixed(2)}%)`,
+        },
+      },
+    },
+  };
+
   if (showDataWarning) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -146,22 +179,14 @@ const MLDashboard: React.FC = () => {
             <h3 className="text-lg font-semibold text-yellow-800">Insufficient Data</h3>
           </div>
           <p className="text-yellow-700 mb-4">
-            We don't have enough user activity data for reliable ML analysis. Results may not be accurate.
+            We don't have enough user activity data for reliable ML analysis. Need at least 10 users with activity.
           </p>
-          <div className="flex gap-3">
-            <button
-              onClick={handleProceedWithLowData}
-              className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-            >
-              Proceed Anyway
-            </button>
-            <button
-              onClick={() => setShowDataWarning(false)}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-            >
-              Cancel
-            </button>
-          </div>
+          <button
+            onClick={() => setShowDataWarning(false)}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     );
@@ -171,117 +196,114 @@ const MLDashboard: React.FC = () => {
     <div className="space-y-8 p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-  {/* Left Section */}
-  <div className="text-center sm:text-left">
-    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
-      ML Analytics Dashboard
-    </h1>
-    <p className="text-gray-600 text-sm sm:text-base">
-      User segmentation and RSVP prediction insights
-    </p>
-  </div>
+        <div className="text-center sm:text-left">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
+            ML Analytics Dashboard
+          </h1>
+          <p className="text-gray-600 text-sm sm:text-base">
+            User segmentation and RSVP prediction insights
+          </p>
+        </div>
 
-  {/* Right Section */}
-  <div className="flex flex-col sm:flex-row gap-3 justify-center sm:justify-end">
-    <select
-      value={timeWindow}
-      onChange={(e) => setTimeWindow(e.target.value as '30d' | '90d' | 'all')}
-      className="px-3 py-2 border border-gray-300 rounded-lg text-sm sm:text-base"
-    >
-      <option value="30d">Last 30 Days</option>
-      <option value="90d">Last 90 Days</option>
-      <option value="all">All Time</option>
-    </select>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center sm:justify-end">
+          <select
+            value={timeWindow}
+            onChange={(e) => setTimeWindow(e.target.value as '30d' | '90d' | 'all' | 'custom')}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm sm:text-base"
+          >
+            <option value="30d">Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+            <option value="all">All Time</option>
+            <option value="custom">Custom Range</option>
+          </select>
 
-    <button
-      onClick={handleRetrain}
-      disabled={isLoading}
-      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
-    >
-      <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-      Retrain Models
-    </button>
+          {timeWindow === 'custom' && (
+            <div className="flex gap-2">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600">Start Date</label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600">End Date</label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+              </div>
+            </div>
+          )}
 
-    <button
-      onClick={exportReport}
-      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 text-sm sm:text-base"
-    >
-      <Download className="h-4 w-4" />
-      Export Report
-    </button>
-  </div>
-</div>
+          <button
+            onClick={loadData}
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
+          >
+            Load Data
+          </button>
+
+          <button
+            onClick={trainModels}
+            disabled={isLoading || !mlService.hasEnoughData()}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Train Models
+          </button>
+
+          <button
+            onClick={exportToCSV}
+            disabled={!isTrained}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+        </div>
+      </div>
 
       {isLoading && (
         <div className="text-center py-8">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-          <p className="mt-2 text-gray-600">Training models...</p>
+          <p className="mt-2 text-gray-600">{trainingMessage || 'Processing...'}</p>
+          {trainingProgress > 0 && (
+            <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${trainingProgress}%` }}
+              ></div>
+            </div>
+          )}
         </div>
       )}
 
-      {!isLoading && (
+      {!isLoading && isTrained && (
         <>
-          {/* User Segmentation Section */}
+          {/* Cluster Visualization */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center gap-3 mb-6">
-              <Users className="h-8 w-8 text-blue-600" />
-              <h2 className="text-2xl font-semibold text-gray-900">User Segmentation</h2>
+              <TrendingUp className="h-8 w-8 text-purple-600" />
+              <h2 className="text-2xl font-semibold text-gray-900">K-Means Clustering</h2>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {clusters.map((cluster) => (
-                <div key={cluster.name} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-medium text-gray-900">{cluster.name}</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${cluster.color}`}>
-                      {cluster.users.length} users
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-gray-600 mb-4">
-                    {cluster.name === 'Low Engagement' ? 'Users with minimal interaction' :
-                     cluster.name === 'Medium Engagement' ? 'Users with moderate participation' :
-                     'Users with high activity levels'}
-                  </p>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Avg Engagement:</span>
-                      <span className="font-medium">{cluster.avgPosts.toFixed(1)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>RSVP Rate:</span>
-                      <span className="font-medium">{cluster.avgRsvpRate.toFixed(1)}%</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(cluster.users.length / Math.max(...clusters.map(c => c.users.length))) * 100}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Relative group size</p>
-                  </div>
-                </div>
-              ))}
+            <p className="text-gray-600 mb-4">
+              Scatter plot showing Engagement Score vs RSVP Rate, colored by cluster.
+            </p>
+            <div className="w-full h-96">
+              <Scatter data={scatterData} options={scatterOptions} />
             </div>
           </div>
 
-          {/* RSVP Prediction Section */}
+          {/* RSVP Prediction */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center gap-3 mb-6">
               <Target className="h-8 w-8 text-green-600" />
               <h2 className="text-2xl font-semibold text-gray-900">RSVP Prediction</h2>
-            </div>
-
-            <div className="mb-4">
-              <div className="flex items-center gap-2 text-gray-700">
-                <Calendar className="h-5 w-5" />
-                <span className="font-medium">Predicted RSVP likelihood for organization members</span>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Based on historical interaction patterns</p>
             </div>
 
             <div className="overflow-x-auto">
@@ -309,12 +331,12 @@ const MLDashboard: React.FC = () => {
                         <div className="text-sm font-medium text-gray-900">{prediction.userName}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{Math.round((prediction.predictedRsvpProb || 0) * 100)}%</div>
+                        <div className="text-sm text-gray-900">{Math.round((prediction.predictedRSVPProb || 0) * 100)}%</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`text-sm font-medium ${getConfidenceColor(prediction.predictedRsvpProb || 0)}`}>
-                          {(prediction.predictedRsvpProb || 0) >= 0.7 ? 'High' :
-                           (prediction.predictedRsvpProb || 0) >= 0.4 ? 'Medium' : 'Low'}
+                        <span className={`text-sm font-medium ${getConfidenceColor(prediction.predictedRSVPProb || 0)}`}>
+                          {(prediction.predictedRSVPProb || 0) >= 0.7 ? 'High' :
+                            (prediction.predictedRSVPProb || 0) >= 0.4 ? 'Medium' : 'Low'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -322,11 +344,11 @@ const MLDashboard: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <div className="w-32 bg-gray-200 rounded-full h-3">
                               <div
-                                className={`h-3 rounded-full transition-all duration-300 ${getProbabilityBarColor(prediction.predictedRsvpProb || 0)}`}
-                                style={{ width: `${(prediction.predictedRsvpProb || 0) * 100}%` }}
+                                className={`h-3 rounded-full transition-all duration-300 ${getProbabilityBarColor(prediction.predictedRSVPProb || 0)}`}
+                                style={{ width: `${(prediction.predictedRSVPProb || 0) * 100}%` }}
                               ></div>
                             </div>
-                            <span className="text-xs text-gray-500">{Math.round((prediction.predictedRsvpProb || 0) * 100)}%</span>
+                            <span className="text-xs text-gray-500">{Math.round((prediction.predictedRSVPProb || 0) * 100)}%</span>
                           </div>
                         </div>
                       </td>
@@ -334,42 +356,6 @@ const MLDashboard: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
-
-            {/* Summary Stats */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">High Likelihood</span>
-                </div>
-                <p className="text-2xl font-bold text-green-900 mt-1">
-                  {predictions.filter(p => (p.predictedRsvpProb || 0) >= 0.7).length}
-                </p>
-                <p className="text-xs text-green-600">users likely to RSVP</p>
-              </div>
-
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-yellow-600" />
-                  <span className="text-sm font-medium text-yellow-800">Medium Likelihood</span>
-                </div>
-                <p className="text-2xl font-bold text-yellow-900 mt-1">
-                  {predictions.filter(p => (p.predictedRsvpProb || 0) >= 0.4 && (p.predictedRsvpProb || 0) < 0.7).length}
-                </p>
-                <p className="text-xs text-yellow-600">users may RSVP</p>
-              </div>
-
-              <div className="bg-red-50 p-4 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-red-600" />
-                  <span className="text-sm font-medium text-red-800">Low Likelihood</span>
-                </div>
-                <p className="text-2xl font-bold text-red-900 mt-1">
-                  {predictions.filter(p => (p.predictedRsvpProb || 0) < 0.4).length}
-                </p>
-                <p className="text-xs text-red-600">users unlikely to RSVP</p>
-              </div>
             </div>
           </div>
         </>
