@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../../lib/supabase";
-import { Heart, Search, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { Heart, Search, ChevronLeft, ChevronRight, Filter, Share2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 import RSVPModal from "../../components/RSVPModal";
@@ -184,7 +184,7 @@ export default function UserNewsFeed() {
       await supabase.from("post_views").insert({ user_id: userId, post_id: postId });
       await supabase.rpc(
         "award_user_coins_once",
-        { p_user_id: userId, p_post_id: postId, p_action: "view", p_points: 10 }
+        { p_user_id: userId, p_post_id: postId, p_action: "view", p_points: 1 }
       );
       setViewed((prev) => ({ ...prev, [postId]: true }));
     } catch (err) {
@@ -215,37 +215,36 @@ export default function UserNewsFeed() {
   }, [posts, viewed]);
 
   async function fetchPosts() {
-    setLoading(true);
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      if (userError || !user?.id) throw new Error(userError?.message || "No user found");
-      const userId = user.id;
+  setLoading(true);
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user?.id) throw new Error(userError?.message || "No user found");
+    const userId = user.id;
 
-      // Get the organizations the user is part of
-      const { data: memberData, error: memberError } = await supabase
-        .from("org_members")
-        .select("org_id")
-        .eq("user_id", userId)
-        .eq("is_active", true);
-      if (memberError) throw memberError;
+    // Get the organizations the user is part of
+    const { data: memberData, error: memberError } = await supabase
+      .from("org_members")
+      .select("org_id")
+      .eq("user_id", userId)
+      .eq("is_active", true);
+    if (memberError) throw memberError;
 
-      const memberOrgIds = memberData?.map((m) => m.org_id) ?? [];
+    const memberOrgIds = memberData?.map((m) => m.org_id) ?? [];
 
-      // Fetch details of joined organizations
-      const { data: joinedOrgData, error: joinedOrgError } = await supabase
-        .from("organizations")
-        .select("id, name, abbrev_name")
-        .in("id", memberOrgIds)
-        .eq("status", "active");
+    // Fetch details of joined organizations
+    const { data: joinedOrgData, error: joinedOrgError } = await supabase
+      .from("organizations")
+      .select("id, name, abbrev_name")
+      .in("id", memberOrgIds)
+      .eq("status", "active");
+    if (joinedOrgError) throw joinedOrgError;
+    setJoinedOrgs(joinedOrgData ?? []);
 
-      if (joinedOrgError) throw joinedOrgError;
-      setJoinedOrgs(joinedOrgData ?? []);
-
-      // Fetch all posts
-      const { data: postsData, error: postsError } = await supabase
+    // Fetch all posts
+    const { data: postsData, error: postsError } = await supabase
       .from("posts")
       .select(`
         *,
@@ -253,97 +252,87 @@ export default function UserNewsFeed() {
         post_likes(user_id),
         post_views(user_id)
       `)
-      .eq("organizations.status", "active") 
+      .eq("organizations.status", "active")
       .order("created_at", { ascending: false });
-      if (postsError) throw postsError;
+    if (postsError) throw postsError;
 
-      // Filter posts based on visibility and membership
-      const visiblePosts = (postsData ?? []).filter((post: any) => {
-        if (post.visibility === "public") return true;
-        if (post.visibility === "private" && memberOrgIds.includes(post.org_id)) return true;
-        return false;
-      });
+    // Filter posts based on visibility and membership
+    const visiblePosts = (postsData ?? []).filter((post: any) => {
+      if (post.visibility === "public") return true;
+      if (post.visibility === "private" && memberOrgIds.includes(post.org_id)) return true;
+      return false;
+    });
 
-      // Fetch user-related data for remaining posts
-      const { data: rsvpData, error: rsvpError } = await supabase
-        .from("rsvps")
-        .select("post_id")
-        .eq("user_id", userId);
-      if (rsvpError) throw rsvpError;
+    // Fetch user-related data
+    const [{ data: rsvpData }, { data: registrationData }, { data: pollVoteData }, { data: feedbackData }, { data: viewData }, { data: evalData }] = await Promise.all([
+      supabase.from("rsvps").select("post_id").eq("user_id", userId),
+      supabase.from("event_registrations").select("post_id").eq("user_id", userId), 
+      supabase.from("poll_votes").select("post_id, option_index").eq("user_id", userId),
+      supabase.from("form_responses").select("post_id, responses, user_id").eq("user_id", userId),
+      supabase.from("post_views").select("post_id").eq("user_id", userId),
+      supabase.from("event_evaluations").select("post_id").eq("user_id", userId),
+    ]);
 
-      const { data: pollVoteData, error: pollVoteError } = await supabase
-        .from("poll_votes")
-        .select("post_id, option_index")
-        .eq("user_id", userId);
-      if (pollVoteError) throw pollVoteError;
+    // Build states
+    const rsvpState: { [key: string]: boolean } = {};
+    const registeredState: { [key: string]: boolean } = {};
+    const likedState: { [key: string]: boolean } = {};
+    const feedbackResponsesState: { [key: string]: string } = {};
+    const feedbackSubmittedState: { [key: string]: boolean } = {};
+    const newPollUserVotes: { [key: string]: number | null } = {};
+    const evaluatedState: { [key: string]: boolean } = {};
 
-      const { data: feedbackData, error: feedbackError } = await supabase
-        .from("form_responses")
-        .select("post_id, responses, user_id")
-        .eq("user_id", userId);
-      if (feedbackError) console.error("Error fetching feedback:", feedbackError);
+    (visiblePosts ?? []).forEach((post: any) => {
+      const postIdStr = post.id.toString();
 
-      const { data: viewData, error: viewError } = await supabase
-        .from("post_views")
-        .select("post_id")
-        .eq("user_id", userId);
-      if (viewError) console.error("Error fetching views:", viewError);
+      rsvpState[postIdStr] = rsvpData?.some((r) => r.post_id.toString() === postIdStr) ?? false;
+      registeredState[postIdStr] = registrationData?.some((r) => r.post_id.toString() === postIdStr) ?? false; 
+      likedState[postIdStr] = post.post_likes?.some((l: any) => l.user_id === userId) ?? false;
+      evaluatedState[postIdStr] = evalData?.some((e) => e.post_id.toString() === postIdStr) ?? false;
 
-      // Build states for polls, RSVPs, feedback, likes
-      const newPollUserVotes: { [key: string]: number | null } = {};
-      (pollVoteData ?? []).forEach((v: any) => {
-        newPollUserVotes[v.post_id.toString()] = v.option_index;
-      });
+      const feedback = feedbackData?.find((f: any) => f.post_id.toString() === postIdStr);
+      if (feedback) {
+        feedbackResponsesState[postIdStr] = feedback.responses?.answer || "";
+        feedbackSubmittedState[postIdStr] = true;
+      } else {
+        feedbackResponsesState[postIdStr] = "";
+        feedbackSubmittedState[postIdStr] = false;
+      }
+    });
 
-      const newPollVotes: { [key: string]: boolean } = {};
-      (visiblePosts ?? []).forEach((post: any) => {
-        const postIdStr = post.id.toString();
-        newPollVotes[postIdStr] = newPollUserVotes[postIdStr] != null;
-      });
+    (pollVoteData ?? []).forEach((v: any) => {
+      newPollUserVotes[v.post_id.toString()] = v.option_index;
+    });
 
-      const rsvpState: { [key: string]: boolean } = {};
-      const likedState: { [key: string]: boolean } = {};
-      const feedbackResponsesState: { [key: string]: string } = {};
-      const feedbackSubmittedState: { [key: string]: boolean } = {};
+    // Set component state
+    setPosts(visiblePosts);
+    setFilteredPosts(visiblePosts);
+    setRsvp(rsvpState);
+    setRegistered(registeredState);
+    setLiked(likedState);
+    setEvaluated(evaluatedState);
+    setPollUserVotes(newPollUserVotes);
+    setPollVotes(visiblePosts.reduce((acc: any, post: any) => {
+      const postIdStr = post.id.toString();
+      acc[postIdStr] = newPollUserVotes[postIdStr] != null;
+      return acc;
+    }, {}));
+    setPollSelections({});
+    setFeedbackResponses(feedbackResponsesState);
+    setFeedbackSubmitted(feedbackSubmittedState);
 
-      (visiblePosts ?? []).forEach((post: any) => {
-        const postIdStr = post.id.toString();
-        rsvpState[postIdStr] = rsvpData?.some((r) => r.post_id.toString() === postIdStr) ?? false;
-        likedState[postIdStr] = post.post_likes?.some((l: any) => l.user_id === userId) ?? false;
-
-        const feedback = feedbackData?.find((f: any) => f.post_id.toString() === postIdStr);
-        if (feedback) {
-          feedbackResponsesState[postIdStr] = feedback.responses?.answer || "";
-          feedbackSubmittedState[postIdStr] = true;
-        } else {
-          feedbackResponsesState[postIdStr] = "";
-          feedbackSubmittedState[postIdStr] = false;
-        }
-      });
-
-      // Update component state
-      setPosts(visiblePosts);
-      setFilteredPosts(visiblePosts);
-      setRsvp(rsvpState);
-      setLiked(likedState);
-      setPollUserVotes(newPollUserVotes);
-      setPollVotes(newPollVotes);
-      setPollSelections({});
-      setFeedbackResponses(feedbackResponsesState);
-      setFeedbackSubmitted(feedbackSubmittedState);
-
-      const viewedState: { [key: string]: boolean } = {};
-      (viewData ?? []).forEach((v: any) => {
-        viewedState[v.post_id.toString()] = true;
-      });
-      setViewed(viewedState);
-    } catch (err) {
-      console.error("Error fetching posts:", err);
-      toast.error("Failed to load posts. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    const viewedState: { [key: string]: boolean } = {};
+    (viewData ?? []).forEach((v: any) => {
+      viewedState[v.post_id.toString()] = true;
+    });
+    setViewed(viewedState);
+  } catch (err) {
+    console.error("Error fetching posts:", err);
+    toast.error("Failed to load posts. Please try again.");
+  } finally {
+    setLoading(false);
   }
+}
 
   // Handle like/unlike + coins
   const handleLike = async (postId: string) => {
@@ -418,6 +407,14 @@ export default function UserNewsFeed() {
     };
 
     const handleRSVPClick = (post: any) => {
+      const now = new Date();
+      const eventDateTime = new Date(`${post.event_date}T${post.end_time || "23:59"}`);
+      
+      if (eventDateTime < now) {
+        toast.error("This event has already ended. You cannot RSVP.");
+        return;
+      }
+
       if (!rsvp[post.id]) {
         setSelectedPost(post);
         setShowModal(true);
@@ -425,6 +422,14 @@ export default function UserNewsFeed() {
     };
 
     const handleRegisterClick = (post: any) => {
+      const now = new Date();
+      const eventEnd = new Date(`${post.event_date}T${post.end_time || "23:59"}`);
+
+      if (eventEnd < now) {
+        toast.error("This event has already ended. You cannot register.");
+        return;
+      }
+
       if (!registered[post.id]) {
         setSelectedPost(post);
         setShowRegisterModal(true);
@@ -432,6 +437,19 @@ export default function UserNewsFeed() {
     };
 
     const handleEvaluateClick = (post: any) => {
+      const now = new Date();
+      const eventStart = new Date(`${post.event_date}T${post.start_time || "00:00"}`);
+
+      if (eventStart > now) {
+        toast.error("You can only evaluate after the event has started.");
+        return;
+      }
+
+      if (!registered[post.id]) {
+        toast.error("You must be registered to evaluate this event.");
+        return;
+      }
+
       if (!evaluated[post.id]) {
         setSelectedPost(post);
         setShowEvalModal(true);
@@ -439,124 +457,126 @@ export default function UserNewsFeed() {
     };
 
     function FeedbackPost({
-      post,
-      feedbackResponses,
-      setFeedbackResponses,
-      feedbackSubmitted,
-      setFeedbackSubmitted,
-    }: {
-      post: any;
-      feedbackResponses: { [key: string]: string };
-      setFeedbackResponses: React.Dispatch<
-        React.SetStateAction<{ [key: string]: string }>
-      >;
-      feedbackSubmitted: { [key: string]: boolean };
-      setFeedbackSubmitted: React.Dispatch<
-        React.SetStateAction<{ [key: string]: boolean }>
-      >;
-    }) {
-      const [showButtons, setShowButtons] = useState(false);
-      const [localValue, setLocalValue] = useState(
-        feedbackResponses[post.id] ?? ""
+  post,
+  feedbackResponses,
+  setFeedbackResponses,
+  feedbackSubmitted,
+  setFeedbackSubmitted,
+}: {
+  post: any;
+  feedbackResponses: { [key: string]: string };
+  setFeedbackResponses: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+  feedbackSubmitted: { [key: string]: boolean };
+  setFeedbackSubmitted: React.Dispatch<React.SetStateAction<{ [key: string]: boolean }>>;
+}) {
+  const [showButtons, setShowButtons] = useState(false);
+  const [localValues, setLocalValues] = useState<{ [key: string]: string }>({});
+
+  const parsed = JSON.parse(post.content);
+  const hasSubmitted = feedbackSubmitted[post.id] ?? false;
+
+  // Initialize localValues with existing responses
+  useEffect(() => {
+    if (parsed.fields) {
+      const initialValues: { [key: string]: string } = {};
+      parsed.fields.forEach((f: any, i: number) => {
+        initialValues[i] = feedbackResponses[post.id]?.[i] || "";
+      });
+      setLocalValues(initialValues);
+    }
+  }, [parsed.fields, feedbackResponses, post.id]);
+
+  const handleInputChange = (index: number, value: string) => {
+    setLocalValues((prev) => ({ ...prev, [index]: value }));
+  };
+
+  const handleFeedbackSubmit = async () => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) return;
+
+      // Make sure all required fields are filled
+      const emptyRequired = parsed.fields?.some(
+        (f: any, i: number) => f.required && !localValues[i]?.trim()
       );
+      if (emptyRequired) {
+        toast.error("Please fill out all required fields.");
+        return;
+      }
 
-      const parsed = JSON.parse(post.content);
-      const hasSubmitted = feedbackSubmitted[post.id] ?? false;
+      await supabase.from("form_responses").insert({
+        post_id: post.id,
+        user_id: userId,
+        responses: localValues,
+        submitted_at: new Date().toISOString(),
+      });
 
-      // keep localValue in sync when responses update externally
-      useEffect(() => {
-        if (feedbackResponses[post.id] !== undefined) {
-          setLocalValue(feedbackResponses[post.id]);
-        }
-      }, [feedbackResponses, post.id]);
+      await supabase.rpc("award_user_coins_once", {
+        p_user_id: userId,
+        p_post_id: post.id,
+        p_action: "feedback",
+        p_points: 50,
+      });
 
-      const handleFeedbackSubmit = async () => {
-        try {
-          const { data: userData } = await supabase.auth.getUser();
-          const userId = userData.user?.id;
-          if (!userId || !localValue.trim()) return;
+      setFeedbackResponses((prev) => ({ ...prev, [post.id]: localValues }));
+      setFeedbackSubmitted((prev) => ({ ...prev, [post.id]: true }));
+      setShowButtons(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to submit feedback.");
+    }
+  };
 
-          await supabase.from("form_responses").insert({
-            post_id: post.id,
-            user_id: userId,
-            responses: { answer: localValue },
-            submitted_at: new Date().toISOString(),
-          });
+  const handleCancel = () => {
+    setLocalValues({});
+    setShowButtons(false);
+  };
 
-          const { data: rpcData, error: rpcError } = await supabase.rpc(
-            "award_user_coins_once",
-            {
-              p_user_id: userId,
-              p_post_id: post.id,
-              p_action: "feedback",
-              p_points: 50,
-            }
-          );
+  return (
+    <div className="mt-2">
+      <p className="font-medium text-gray-800">{parsed.description}</p>
 
-          if (rpcError) {
-            console.error("Error awarding coins:", rpcError);
-          } else if ((rpcData ?? 0) > 0) {
-            toast.success(`🎉 You earned ${rpcData} coins for submitting feedback!`);
-          }
-
-          // Persist the value and mark as submitted
-          setFeedbackResponses((prev) => ({ ...prev, [post.id]: localValue }));
-          setFeedbackSubmitted((prev) => ({ ...prev, [post.id]: true }));
-          setShowButtons(false);
-        } catch (err) {
-          console.error(err);
-          toast.error("Failed to submit feedback. Try again.");
-        }
-      };
-
-      const handleCancel = () => {
-        setLocalValue("");
-        setShowButtons(false);
-      };
-
-      return (
-        <div className="mt-2">
-          <p className="font-medium text-gray-800">{parsed.description}</p>
-
+      {parsed.fields?.map((field: any, index: number) => (
+        <div key={index} className="mt-2">
+          <p className="text-gray-700 font-medium">{field.question}</p>
           <textarea
-            className="w-full mt-2 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none"
-            rows={4}
-            value={localValue}
-            onChange={(e) => setLocalValue(e.target.value)}
+            className="w-full mt-1 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-green-500 outline-none"
+            rows={3}
+            value={localValues[index] || ""}
+            onChange={(e) => handleInputChange(index, e.target.value)}
             onFocus={() => !hasSubmitted && setShowButtons(true)}
             disabled={hasSubmitted}
-            placeholder={
-              hasSubmitted
-                ? "You have already responded."
-                : "Write your feedback here..."
-            }
+            placeholder={hasSubmitted ? "You have already responded." : "Your answer..."}
           />
-
-          {!hasSubmitted && showButtons && (
-            <div className="mt-2 flex space-x-2">
-              <button
-                onClick={handleCancel}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleFeedbackSubmit}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Submit
-              </button>
-            </div>
-          )}
-
-          {hasSubmitted && (
-            <p className="mt-2 text-sm text-gray-500">
-              You have already responded.
-            </p>
-          )}
         </div>
-      );
-    }
+      ))}
+
+      {!hasSubmitted && showButtons && (
+        <div className="mt-2 flex space-x-2">
+          <button
+            onClick={handleCancel}
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleFeedbackSubmit}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Submit
+          </button>
+        </div>
+      )}
+
+      {hasSubmitted && (
+        <p className="mt-2 text-sm text-gray-500">
+          You have already responded.
+        </p>
+      )}
+    </div>
+  );
+}
 
     function PollPost({
       post,
@@ -671,6 +691,14 @@ export default function UserNewsFeed() {
       );
     }
 
+    function sharePost(postId: string) {
+      const url = `${window.location.origin}/user/dashboard/posts/${postId}`;
+      navigator.clipboard.writeText(url).then(() => {
+        toast.success("Post link copied to clipboard!");
+      });
+    }
+
+
     if (loading) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -757,49 +785,76 @@ export default function UserNewsFeed() {
                     <p><strong>Time:</strong> {formatTime(post.start_time)} – {formatTime(post.end_time)}</p>
                     <p><strong>Location:</strong> {post.location}</p>
 
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      <button
-                        onClick={() => handleRSVPClick(post)}
-                        disabled={rsvp[post.id]}
-                        className={`px-4 py-2 rounded-md transition-colors ${rsvp[post.id]
-                            ? "bg-gray-300 text-gray-700 cursor-not-allowed"
-                            : "bg-green-600 text-white hover:bg-green-700"
+                    <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleRSVPClick(post)}
+                          disabled={rsvp[post.id] || new Date(`${post.event_date}T${post.end_time || "23:59"}`) < new Date()}
+                          className={`px-4 py-2 rounded-md transition-colors ${
+                            rsvp[post.id] || new Date(`${post.event_date}T${post.end_time || "23:59"}`) < new Date()
+                              ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                              : "bg-green-600 text-white hover:bg-green-700"
                           }`}
-                      >
-                        {rsvp[post.id] ? "RSVP'd" : "RSVP"}
-                      </button>
+                        >
+                          {rsvp[post.id] ? "RSVP'd" : "RSVP"}
+                        </button>
 
-                      <button
-                        onClick={() => handleRegisterClick(post)}
-                        disabled={registered[post.id]}
-                        className={`px-4 py-2 rounded-md transition-colors ${registered[post.id] ? "bg-gray-300 text-gray-700 cursor-not-allowed" : "bg-green-600 text-white hover:bg-green-700"
+                        <button
+                          onClick={() => handleRegisterClick(post)}
+                          disabled={
+                            registered[post.id] ||
+                            new Date(`${post.event_date}T${post.end_time || "23:59"}`) < new Date()
+                          }
+                          className={`px-4 py-2 rounded-md transition-colors ${
+                            registered[post.id] ||
+                            new Date(`${post.event_date}T${post.end_time || "23:59"}`) < new Date()
+                              ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                              : "bg-green-600 text-white hover:bg-green-700"
                           }`}
-                      >
-                        {registered[post.id] ? "Registered" : "Register"}
-                      </button>
+                        >
+                          {registered[post.id] ? "Registered" : "Register"}
+                        </button>
 
-                      <button
-                        onClick={() => handleEvaluateClick(post)}
-                        disabled={evaluated[post.id]}
-                        className={`px-4 py-2 rounded-md transition-colors ${evaluated[post.id] ? "bg-gray-300 text-gray-700 cursor-not-allowed" : "bg-green-600 text-white hover:bg-green-700"
+                        <button
+                          onClick={() => handleEvaluateClick(post)}
+                          disabled={
+                            evaluated[post.id] ||
+                            !registered[post.id] ||
+                            new Date(`${post.event_date}T${post.start_time || "00:00"}`) > new Date()
+                          }
+                          className={`px-4 py-2 rounded-md transition-colors ${
+                            evaluated[post.id] ||
+                            !registered[post.id] ||
+                            new Date(`${post.event_date}T${post.start_time || "00:00"}`) > new Date()
+                              ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                              : "bg-green-600 text-white hover:bg-green-700"
                           }`}
-                      >
-                        {evaluated[post.id] ? "Evaluated" : "Evaluate"}
-                      </button>
+                        >
+                          {evaluated[post.id] ? "Evaluated" : "Evaluate"}
+                        </button>
+                      </div>
 
-                      <button
-                        onClick={() => handleLike(post.id)}
-                        className={`flex items-center ml-auto transition-colors ${liked[post.id] ? "text-red-500" : "text-gray-500 hover:text-red-500"
+                      <div className="flex gap-4 mt-3 sm:mt-0 sm:justify-end">
+                        <button
+                          onClick={() => sharePost(post.id)}
+                          className="flex items-center text-gray-500 hover:text-green-700 transition-all"
+                        >
+                          <Share2 className="w-5 h-5 mr-1" />
+                          Share
+                        </button>
+                        
+                        <button
+                          onClick={() => handleLike(post.id)}
+                          className={`flex items-center text-gray-500 hover:text-green-700 transition-all ${
+                            liked[post.id] ? "text-green-600" : ""
                           }`}
-                      >
-                        <Heart
-                          className="h-5 w-5 mr-1"
-                          color={liked[post.id] ? "red" : "currentColor"}
-                          fill={liked[post.id] ? "red" : "none"}
-                        />
-                        {liked[post.id] ? "Liked" : "Like"}
-                      </button>
+                        >
+                          <Heart className="w-5 h-5 mr-1" />
+                          Like
+                        </button>
+                      </div>
                     </div>
+
                   </div>
                 )}
 
@@ -862,6 +917,13 @@ export default function UserNewsFeed() {
 
               {post.post_type !== "event" && (
                 <div className="mt-4 flex justify-end">
+                  <button
+                      onClick={() => sharePost(post.id)}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-500 rounded-lg hover:text-green-700 transition-all"
+                    >
+                    <Share2 className="w-5 h-5" />
+                    Share
+                  </button>
                   <button
                     onClick={() => handleLike(post.id)}
                     className={`flex items-center transition-colors ${liked[post.id] ? "text-red-500" : "text-gray-500 hover:text-red-500"

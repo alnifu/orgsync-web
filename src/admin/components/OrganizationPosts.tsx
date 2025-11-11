@@ -365,6 +365,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
 
       {/* Modals */}
       <CreatePostModal
+        key={selectedPostType}
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onPostCreated={fetchPosts}

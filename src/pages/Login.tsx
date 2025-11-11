@@ -58,6 +58,24 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         }
     };
 
+    const handleForgotPassword = async () => {
+    if (!email) {
+        setError("Please enter your email to reset your password.");
+        return;
+    }
+
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password` // optional: page to redirect after reset
+    });
+
+    if (error) {
+        setError(error.message);
+    } else {
+        setError(null);
+        alert("Password reset email sent. Check your inbox.");
+    }
+};
+
     return (
     <div className="min-h-screen flex flex-col md:flex-row">
       <div className="flex-1 bg-gradient-to-br from-green-700 to-green-500 text-white flex flex-col justify-center items-center p-10">
@@ -93,26 +111,26 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 />
               </div>
               <div className="relative">
-  <label htmlFor="password" className="sr-only">
-    Password
-  </label>
-  <input
-    id="password"
-    type={showPassword ? "text" : "password"}
-    required
-    value={password}
-    onChange={(e) => setPassword(e.target.value)}
-    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm pr-10"
-    placeholder="Password"
-  />
-  <button
-    type="button"
-    onClick={() => setShowPassword(!showPassword)}
-    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-  >
-    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-  </button>
-</div>
+                <label htmlFor="password" className="sr-only">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm pr-10"
+                  placeholder="Password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <div>
@@ -123,6 +141,17 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 Log in
               </button>
             </div>
+
+            <div className="text-sm text-center mt-2">
+    <button
+        type="button"
+        onClick={handleForgotPassword}
+        className="font-medium text-green-600 hover:text-green-500"
+    >
+        Forgot password?
+    </button>
+</div>
+
 
             <p className="mt-4 text-center text-sm text-gray-600">
               Don't have an account?{" "}

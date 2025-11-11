@@ -21,6 +21,7 @@ const OfficerContestManager: React.FC = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [submitting, setSubmitting] = useState(false); 
   const [toggling, setToggling] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [newContest, setNewContest] = useState({
@@ -74,43 +75,51 @@ const OfficerContestManager: React.FC = () => {
   }, [orgId]);
 
   const handleCreateContest = async () => {
-    if (creating) return; // Prevent multiple clicks
-    
-    if (!orgId || !user) return;
-    if (!newContest.title.trim()) return alert("Enter a contest title.");
+  if (submitting) return; // prevent double click
+  if (!orgId || !user) return;
 
-    setCreating(true);
-    try {
-      const { error } = await supabase.from("room_contests").insert({
-        org_id: orgId,
-        title: newContest.title.trim(),
-        description: newContest.description.trim(),
-        start_date: newContest.start_date || null,
-        end_date: newContest.end_date || null,
-        created_by: user.id,
-        is_active: true,
-      });
+  if (!newContest.title.trim()) {
+    alert("Please enter a contest title.");
+    return;
+  }
 
-      if (error) throw error;
+  if (!newContest.description.trim()) {
+    alert("Please enter a contest description.");
+    return;
+  }
 
-      alert("✅ Contest created!");
-      setNewContest({ title: "", description: "", start_date: "", end_date: "" });
-      setCreating(false);
+  setSubmitting(true);
+  try {
+    const { error } = await supabase.from("room_contests").insert({
+      org_id: orgId,
+      title: newContest.title.trim(),
+      description: newContest.description.trim(),
+      start_date: newContest.start_date || null,
+      end_date: newContest.end_date || null,
+      created_by: user.id,
+      is_active: true,
+    });
 
-      const { data } = await supabase
-        .from("room_contests")
-        .select("*")
-        .eq("org_id", orgId)
-        .order("created_at", { ascending: false });
+    if (error) throw error;
 
-      setContests(data || []);
-    } catch (err) {
-      console.error("❌ Failed to create contest:", err);
-      alert("Error creating contest.");
-    } finally {
-      setCreating(false);
-    }
-  };
+    alert("✅ Contest created!");
+    setNewContest({ title: "", description: "", start_date: "", end_date: "" });
+    setCreating(false);
+
+    const { data } = await supabase
+      .from("room_contests")
+      .select("*")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
+
+    setContests(data || []);
+  } catch (err) {
+    console.error("❌ Failed to create contest:", err);
+    alert("Error creating contest.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const toggleContestStatus = async (contest: Contest) => {
     if (toggling) return; // Prevent multiple clicks
@@ -166,78 +175,80 @@ const OfficerContestManager: React.FC = () => {
 
     {/* Create Contest Form */}
     {creating ? (
-      <div className="bg-white p-4 rounded-lg mb-6 shadow">
-        <h2 className="text-lg sm:text-xl font-semibold mb-4">🆕 Create Contest</h2>
+  <div className="bg-white p-4 rounded-lg mb-6 shadow">
+    <h2 className="text-lg sm:text-xl font-semibold mb-4">🆕 Create Contest</h2>
 
-        <div className="space-y-3">
+    <div className="space-y-3">
+      <input
+        type="text"
+        placeholder="Contest Title"
+        value={newContest.title}
+        onChange={(e) =>
+          setNewContest({ ...newContest, title: e.target.value })
+        }
+        className="w-full p-2 rounded border border-gray-300"
+      />
+      <textarea
+        placeholder="Contest Description"
+        value={newContest.description}
+        onChange={(e) =>
+          setNewContest({ ...newContest, description: e.target.value })
+        }
+        className="w-full p-2 rounded border border-gray-300"
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm text-gray-500">Start Date (Optional)</label>
           <input
-            type="text"
-            placeholder="Contest Title"
-            value={newContest.title}
+            type="datetime-local"
+            value={newContest.start_date}
             onChange={(e) =>
-              setNewContest({ ...newContest, title: e.target.value })
+              setNewContest({ ...newContest, start_date: e.target.value })
             }
             className="w-full p-2 rounded border border-gray-300"
           />
-          <textarea
-            placeholder="Contest Description"
-            value={newContest.description}
+        </div>
+        <div>
+          <label className="text-sm text-gray-500">End Date (Optional)</label>
+          <input
+            type="datetime-local"
+            value={newContest.end_date}
             onChange={(e) =>
-              setNewContest({ ...newContest, description: e.target.value })
+              setNewContest({ ...newContest, end_date: e.target.value })
             }
             className="w-full p-2 rounded border border-gray-300"
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-gray-500">Start Date</label>
-              <input
-                type="datetime-local"
-                value={newContest.start_date}
-                onChange={(e) =>
-                  setNewContest({ ...newContest, start_date: e.target.value })
-                }
-                className="w-full p-2 rounded border border-gray-300"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-500">End Date</label>
-              <input
-                type="datetime-local"
-                value={newContest.end_date}
-                onChange={(e) =>
-                  setNewContest({ ...newContest, end_date: e.target.value })
-                }
-                className="w-full p-2 rounded border border-gray-300"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 mt-3">
-            <button
-              onClick={handleCreateContest}
-              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 text-white w-full sm:w-auto"
-            >
-              Create Contest
-            </button>
-            <button
-              onClick={() => setCreating(false)}
-              className="bg-red-500 px-4 py-2 rounded hover:bg-red-600 text-white w-full sm:w-auto"
-            >
-              Cancel
-            </button>
-          </div>
         </div>
       </div>
-    ) : (
-      <div className="flex justify-center sm:justify-end mb-6">
+
+      <div className="flex flex-col sm:flex-row gap-3 mt-3">
         <button
-          onClick={() => setCreating(true)}
-          className="bg-blue-500 px-6 py-2 rounded hover:bg-blue-600 text-white inline-block"
+          type="button"
+          onClick={handleCreateContest}
+          disabled={submitting}
+          className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 text-white w-full sm:w-auto"
         >
-          New Contest
+          {submitting ? "Creating..." : "Create Contest"}
+        </button>
+        <button
+          onClick={() => setCreating(false)}
+          className="bg-red-500 px-4 py-2 rounded hover:bg-red-600 text-white w-full sm:w-auto"
+        >
+          Cancel
         </button>
       </div>
-    )}
+    </div>
+  </div>
+) : (
+  <div className="flex justify-center sm:justify-end mb-6">
+    <button
+      onClick={() => setCreating(true)}
+      className="bg-blue-500 px-6 py-2 rounded hover:bg-blue-600 text-white inline-block"
+    >
+      New Contest
+    </button>
+  </div>
+)}
 
     {/* Contest Table */}
     <div className="bg-white rounded-lg p-4 shadow overflow-x-auto">

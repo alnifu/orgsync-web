@@ -86,6 +86,10 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
     }
   }, [open]);
 
+  useEffect(() => {
+    setPostType(defaultPostType);
+  }, [defaultPostType]);
+
   const getFocusRingColor = () => {
     switch (postType) {
       case 'general': return 'focus:ring-green-500 focus:border-green-500';
@@ -151,6 +155,18 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated, cur
         alert("Please enter an event location");
         setLoading(false);
         return;
+      }
+
+      // ✅ Validate that end time (if provided) is after start time
+      if (endTime) {
+        const start = new Date(`${eventDate}T${startTime}`);
+        const end = new Date(`${eventDate}T${endTime}`);
+
+        if (end <= start) {
+          alert("End time must be after start time");
+          setLoading(false);
+          return;
+        }
       }
     } else if (!content.trim()) {
       alert("Please fill in the content");

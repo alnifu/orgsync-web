@@ -247,16 +247,33 @@ export default function UserProfile() {
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setCropImageSrc(reader.result as string);
-        setShowCropModal(true);
-      };
-      reader.readAsDataURL(file);
-    }
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // Validate file type
+  if (!file.type.startsWith("image/")) {
+    setError("Please upload a valid image file (JPG, PNG, or similar).");
+    e.target.value = ""; 
+    return;
+  }
+
+  // limit file size (5MB)
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    setError("Image file size must be less than 5MB.");
+    e.target.value = "";
+    return;
+  }
+
+  // If valid, continue as before
+  const reader = new FileReader();
+  reader.onload = () => {
+    setCropImageSrc(reader.result as string);
+    setShowCropModal(true);
+    setError(null); // clear old errors
   };
+  reader.readAsDataURL(file);
+};
 
   const handleCropComplete = async (croppedFile: File) => {
     // set local state so preview updates immediately
