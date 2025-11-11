@@ -20,6 +20,10 @@ interface ReportStats {
   totalRegistrations: number;
   engagementRate: number;
   activeUsers: number;
+  // New analytics metrics
+  rsvpConversionRate: number;
+  dailyRetentionRate: number;
+  thirtyDayRetentionRate: number;
 }
 
 interface EngagementStats {
@@ -67,7 +71,11 @@ export default function Reports() {
     totalEvaluations: 0,
     totalRegistrations: 0,
     engagementRate: 0,
-    activeUsers: 0
+    activeUsers: 0,
+    // New analytics metrics
+    rsvpConversionRate: 0,
+    dailyRetentionRate: 0,
+    thirtyDayRetentionRate: 0
   });
   const [engagementStats, setEngagementStats] = useState<EngagementStats>({
     totalInteractions: 0,
@@ -121,7 +129,11 @@ export default function Reports() {
         recentViewsResult,
         // Engagement metrics
         engagementResult,
-        topUsersResult
+        topUsersResult,
+        // New analytics queries
+        eventViewsResult,
+        yesterdayEngagementResult,
+        lastMonthEngagementResult
       ] = await Promise.all([
         // Total users
         supabase.from('users').select('id', { count: 'exact', head: true }),
@@ -182,7 +194,22 @@ export default function Reports() {
             `);
           if (dateFilter) baseQuery = baseQuery.gte('created_at', dateFilter);
           return baseQuery;
-        })()
+        })(),
+
+        // Views on event posts (for RSVP conversion rate)
+        dateFilter
+          ? supabase.from('posts').select('post_views(user_id)').eq('post_type', 'event').gte('created_at', dateFilter)
+          : supabase.from('posts').select('post_views(user_id)').eq('post_type', 'event'),
+
+        // Yesterday's engagement (for daily retention)
+        supabase.from('reward_log').select('user_id')
+          .gte('created_at', new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString())
+          .lt('created_at', new Date().toISOString()),
+
+        // Last month's engagement (for 30-day retention)
+        supabase.from('reward_log').select('user_id')
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .lt('created_at', new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString())
       ]);
 
       // Process user types
@@ -207,6 +234,18 @@ export default function Reports() {
       const totalInteractions = engagementData.length;
       const activeUsers = new Set(engagementData.map(e => e.user_id)).size;
       const engagementRate = stats.totalUsers > 0 ? (activeUsers / stats.totalUsers) * 100 : 0;
+
+      // Calculate new analytics metrics
+      const eventViews = eventViewsResult.data?.reduce((sum, post) => sum + (post.post_views?.length ?? 0), 0) || 0;
+      const rsvpConversionRate = eventViews > 0 ? (totalRsvps / eventViews) * 100 : 0;
+
+      // Calculate retention rates
+      const yesterdayUsers = new Set(yesterdayEngagementResult.data?.map((e: any) => e.user_id) || []);
+      const lastMonthUsers = new Set(lastMonthEngagementResult.data?.map((e: any) => e.user_id) || []);
+      const currentPeriodUsers = new Set(engagementData.map(e => e.user_id));
+
+      const dailyRetentionRate = yesterdayUsers.size > 0 ? (currentPeriodUsers.size / yesterdayUsers.size) * 100 : 0;
+      const thirtyDayRetentionRate = lastMonthUsers.size > 0 ? (currentPeriodUsers.size / lastMonthUsers.size) * 100 : 0;
 
       // Process top engaged users
       const userInteractionMap = new Map<string, { count: number; user: any }>();
@@ -242,7 +281,10 @@ export default function Reports() {
         totalEvaluations,
         totalRegistrations,
         engagementRate,
-        activeUsers
+        activeUsers,
+        rsvpConversionRate: rsvpConversionRate,
+        dailyRetentionRate: dailyRetentionRate,
+        thirtyDayRetentionRate: thirtyDayRetentionRate
       });
 
       setEngagementStats({
@@ -507,6 +549,24 @@ export default function Reports() {
             title="Top Engaged Users"
             value={engagementStats.topEngagedUsers.length}
             icon={Users}
+            color="bg-green-600"
+          />
+          <StatCard
+            title="RSVP Conversion Rate"
+            value={`${stats.rsvpConversionRate.toFixed(1)}%`}
+            icon={Calendar}
+            color="bg-green-600"
+          />
+          <StatCard
+            title="Daily Retention Rate"
+            value={`${stats.dailyRetentionRate.toFixed(1)}%`}
+            icon={TrendingUp}
+            color="bg-green-600"
+          />
+          <StatCard
+            title="30-Day Retention Rate"
+            value={`${stats.thirtyDayRetentionRate.toFixed(1)}%`}
+            icon={TrendingUp}
             color="bg-green-600"
           />
         </div>

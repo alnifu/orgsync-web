@@ -19,20 +19,18 @@ export interface UserFeatures {
   predictedRsvpProb?: number;
 }
 
-export interface MLModels {
-  kmeans: {
-    centroids: tf.Tensor2D;
-    labels: number[];
-  };
-  logistic: {
-    weights: tf.Tensor2D;
-    bias: tf.Tensor1D;
-  };
-}
-
 export class MLService {
   private static instance: MLService;
-  private models: MLModels | null = null;
+  private models: {
+    kmeans: {
+      centroids: tf.Tensor2D;
+      labels: number[];
+    };
+    logistic: {
+      weights: tf.Tensor2D;
+      bias: tf.Tensor1D;
+    };
+  } | null = null;
   private userFeatures: UserFeatures[] = [];
 
   static getInstance(): MLService {

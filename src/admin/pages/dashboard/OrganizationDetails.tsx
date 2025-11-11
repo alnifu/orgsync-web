@@ -20,6 +20,7 @@ import OrganizationOfficers from '../../components/OrganizationOfficers';
 import FlappyConfigUploader from './FlappyConfigUploader';
 import FlappyCommunityGoalsManager from './FlappyCommunityGoalsManager';
 import CommunityGoalsManager from './CommunityGoalsManager';
+import OrganizationAttendance from './OrganizationAttendance';
 import { Pencil, Trash2, ArrowLeft } from 'lucide-react';
 
 export default function OrganizationDetails() {
@@ -306,6 +307,12 @@ export default function OrganizationDetails() {
           >
             Flappy Goals
           </TabsTrigger>
+          <TabsTrigger
+            value="attendance"
+            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Attendance
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -373,6 +380,14 @@ export default function OrganizationDetails() {
         {/* Flappy Goals Tab */}
         <TabsContent value="flappy-goals" className="space-y-4">
           <FlappyCommunityGoalsManager />
+        </TabsContent>
+
+        {/* Attendance Tab */}
+        <TabsContent value="attendance" className="space-y-4">
+          <OrganizationAttendance
+            orgId={id!}
+            onError={handleError}
+          />
         </TabsContent>
       </Tabs>
 

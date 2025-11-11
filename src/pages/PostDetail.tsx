@@ -82,7 +82,7 @@ export default function PostDetail() {
     if (!post?.user_id) return;
     const { data } = await supabase
       .from('users')
-      .select('id, first_name, last_name, profile_pic')
+      .select('id, first_name, last_name, avatar_url')
       .eq('id', post.user_id)
       .single();
     setUserData(data);
@@ -582,9 +582,9 @@ export default function PostDetail() {
                       </>
                     ) : userData ? (
                       <>
-                        {userData.profile_pic ? (
+                        {userData.avatar_url ? (
                           <img
-                            src={userData.profile_pic}
+                            src={userData.avatar_url}
                             alt={`${userData.first_name} ${userData.last_name}`}
                             className="w-4 h-4 rounded-full object-cover"
                           />

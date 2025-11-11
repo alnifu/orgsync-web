@@ -57,7 +57,7 @@ export default function PostCard({
       if (post.user_id && !poster) {
         const { data } = await supabase
           .from('users')
-          .select('id, first_name, last_name, profile_pic')
+          .select('id, first_name, last_name, avatar_url')
           .eq('id', post.user_id)
           .single();
         setFetchedUser(data);
@@ -706,9 +706,9 @@ export default function PostCard({
                 </>
               ) : displayUser ? (
                 <>
-                  {displayUser.profile_pic ? (
+                  {displayUser.avatar_url ? (
                     <img
-                      src={displayUser.profile_pic}
+                      src={displayUser.avatar_url}
                       alt={`${displayUser.first_name} ${displayUser.last_name}`}
                       className="w-4 h-4 rounded-full object-cover"
                     />
