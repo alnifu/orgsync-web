@@ -5,6 +5,9 @@ import { useNavigate } from "react-router";
 import type { SignupFormData } from "../types/userTypes";
 import { Eye, EyeOff } from "lucide-react";
 
+import TermsModal from "./TermsModal";
+import PrivacyModal from "./PrivacyModal";
+
 type SignupProps = {
   onSignupSuccess?: (user: any) => void;
 };
@@ -25,6 +28,10 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
   });
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  const [agree, setAgree] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const { signUpNewUser } = useAuth();
   const navigate = useNavigate();
@@ -191,15 +198,45 @@ export default function Signup({ onSignupSuccess }: SignupProps) {
               </div>
             </div>
 
+            <div className="flex items-center space-x-2 text-sm text-gray-700">
+  <input
+    type="checkbox"
+    checked={agree}
+    onChange={(e) => setAgree(e.target.checked)}
+    required
+    className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+  />
+  <label className="text-gray-700">
+    I agree to the{" "}
+    <button
+      type="button"
+      className="text-green-600 hover:underline"
+      onClick={() => setShowTerms(true)}
+    >
+      Terms and Conditions
+    </button>{" "}
+    and{" "}
+    <button
+      type="button"
+      className="text-green-600 hover:underline"
+      onClick={() => setShowPrivacy(true)}
+    >
+      Privacy Policy
+    </button>
+    .
+  </label>
+</div>
+
             {/* Submit */}
-            <div>
-              <button
-                type="submit"
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-              >
-                Sign up
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50"
+            >
+              Sign up
+            </button>
+
+            <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+            <PrivacyModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
 
             <p className="mt-4 text-center text-sm text-gray-600">
               Already have an account?{" "}

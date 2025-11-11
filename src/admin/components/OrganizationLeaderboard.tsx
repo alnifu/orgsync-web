@@ -203,14 +203,29 @@ const OrganizationLeaderboard: React.FC<OrganizationLeaderboardProps> = ({ organ
 
         {!loading && scores.length > 0 ? (
           <ol className="divide-y divide-gray-200">
-            {scores.map((entry) => (
-              <li key={entry.id} className="py-3 flex justify-between">
-                <span>
-                  {entry.rank}. <span className="font-medium">{entry.username || entry.user_id.slice(0, 6)}</span>
-                </span>
-                <span className="font-semibold">{entry.score}</span>
-              </li>
-            ))}
+            {scores.map((entry) => {
+              // Format the created_at date
+              const createdAt = new Date(entry.created_at);
+              const formattedDate = createdAt.toLocaleString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+
+              return (
+                <li key={entry.id} className="py-3 flex flex-col sm:flex-row sm:justify-between">
+                  <span>
+                    {entry.rank}. <span className="font-medium">{entry.username || entry.user_id.slice(0, 6)}</span>
+                  </span>
+                  <div className="text-right">
+                    <span className="font-semibold">{entry.score}</span>
+                    <div className="text-xs text-gray-400">{formattedDate}</div>
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         ) : (
           !loading && <div className="text-center text-gray-500 py-6">No leaderboard entries yet.</div>

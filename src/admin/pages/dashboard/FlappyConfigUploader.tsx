@@ -133,39 +133,56 @@ export default function FlappyConfigUploader({ orgId }: { orgId: string }) {
 
   // Handle form submit
   const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!authorized) {
-      setMessage("You are not authorized to manage this challenge.");
-      return;
-    }
-    if (!orgId) {
-      setMessage("Organization ID is missing.");
-      return;
-    }
-    if (!name) {
-      setMessage("Please provide a challenge name.");
-      return;
-    }
+  e.preventDefault();
 
-    // Show create confirmation if unchecked availability and creating a new challenge
-    if (!editingId && !hasAvailability) {
-      setShowCreateConfirmModal(true);
+  if (!authorized) {
+    setMessage("You are not authorized to manage this challenge.");
+    return;
+  }
+  if (!orgId) {
+    setMessage("Organization ID is missing.");
+    return;
+  }
+  if (!name.trim()) {
+    setMessage("Please provide a challenge name.");
+    return;
+  }
+  if (!description.trim()) {
+    setMessage("Please provide a description for the challenge.");
+    return;
+  }
+
+  // Require images if creating a new challenge
+  if (!editingId) {
+    if (!playerImage) {
+      setMessage("Please select a player image.");
       return;
     }
-
-    if (hasAvailability && (!startTime || !endTime)) {
-      setMessage("Please provide start and end availability times.");
+    if (!backgroundImage) {
+      setMessage("Please select a background image.");
       return;
     }
+  }
 
-    await uploadChallenge();
-  };
+  // Show create confirmation if unchecked availability and creating a new challenge
+  if (!editingId && !hasAvailability) {
+    setShowCreateConfirmModal(true);
+    return;
+  }
+
+  if (hasAvailability && (!startTime || !endTime)) {
+    setMessage("Please provide start and end availability times.");
+    return;
+  }
+
+  await uploadChallenge();
+};
 
   const handleEdit = (config: any) => {
     setEditingId(config.id);
     setEditingConfig(config);
     setName(config.name);
-    setDescription(config.description || ""); // NEW
+    setDescription(config.description || ""); 
     setStartTime(config.start_time ? config.start_time.slice(0, 16) : "");
     setEndTime(config.end_time ? config.end_time.slice(0, 16) : "");
     setHasAvailability(!!config.start_time && !!config.end_time);
@@ -342,13 +359,44 @@ export default function FlappyConfigUploader({ orgId }: { orgId: string }) {
 
         </div>
 
-        <button
-          type="submit"
-          disabled={uploading}
-          className="bg-green-700 text-white py-2 rounded-lg hover:bg-green-800 disabled:opacity-50"
-        >
-          {uploading ? "Saving..." : editingId ? "Update Challenge" : "Create Challenge"}
-        </button>
+        {editingId ? (
+  <div className="flex gap-4">
+    <button
+      type="submit"
+      disabled={uploading}
+      className="flex-1 bg-green-700 text-white py-2 rounded-lg hover:bg-green-800 disabled:opacity-50"
+    >
+      {uploading ? "Saving..." : "Update Challenge"}
+    </button>
+    <button
+      type="button"
+      onClick={() => {
+        // Reset editing state
+        setEditingId(null);
+        setEditingConfig(null);
+        setName("");
+        setDescription("");
+        setStartTime("");
+        setEndTime("");
+        setHasAvailability(false);
+        setPlayerImage(null);
+        setBackgroundImage(null);
+        setMessage("");
+      }}
+      className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
+    >
+      Cancel
+    </button>
+  </div>
+) : (
+  <button
+    type="submit"
+    disabled={uploading}
+    className="bg-green-700 text-white py-2 rounded-lg hover:bg-green-800 disabled:opacity-50"
+  >
+    {uploading ? "Saving..." : "Create Challenge"}
+  </button>
+)}
       </form>
 
       {message && <p className="mt-2 text-center text-sm text-gray-700">{message}</p>}

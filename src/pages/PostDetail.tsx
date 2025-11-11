@@ -407,9 +407,11 @@ export default function PostDetail() {
   }
 
   function sharePost() {
-    const url = window.location.href;
+    if (!post) return;
+
+    const url = `${window.location.origin}/user/dashboard/posts/${post.id}`;
+
     navigator.clipboard.writeText(url).then(() => {
-      // Could show a toast notification here
       alert('Link copied to clipboard!');
     });
   }

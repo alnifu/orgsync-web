@@ -48,6 +48,7 @@ import FlappyGame from "./user/pages/dashboard/FlappyGame";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ProfileSetup from "./pages/ProfileSetup";
+import ResetPassword from "./pages/ResetPassword";
 
 const DashboardRedirect = () => {
   const { user } = useAuth();
@@ -119,6 +120,10 @@ const router = createBrowserRouter([
   {
     path: "/signup",
     element: <Signup />
+  },
+  {
+    path: "/reset-password",
+    element: <ResetPassword />  // <-- add this
   },
   {
     path: "/profile-setup",
@@ -203,6 +208,7 @@ const router = createBrowserRouter([
         path: "member-contests",
         element: <MemberContests />
       },
+      { path: "posts/:postId", element: <PostDetail /> },
       { path: "quiz-games", element: <QuizGame /> },
       { path: "room-game", element: <RoomGame /> },
       { path: "quiz-selection", element: <QuizSelection /> },

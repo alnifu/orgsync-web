@@ -215,10 +215,18 @@ export default function ProfileSetup() {
     };
 
     const handleNext = () => {
-        if (validateStep(currentStep) && currentStep < totalSteps) {
-            setCurrentStep(currentStep + 1);
-        }
-    };
+  if (validateStep(currentStep) && currentStep < totalSteps) {
+    // Only show confirmation when moving from Step 2 → Step 3
+    if (currentStep === 2) {
+      const confirmed = window.confirm(
+        "Please ensure your information is correct before proceeding.\nOnce submitted, it cannot be changed."
+      );
+      if (!confirmed) return; // stop if user cancels
+    }
+
+    setCurrentStep(currentStep + 1);
+  }
+};
 
     const handlePrevious = () => {
         if (currentStep > 1) {
@@ -498,12 +506,14 @@ export default function ProfileSetup() {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Student Number</label>
                                         <input
-                                            type="text"
+                                            type="number"
                                             name="studentNumber"
-                                            value={profileData.studentNumber}
+                                            value={profileData.studentNumber ?? ""}
                                             onChange={handleInputChange}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                                             required
+                                            min={0} 
+                                            step={1}
                                         />
                                     </div>
 
