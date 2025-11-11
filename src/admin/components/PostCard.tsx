@@ -57,7 +57,7 @@ export default function PostCard({
       if (post.user_id && !poster) {
         const { data } = await supabase
           .from('users')
-          .select('id, first_name, last_name, profile_pic')
+          .select('id, first_name, last_name, avatar_url')
           .eq('id', post.user_id)
           .single();
         setFetchedUser(data);

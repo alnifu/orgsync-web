@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { Eye, EyeOff } from "lucide-react";
+import toast, { Toaster } from "react-hot-toast";
 
 type LoginProps = {
     onLoginSuccess?: (user: any) => void;
@@ -11,7 +12,6 @@ type LoginProps = {
 export default function Login({ onLoginSuccess }: LoginProps) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
     const { signInUser } = useAuth();
@@ -26,9 +26,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         });
         console.log("Sign-in response:", { success, error, data });
         if (!success) {
-            setError(error || 'An error occurred during log in');
+            toast.error(error || 'An error occurred during log in');
         } else {
-            setError(null);
             if (onLoginSuccess) {
                 onLoginSuccess(data.user);
             }
@@ -57,6 +56,23 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             }
         }
     };
+
+    const handleForgotPassword = async () => {
+    if (!email) {
+        toast.error("Please enter your email to reset your password.");
+        return;
+    }
+
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password` // optional: page to redirect after reset
+    });
+
+    if (error) {
+        toast.error(error.message);
+    } else {
+        toast.success("Password reset email sent. Check your inbox.");
+    }
+};
 
     return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -93,26 +109,26 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 />
               </div>
               <div className="relative">
-  <label htmlFor="password" className="sr-only">
-    Password
-  </label>
-  <input
-    id="password"
-    type={showPassword ? "text" : "password"}
-    required
-    value={password}
-    onChange={(e) => setPassword(e.target.value)}
-    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm pr-10"
-    placeholder="Password"
-  />
-  <button
-    type="button"
-    onClick={() => setShowPassword(!showPassword)}
-    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-  >
-    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-  </button>
-</div>
+                <label htmlFor="password" className="sr-only">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm pr-10"
+                  placeholder="Password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <div>
@@ -124,6 +140,17 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               </button>
             </div>
 
+            <div className="text-sm text-center mt-2">
+    <button
+        type="button"
+        onClick={handleForgotPassword}
+        className="font-medium text-green-600 hover:text-green-500"
+    >
+        Forgot password?
+    </button>
+</div>
+
+
             <p className="mt-4 text-center text-sm text-gray-600">
               Don't have an account?{" "}
               <Link
@@ -133,19 +160,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 Sign up here
               </Link>
             </p>
-
-            {error && (
-              <div className="rounded-md bg-red-50 p-4">
-                <div className="flex">
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-red-800">{error}</p>
-                  </div>
-                </div>
-              </div>
-            )}
           </form>
         </div>
       </div>
+      <Toaster position="top-center" reverseOrder={false} />
     </div>
   );
 }

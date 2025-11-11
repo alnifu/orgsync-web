@@ -3,15 +3,15 @@ import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
 import { Search } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { User } from '../../types/database.types';
+import toast from 'react-hot-toast';
 
 type SelectAdviserProps = {
   isOpen: boolean;
   onClose: () => void;
   orgId: string;
-  onError?: (error: string) => void;
 };
 
-export default function SelectAdviser({ isOpen, onClose, orgId, onError }: SelectAdviserProps) {
+export default function SelectAdviser({ isOpen, onClose, orgId }: SelectAdviserProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
         if (error) throw error;
         setMembers(data || []);
       } catch (err) {
-        onError?.(err instanceof Error ? err.message : 'Failed to load members');
+        toast.error(err instanceof Error ? err.message : 'Failed to load members');
       } finally {
         setLoading(false);
       }
@@ -39,7 +39,7 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
     if (isOpen) {
       fetchMembers();
     }
-  }, [isOpen, onError]);
+  }, [isOpen]);
 
   // Handle adviser assignment
   const handleAssignAdviser = async (userId: string) => {
@@ -82,8 +82,9 @@ export default function SelectAdviser({ isOpen, onClose, orgId, onError }: Selec
 
       if (assignError) throw assignError;
       onClose();
+      toast.success('Adviser assigned successfully!');
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : 'Failed to assign adviser');
+      toast.error(err instanceof Error ? err.message : 'Failed to assign adviser');
       console.log('error:', err);
     } finally {
       setAssigning(false);

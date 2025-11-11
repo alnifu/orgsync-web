@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { Plus, Search, Loader2, Edit3 } from "lucide-react";
 import type { Posts, PostType } from '../../types/database.types';
 import { useUserRoles } from '../../utils/roles';
+import toast from 'react-hot-toast';
 import CreatePostModal from './CreatePostModal';
 import EditPostModal from './EditPostModal';
 import DeletePostModal from './DeletePostModal';
@@ -12,7 +13,6 @@ import PostCard from './PostCard';
 
 interface OrganizationPostsProps {
   organizationId: string;
-  onError: (error: string) => void;
 }
 
 // Type for the user object from Supabase auth
@@ -21,7 +21,7 @@ interface AuthUser {
   email?: string;
 }
 
-export default function OrganizationPosts({ organizationId, onError }: OrganizationPostsProps) {
+export default function OrganizationPosts({ organizationId }: OrganizationPostsProps) {
   const [posts, setPosts] = useState<Posts[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Posts[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -103,7 +103,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
       if (error) throw error;
       setPosts(data as Posts[] || []);
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to fetch posts');
+      toast.error(err instanceof Error ? err.message : 'Failed to fetch posts');
     } finally {
       setLoading(false);
     }
@@ -169,8 +169,9 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
       
       if (error) throw error;
       fetchPosts();
+      toast.success('Post pin status updated!');
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to toggle pin');
+      toast.error(err instanceof Error ? err.message : 'Failed to toggle pin');
     }
   }
 
@@ -360,6 +361,7 @@ export default function OrganizationPosts({ organizationId, onError }: Organizat
 
       {/* Modals */}
       <CreatePostModal
+        key={selectedPostType}
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onPostCreated={fetchPosts}

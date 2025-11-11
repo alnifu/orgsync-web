@@ -9,6 +9,7 @@ interface FlappyConfig {
   challenge_id: string;
   org_id: string;
   name: string;
+  description?: string; 
   player_image_url?: string;
   background_image_url?: string;
   start_time?: string;
@@ -40,11 +41,11 @@ export default function FlappyChallengePicker() {
 
         const orgIds = memberships.map((m) => m.org_id);
 
-        // Fetch flappy configs for those orgs
+        // ✅ Include "description" in the select query
         const { data, error } = await supabase
           .from("flappy_config")
           .select(
-            "id, challenge_id, org_id, name, player_image_url, background_image_url, start_time, end_time"
+            "id, challenge_id, org_id, name, description, player_image_url, background_image_url, start_time, end_time"
           )
           .in("org_id", orgIds);
 
@@ -93,7 +94,9 @@ export default function FlappyChallengePicker() {
           <ArrowLeft className="w-5 h-5 mr-1" />
           Back
         </button>
-        <h2 className="text-2xl font-semibold mb-2 text-gray-800">No Challenges Available</h2>
+        <h2 className="text-2xl font-semibold mb-2 text-gray-800">
+          No Challenges Available
+        </h2>
         <p className="text-gray-600 max-w-md">
           There are currently no Flappy challenges available for your organization.
         </p>
@@ -133,12 +136,21 @@ export default function FlappyChallengePicker() {
                   className="w-full h-full object-cover rounded-t-2xl"
                 />
               </div>
+
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
                   <h2 className="text-lg font-semibold mb-1 text-gray-900">
                     {config.name}
                   </h2>
-                  <p className="text-sm text-gray-600 line-clamp-3">
+
+                  {/* ✅ Display description */}
+                  {config.description && (
+                    <p className="text-sm text-gray-700 mb-2 line-clamp-3">
+                      {config.description}
+                    </p>
+                  )}
+
+                  <p className="text-sm text-gray-600">
                     {config.start_time && config.end_time
                       ? `Available from ${new Date(
                           config.start_time
@@ -156,6 +168,7 @@ export default function FlappyChallengePicker() {
                       : "Available challenge"}
                   </p>
                 </div>
+
                 <button className="mt-4 w-full bg-green-600 text-white py-2 rounded-full hover:bg-green-700 transition">
                   Play Challenge
                 </button>

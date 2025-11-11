@@ -21,6 +21,8 @@ export default function Members() {
   const [error, setError] = useState<string | null>(null);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
+  const [officerUserIds, setOfficerUserIds] = useState<Set<string>>(new Set());
+  const [memberUserIds, setMemberUserIds] = useState<Set<string>>(new Set());
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,6 +44,33 @@ export default function Members() {
     try {
       setLoading(true);
       
+      // First, fetch officer user IDs
+      const { data: officerData, error: officerError } = await supabase
+        .from('org_managers')
+        .select('user_id');
+
+      if (officerError) {
+        console.error('Error fetching officers:', officerError);
+        // Continue anyway, just won't hide promote buttons
+      } else {
+        const officerIds = new Set((officerData || []).map(o => o.user_id));
+        setOfficerUserIds(officerIds);
+      }
+
+      // Fetch member user IDs
+      const { data: memberData, error: memberError } = await supabase
+        .from('org_members')
+        .select('user_id')
+        .eq('is_active', true);
+
+      if (memberError) {
+        console.error('Error fetching members:', memberError);
+        // Continue anyway
+      } else {
+        const memberIds = new Set((memberData || []).map(m => m.user_id));
+        setMemberUserIds(memberIds);
+      }
+      
       let query = supabase
         .from('users')
         .select('*', { count: 'exact' });
@@ -54,11 +83,13 @@ export default function Members() {
       }
 
       // Apply specific filters
-      if (filterDepartment) {
+      const validDepartments = ['CITE', 'CBEAM', 'COL', 'CON', 'CEAS', 'OTHERS'];
+      if (filterDepartment && validDepartments.includes(filterDepartment)) {
         query = query.eq('department', filterDepartment);
       }
-      if (filterYear) {
-        query = query.eq('year_level', filterYear);
+        const validYears = ['1', '2', '3', '4', '5'];
+      if (filterYear && validYears.includes(filterYear)) {
+          query = query.eq('year_level', parseInt(filterYear, 10));
       }
       if (filterCourse) {
         query = query.eq('program', filterCourse);
@@ -73,7 +104,15 @@ export default function Members() {
 
       const { data, error, count } = await query;
 
-      if (error) throw error;
+      if (error) {
+        // Handle 416 Range Not Satisfiable error (offset too large for filtered results)
+        if (error.code === 'PGRST116' || error.message?.includes('416') || error.message?.includes('Range Not Satisfiable')) {
+          // Reset to first page and retry
+          setCurrentPage(1);
+          return;
+        }
+        throw error;
+      }
       console.log('Fetched members:', data);
       setMembers(data || []);
       setTotalCount(count || 0);
@@ -88,6 +127,11 @@ export default function Members() {
   useEffect(() => {
     fetchMembers();
   }, [searchQuery, filterDepartment, filterYear, filterCourse, sortField, sortDirection, currentPage]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterDepartment, filterYear, filterCourse]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -162,11 +206,11 @@ export default function Members() {
           className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
         >
           <option value="">All Years</option>
-          <option value="1st">1st Year</option>
-          <option value="2nd">2nd Year</option>
-          <option value="3rd">3rd Year</option>
-          <option value="4th">4th Year</option>
-          <option value="5th">5th Year</option>
+         <option value="1">1st Year</option>
+         <option value="2">2nd Year</option>
+         <option value="3">3rd Year</option>
+         <option value="4">4th Year</option>
+         <option value="5">5th Year</option>
         </select>
 
         <select
@@ -365,7 +409,7 @@ export default function Members() {
                       </span>
                     </td>
                     <td className="pl-4 pr-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-start gap-2">
                         <button
                           onClick={() => navigate(`/admin/dashboard/profile/${member.id}`)}
                           className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 transition-colors"
@@ -374,17 +418,19 @@ export default function Members() {
                           <UserIcon className="h-3.5 w-3.5" />
                           View
                         </button>
-                        <button
-                          onClick={() => {
-                            setSelectedMember(member);
-                            setShowPromoteModal(true);
-                          }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 hover:border-green-300 transition-colors"
-                          title="Promote to Officer"
-                        >
-                          <Shield className="h-3.5 w-3.5" />
-                          Promote
-                        </button>
+                        {!officerUserIds.has(member.id) && memberUserIds.has(member.id) && (
+                          <button
+                            onClick={() => {
+                              setSelectedMember(member);
+                              setShowPromoteModal(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 hover:border-green-300 transition-colors"
+                            title="Promote to Officer"
+                          >
+                            <Shield className="h-3.5 w-3.5" />
+                            Promote
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

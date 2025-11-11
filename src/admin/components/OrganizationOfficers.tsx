@@ -2,15 +2,25 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { User } from '../../types/database.types';
+import toast from 'react-hot-toast';
 import { UserPlus, Users, X, Search, Filter, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 interface OrganizationOfficersProps {
   organizationId: string;
-  onError: (error: string) => void;
 }
 
-export default function OrganizationOfficers({ organizationId, onError }: OrganizationOfficersProps) {
+// Helper function to format ordinal numbers
+const formatOrdinal = (num: number): string => {
+  const j = num % 10;
+  const k = num % 100;
+  if (j === 1 && k !== 11) return num + 'st';
+  if (j === 2 && k !== 12) return num + 'nd';
+  if (j === 3 && k !== 13) return num + 'rd';
+  return num + 'th';
+};
+
+export default function OrganizationOfficers({ organizationId }: OrganizationOfficersProps) {
   const [officers, setOfficers] = useState<User[]>([]);
   const [availableOfficers, setAvailableOfficers] = useState<User[]>([]);
   const [officerSearchQuery, setOfficerSearchQuery] = useState('');
@@ -67,7 +77,7 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
       }
     } catch (err) {
       console.error('Error fetching officers:', err);
-      onError(err instanceof Error ? err.message : 'Failed to fetch officers');
+      toast.error(err instanceof Error ? err.message : 'Failed to fetch officers');
     }
   };
 
@@ -182,8 +192,9 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
 
       // Update local state
       setOfficers(prev => prev.filter(officer => officer.id !== memberId));
+      toast.success('Officer removed successfully!');
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to remove officer');
+      toast.error(err instanceof Error ? err.message : 'Failed to remove officer');
     }
   };
 
@@ -235,8 +246,9 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
       setPosition('');
       setShowAddOfficers(false);
       await fetchOfficers();
+      toast.success('Officer assigned successfully!');
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to assign officer');
+      toast.error(err instanceof Error ? err.message : 'Failed to assign officer');
     }
   };
 
@@ -326,7 +338,7 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
                   >
                     <option value="">All Year Levels</option>
                     {yearLevels.map(level => (
-                      <option key={level} value={level.toString()}>{level}st Year</option>
+                      <option key={level} value={level.toString()}>{formatOrdinal(level)} Year</option>
                     ))}
                   </select>
                 </div>
@@ -373,7 +385,7 @@ export default function OrganizationOfficers({ organizationId, onError }: Organi
                             {officer.first_name || 'Unknown'} {officer.last_name || 'User'}
                           </p>
                           <span className="text-xs text-gray-500">
-                            {officer.year_level ? `${officer.year_level}st Year` : ''}
+                            {officer.year_level ? `${formatOrdinal(officer.year_level)} Year` : ''}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500">{officer.email}</p>

@@ -48,14 +48,17 @@ export default function PostDetail() {
   }, [postId]);
 
   useEffect(() => {
-    if (currentUser && postId) {
-      fetchUserRsvp();
-      fetchRsvpStats();
-      fetchUserVote();
-      fetchVoteStats();
-      fetchUserFormResponse();
+    if (currentUser && postId && post) {
+      // RSVP functionality disabled
+      if (post.post_type === 'poll') {
+        fetchUserVote();
+        fetchVoteStats();
+      }
+      if (post.post_type === 'feedback') {
+        fetchUserFormResponse();
+      }
     }
-  }, [currentUser, postId]);
+  }, [currentUser, postId, post]);
 
   useEffect(() => {
     if (post) {
@@ -82,7 +85,7 @@ export default function PostDetail() {
     if (!post?.user_id) return;
     const { data } = await supabase
       .from('users')
-      .select('id, first_name, last_name, profile_pic')
+      .select('id, first_name, last_name, avatar_url')
       .eq('id', post.user_id)
       .single();
     setUserData(data);
@@ -165,75 +168,19 @@ export default function PostDetail() {
   }
 
   async function fetchUserRsvp() {
-    if (!currentUser || !postId) return;
-
-    const { data, error } = await supabase
-      .from('rsvps')
-      .select('*')
-      .eq('post_id', postId)
-      .eq('user_id', currentUser.id)
-      .single();
-
-    if (data && !error) {
-      setUserRsvp(data);
-    }
+    // Disabled - RSVP functionality not implemented
+    return;
   }
 
   async function fetchRsvpStats() {
-    if (!postId) return;
-
-    const { data, error } = await supabase
-      .from('rsvps')
-      .select('status')
-      .eq('post_id', postId);
-
-    if (data && !error) {
-      const stats = data.reduce((acc, rsvp) => {
-        acc[rsvp.status as keyof typeof acc] = (acc[rsvp.status as keyof typeof acc] || 0) + 1;
-        return acc;
-      }, { attending: 0, maybe: 0, not_attending: 0 });
-
-      setRsvpStats(stats);
-    }
+    // Disabled - RSVP functionality not implemented
+    return;
   }
 
   async function handleRsvp(status: string) {
-    if (!currentUser || !postId || rsvpLoading) return;
-
-    setRsvpLoading(true);
-    try {
-      if (userRsvp) {
-        // Update existing RSVP
-        const { error } = await supabase
-          .from('rsvps')
-          .update({ status, updated_at: new Date().toISOString() })
-          .eq('id', userRsvp.id);
-
-        if (!error) {
-          setUserRsvp({ ...userRsvp, status });
-          fetchRsvpStats(); // Refresh stats
-        }
-      } else {
-        // Create new RSVP
-        const { data, error } = await supabase
-          .from('rsvps')
-          .insert({
-            post_id: postId,
-            user_id: currentUser.id,
-            status
-          })
-          .select()
-          .single();
-
-        if (data && !error) {
-          setUserRsvp(data);
-          fetchRsvpStats(); // Refresh stats
-        }
-      }
-    } finally {
-      setRsvpLoading(false);
-    }
-  };
+    // Disabled - RSVP functionality not implemented
+    return;
+  }
 
   async function fetchUserVote() {
     if (!currentUser || !postId) return;
@@ -407,9 +354,11 @@ export default function PostDetail() {
   }
 
   function sharePost() {
-    const url = window.location.href;
+    if (!post) return;
+
+    const url = `${window.location.origin}/user/dashboard/posts/${post.id}`;
+
     navigator.clipboard.writeText(url).then(() => {
-      // Could show a toast notification here
       alert('Link copied to clipboard!');
     });
   }
@@ -582,9 +531,9 @@ export default function PostDetail() {
                       </>
                     ) : userData ? (
                       <>
-                        {userData.profile_pic ? (
+                        {userData.avatar_url ? (
                           <img
-                            src={userData.profile_pic}
+                            src={userData.avatar_url}
                             alt={`${userData.first_name} ${userData.last_name}`}
                             className="w-4 h-4 rounded-full object-cover"
                           />

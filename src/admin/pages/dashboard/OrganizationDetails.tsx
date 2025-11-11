@@ -17,10 +17,11 @@ import DeleteOrganizationModal from '../../components/DeleteOrganizationModal';
 import OrganizationLeaderboard from '../../components/OrganizationLeaderboard';
 import OrganizationQuizzes from '../../components/OrganizationQuizzes';
 import OrganizationOfficers from '../../components/OrganizationOfficers';
-import FlappyConfigUploader from './FlappyConfigUploader';
 import FlappyCommunityGoalsManager from './FlappyCommunityGoalsManager';
 import CommunityGoalsManager from './CommunityGoalsManager';
+import OrganizationAttendance from '../../components/OrganizationAttendance';
 import { Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 
 export default function OrganizationDetails() {
   const { id } = useParams<{ id: string }>();
@@ -248,61 +249,61 @@ export default function OrganizationDetails() {
 <TabsList className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap border-b border-gray-200 bg-white p-1 rounded-lg shadow-sm">
           <TabsTrigger
             value="overview"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="members"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Members
           </TabsTrigger>
           <TabsTrigger
             value="officers"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Officers
           </TabsTrigger>
           <TabsTrigger
             value="posts"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Posts
           </TabsTrigger>
           <TabsTrigger
             value="reports"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Reports
           </TabsTrigger>
           <TabsTrigger
+            value="attendance"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+          >
+            Attendance
+          </TabsTrigger>
+          <TabsTrigger
             value="quizzes"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Quizzes
           </TabsTrigger>
           <TabsTrigger
-            value="flappy"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
-          >
-            Flappy
-          </TabsTrigger>
-          <TabsTrigger
             value="leaderboard"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Leaderboard
           </TabsTrigger>
           <TabsTrigger
             value="quiz-goals"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Quiz Goals
           </TabsTrigger>
           <TabsTrigger
             value="flappy-goals"
-            className="px-5 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
+            className="px-4 py-2.5 -mb-px transition-all duration-200 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-green-700 focus:outline-none rounded-md font-medium"
           >
             Flappy Goals
           </TabsTrigger>
@@ -322,7 +323,6 @@ export default function OrganizationDetails() {
         <TabsContent value="members" className="space-y-4">
           <OrganizationMembers
             organizationId={id!}
-            onError={handleError}
           />
         </TabsContent>
 
@@ -330,7 +330,6 @@ export default function OrganizationDetails() {
         <TabsContent value="officers" className="space-y-4">
           <OrganizationOfficers
             organizationId={id!}
-            onError={handleError}
           />
         </TabsContent>
 
@@ -338,7 +337,6 @@ export default function OrganizationDetails() {
         <TabsContent value="posts" className="space-y-4">
           <OrganizationPosts
             organizationId={id!}
-            onError={handleError}
           />
         </TabsContent>
 
@@ -346,18 +344,19 @@ export default function OrganizationDetails() {
         <TabsContent value="reports" className="space-y-4">
           <OrganizationReports
             organizationId={id!}
-            onError={handleError}
+          />
+        </TabsContent>
+
+        {/* Attendance Tab */}
+        <TabsContent value="attendance" className="space-y-4">
+          <OrganizationAttendance
+            orgId={id!}
           />
         </TabsContent>
 
         {/* Quizzes Tab */}
         <TabsContent value="quizzes" className="space-y-4">
           <OrganizationQuizzes organizationId={id!} />
-        </TabsContent>
-
-        {/* Flappy Tab */}
-        <TabsContent value="flappy" className="space-y-4">
-          <FlappyConfigUploader orgId={id!} />
         </TabsContent>
 
         {/* Leaderboard Tab */}
@@ -388,22 +387,20 @@ export default function OrganizationDetails() {
         isOpen={isSelectAdviserOpen}
         onClose={() => setIsSelectAdviserOpen(false)}
         orgId={id!}
-        onError={handleError}
       />
 
       <EditOrganizationModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         organization={organization}
-        onError={handleError}
       />
 
       <DeleteOrganizationModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         organization={organization}
-        onError={handleError}
       />
+      <Toaster position="top-center" />
     </div>
   );
 }

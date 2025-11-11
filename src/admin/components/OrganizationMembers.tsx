@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { User, OrgMember } from '../../types/database.types';
+import toast from 'react-hot-toast';
 
 type OrgMemberWithUser = OrgMember & {
   users: User;
@@ -11,10 +12,9 @@ import { useNavigate } from 'react-router';
 
 interface OrganizationMembersProps {
   organizationId: string;
-  onError: (error: string) => void;
 }
 
-export default function OrganizationMembers({ organizationId, onError }: OrganizationMembersProps) {
+export default function OrganizationMembers({ organizationId }: OrganizationMembersProps) {
   const [organizationMembers, setOrganizationMembers] = useState<OrgMemberWithUser[]>([]);
   const [availableMembers, setAvailableMembers] = useState<User[]>([]);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
@@ -93,8 +93,9 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
         .eq('user_id', memberId);
       if (error) throw error;
       fetchOrganizationMembers();
+      toast.success('Member removed successfully!');
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to remove member');
+      toast.error(err instanceof Error ? err.message : 'Failed to remove member');
     }
   };
 
@@ -173,8 +174,9 @@ export default function OrganizationMembers({ organizationId, onError }: Organiz
 
       setSelectedMembers([]);
       fetchOrganizationMembers();
+      toast.success('Members added successfully!');
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to add members');
+      toast.error(err instanceof Error ? err.message : 'Failed to add members');
     } finally {
       setAddingMember(false);
     }

@@ -95,6 +95,11 @@ export default function OrgTable() {
       setOrganizations(data || []);
       setTotalCount(count || 0);
     } catch (err) {
+      // Handle 416 Range Not Satisfiable error by resetting to page 1
+      if (err instanceof Error && (err.message.includes('416') || err.message.includes('Range Not Satisfiable'))) {
+        setCurrentPage(1);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);

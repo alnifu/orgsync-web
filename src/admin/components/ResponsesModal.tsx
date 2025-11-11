@@ -16,6 +16,10 @@ interface RSVP {
   user_id: string;
   status: string;
   created_at: string;
+  users: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 interface PollVote {
@@ -23,6 +27,17 @@ interface PollVote {
   user_id: string;
   option_index: number;
   created_at: string;
+  users: {
+    first_name: string;
+    last_name: string;
+  };
+}
+
+interface EventEvaluationWithUser extends EventEvaluation {
+  users: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 interface FormResponse {
@@ -30,13 +45,17 @@ interface FormResponse {
   user_id: string;
   responses: Record<string, unknown>;
   submitted_at: string;
+  users: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 export default function ResponsesModal({ open, onOpenChange, post }: ResponsesModalProps) {
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [votes, setVotes] = useState<PollVote[]>([]);
   const [formResponses, setFormResponses] = useState<FormResponse[]>([]);
-  const [evaluations, setEvaluations] = useState<EventEvaluation[]>([]);
+  const [evaluations, setEvaluations] = useState<EventEvaluationWithUser[]>([]);
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'rsvps' | 'evaluations' | 'registrations'>('rsvps');
@@ -53,21 +72,72 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
           supabase.from('event_registrations').select('*').eq('post_id', post.id)
         ]);
         
-        setRsvps(rsvpData.data || []);
-        setEvaluations(evaluationData.data || []);
+        // Fetch user data for RSVPs
+        const rsvpUserIds = [...new Set((rsvpData.data || []).map(r => r.user_id))];
+        const rsvpUsers = rsvpUserIds.length > 0 ? await supabase
+          .from('users')
+          .select('id, first_name, last_name')
+          .in('id', rsvpUserIds) : { data: [] };
+        
+        // Fetch user data for evaluations
+        const evaluationUserIds = [...new Set((evaluationData.data || []).map(e => e.user_id))];
+        const evaluationUsers = evaluationUserIds.length > 0 ? await supabase
+          .from('users')
+          .select('id, first_name, last_name')
+          .in('id', evaluationUserIds) : { data: [] };
+        
+        // Merge user data
+        const rsvpsWithUsers = (rsvpData.data || []).map(rsvp => ({
+          ...rsvp,
+          users: (rsvpUsers.data || []).find(u => u.id === rsvp.user_id) || { first_name: 'Unknown', last_name: 'User' }
+        }));
+        
+        const evaluationsWithUsers = (evaluationData.data || []).map(evaluation => ({
+          ...evaluation,
+          users: (evaluationUsers.data || []).find(u => u.id === evaluation.user_id) || { first_name: 'Unknown', last_name: 'User' }
+        }));
+        
+        setRsvps(rsvpsWithUsers);
+        setEvaluations(evaluationsWithUsers);
         setRegistrations(registrationData.data || []);
       } else if (post.post_type === 'poll') {
         const { data } = await supabase
           .from('poll_votes')
           .select('*')
           .eq('post_id', post.id);
-        setVotes(data || []);
+        
+        // Fetch user data for poll votes
+        const voteUserIds = [...new Set((data || []).map(v => v.user_id))];
+        const voteUsers = voteUserIds.length > 0 ? await supabase
+          .from('users')
+          .select('id, first_name, last_name')
+          .in('id', voteUserIds) : { data: [] };
+        
+        const votesWithUsers = (data || []).map(vote => ({
+          ...vote,
+          users: (voteUsers.data || []).find(u => u.id === vote.user_id) || { first_name: 'Unknown', last_name: 'User' }
+        }));
+        
+        setVotes(votesWithUsers);
       } else if (post.post_type === 'feedback') {
         const { data } = await supabase
           .from('form_responses')
           .select('*')
           .eq('post_id', post.id);
-        setFormResponses(data || []);
+        
+        // Fetch user data for form responses
+        const responseUserIds = [...new Set((data || []).map(r => r.user_id))];
+        const responseUsers = responseUserIds.length > 0 ? await supabase
+          .from('users')
+          .select('id, first_name, last_name')
+          .in('id', responseUserIds) : { data: [] };
+        
+        const responsesWithUsers = (data || []).map(response => ({
+          ...response,
+          users: (responseUsers.data || []).find(u => u.id === response.user_id) || { first_name: 'Unknown', last_name: 'User' }
+        }));
+        
+        setFormResponses(responsesWithUsers);
       }
     } finally {
       setLoading(false);
@@ -78,7 +148,7 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
     if (open && post) {
       fetchResponses();
     }
-  }, [open, post, fetchResponses]);
+  }, [open, post]);
 
   function getPollOptions(): string[] {
     if (!post || post.post_type !== 'poll') return [];
@@ -111,14 +181,14 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
     if (post.post_type === 'event') {
       if (activeTab === 'rsvps') {
         data = rsvps.map(rsvp => ({
-          user_id: rsvp.user_id,
+          name: `${rsvp.users.first_name} ${rsvp.users.last_name}`,
           status: rsvp.status,
           created_at: rsvp.created_at
         }));
         filename = `event-rsvps-${post.id}.csv`;
       } else if (activeTab === 'evaluations') {
         data = evaluations.map(evaluation => ({
-          user_id: evaluation.user_id,
+          name: `${evaluation.users.first_name} ${evaluation.users.last_name}`,
           design_rating: evaluation.design,
           speakers_rating: evaluation.speakers,
           facilities_rating: evaluation.facilities,
@@ -147,14 +217,14 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
     } else if (post.post_type === 'poll') {
       const options = getPollOptions();
       data = votes.map(vote => ({
-        user_id: vote.user_id,
+        name: `${vote.users.first_name} ${vote.users.last_name}`,
         option: options[vote.option_index] || `Option ${vote.option_index + 1}`,
         created_at: vote.created_at
       }));
       filename = `poll-results-${post.id}.csv`;
     } else if (post.post_type === 'feedback') {
       data = formResponses.map(response => ({
-        user_id: response.user_id,
+        name: `${response.users.first_name} ${response.users.last_name}`,
         ...Object.fromEntries(
           Object.entries(response.responses).map(([key, value]) => [key, String(value)])
         ),
@@ -258,7 +328,7 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
                     <div className="space-y-2">
                       {rsvps.map((rsvp) => (
                         <div key={rsvp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="text-sm font-medium">{rsvp.user_id.slice(0, 8)}...</span>
+                          <span className="text-sm font-medium">{rsvp.users.first_name} {rsvp.users.last_name}</span>
                           <div className="flex items-center gap-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               rsvp.status === 'attending' ? 'bg-green-100 text-green-800' :
@@ -319,7 +389,7 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
                         <div key={evaluation.id} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-3">
                             <span className="text-sm font-medium text-gray-900">
-                              Evaluation from {evaluation.user_id.slice(0, 8)}...
+                              Evaluation from {evaluation.users.first_name} {evaluation.users.last_name}
                             </span>
                             <span className="text-xs text-gray-500">
                               {new Date(evaluation.created_at).toLocaleDateString()}
@@ -437,7 +507,7 @@ export default function ResponsesModal({ open, onOpenChange, post }: ResponsesMo
                     <div key={response.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-medium text-gray-900">
-                          Response from {response.user_id.slice(0, 8)}...
+                          Response from {response.users.first_name} {response.users.last_name}
                         </span>
                         <span className="text-xs text-gray-500">
                           {new Date(response.submitted_at).toLocaleDateString()}

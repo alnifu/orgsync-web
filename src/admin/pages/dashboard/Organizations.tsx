@@ -104,6 +104,11 @@ export default function Organizations() {
       setOrganizations(data || []);
       setTotalCount(count || 0);
     } catch (err) {
+      // Handle 416 Range Not Satisfiable error by resetting to page 1
+      if (err instanceof Error && (err.message.includes('416') || err.message.includes('Range Not Satisfiable'))) {
+        setCurrentPage(1);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -115,6 +120,11 @@ export default function Organizations() {
       fetchOrganizations();
     }
   }, [searchQuery, filterOrgType, filterDepartment, sortField, sortDirection, currentPage, rolesLoading]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterOrgType, filterDepartment]);
 
   // Auto-navigate officers/advisers to single organization
   useEffect(() => {

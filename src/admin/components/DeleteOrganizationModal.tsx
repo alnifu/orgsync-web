@@ -3,19 +3,18 @@ import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
 import { useNavigate } from 'react-router';
 import { supabase } from '../../lib/supabase';
 import type { Organization } from '../../types/database.types';
+import toast from 'react-hot-toast';
 
 type DeleteOrganizationProps = {
   isOpen: boolean;
   onClose: () => void;
   organization: Organization;
-  onError?: (error: string) => void;
 };
 
 export default function DeleteOrganization({
   isOpen,
   onClose,
-  organization,
-  onError
+  organization
 }: DeleteOrganizationProps) {
   const [confirmCode, setConfirmCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,8 +33,9 @@ export default function DeleteOrganization({
       if (error) throw error;
       onClose();
       navigate('/dashboard/organizations');
+      toast.success('Organization deleted successfully!');
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : 'Failed to delete organization');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete organization');
     } finally {
       setLoading(false);
     }

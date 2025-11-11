@@ -71,6 +71,8 @@ export default function UserProfile() {
   const [cropImageSrc, setCropImageSrc] = useState<string>('');
   const [coins, setCoins] = useState<number>(0);
   const [badges, setBadges] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [officerPositions, setOfficerPositions] = useState<any[]>([]);
 
   // Fetch user profile
   useEffect(() => {
@@ -144,6 +146,52 @@ export default function UserProfile() {
           }
         } catch (innerErr) {
           console.error('Unexpected error fetching badges:', innerErr);
+        }
+
+        // Fetch organizations the user is a member of
+        const { data: orgData, error: orgError } = await supabase
+          .from('org_members')
+          .select(`
+            joined_at,
+            org_id,
+            organizations (
+              id,
+              name,
+              abbrev_name,
+              department,
+              org_type,
+              status
+            )
+          `)
+          .eq('user_id', authUser.id)
+          .eq('is_active', true);
+
+        if (orgError) {
+          console.error("Error fetching organizations:", orgError);
+        } else {
+          setOrganizations(orgData || []);
+        }
+
+        // Fetch officer positions
+        const { data: officerData, error: officerError } = await supabase
+          .from('org_managers')
+          .select(`
+            position,
+            manager_role,
+            assigned_at,
+            org_id,
+            organizations (
+              id,
+              name,
+              abbrev_name
+            )
+          `)
+          .eq('user_id', authUser.id);
+
+        if (officerError) {
+          console.error("Error fetching officer positions:", officerError);
+        } else {
+          setOfficerPositions(officerData || []);
         }
       } catch (err) {
         console.log('Error in fetchUser:', err);
@@ -247,16 +295,33 @@ export default function UserProfile() {
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setCropImageSrc(reader.result as string);
-        setShowCropModal(true);
-      };
-      reader.readAsDataURL(file);
-    }
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // Validate file type
+  if (!file.type.startsWith("image/")) {
+    setError("Please upload a valid image file (JPG, PNG, or similar).");
+    e.target.value = ""; 
+    return;
+  }
+
+  // limit file size (5MB)
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    setError("Image file size must be less than 5MB.");
+    e.target.value = "";
+    return;
+  }
+
+  // If valid, continue as before
+  const reader = new FileReader();
+  reader.onload = () => {
+    setCropImageSrc(reader.result as string);
+    setShowCropModal(true);
+    setError(null); // clear old errors
   };
+  reader.readAsDataURL(file);
+};
 
   const handleCropComplete = async (croppedFile: File) => {
     // set local state so preview updates immediately
@@ -406,86 +471,86 @@ export default function UserProfile() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
           {/* Profile Header */}
-          <div className="relative bg-gradient-to-r from-green-600 to-green-700 px-6 py-12">
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="relative flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 sm:gap-8">
-              <div className="relative group">
-                {isEditing && avatarFile ? (
-                  <div className="relative">
-                    <img
-                      src={URL.createObjectURL(avatarFile)}
-                      alt="Preview"
-                      className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20"
-                    />
-                    <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                  </div>
-                ) : user.avatar_url ? (
-                  <div className="relative">
-                    <img
-                      src={user.avatar_url}
-                      alt={`${user.first_name} ${user.last_name}`}
-                      className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20"
-                    />
-                    <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                  </div>
-                ) : (
-                  <div className="h-32 w-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-4 border-white shadow-2xl ring-4 ring-white/20 flex items-center justify-center">
-                    <span className="text-4xl font-bold text-gray-600">
-                      {(user.first_name ? user.first_name.charAt(0) : '?')}{(user.last_name ? user.last_name.charAt(0) : '?')}
-                    </span>
-                  </div>
-                )}
-                {isEditing && (
-                  <label className="absolute bottom-2 right-2 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-200 hover:scale-110 border border-gray-200">
-                    <Camera className="h-5 w-5 text-gray-600" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
-              <div className="text-white sm:ml-8 mt-4 sm:mt-0">
-                {isEditing ? (
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={editForm.first_name}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
-                      className="text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none text-white placeholder-white/70"
-                      placeholder="First name"
-                    />
-                    <input
-                      type="text"
-                      value={editForm.last_name}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
-                      className="text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none text-white placeholder-white/70"
-                      placeholder="Last name"
-                    />
-                  </div>
-                ) : (
-                  <h2 className="text-3xl font-bold mb-2">
-                    {user.first_name} {user.last_name}
-                  </h2>
-                )}
-                <p className="text-green-100 text-lg mb-3">{user.email}</p>
-                <div className="flex items-center space-x-3">
-                  <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm border border-white/30">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    {user.user_type || 'Not specified'}
-                  </span>
-                  <div className="flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-yellow-200 backdrop-blur-sm border border-orange-400/30">
-                    <Coins className="w-4 h-4 mr-2 text-yellow-700" />
-                    <span className="text-yellow-700">{coins} Coins</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+<div className="relative bg-gradient-to-r from-green-600 to-green-700 px-6 py-12">
+  <div className="absolute inset-0 bg-black/10"></div>
+
+  <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-6">
+    {/* Avatar */}
+    <div className="relative group flex-shrink-0">
+      {isEditing && avatarFile ? (
+        <img
+          src={URL.createObjectURL(avatarFile)}
+          alt="Preview"
+          className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20"
+        />
+      ) : user.avatar_url ? (
+        <img
+          src={user.avatar_url}
+          alt={`${user.first_name} ${user.last_name}`}
+          className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-white/20"
+        />
+      ) : (
+        <div className="h-32 w-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 border-4 border-white shadow-2xl ring-4 ring-white/20 flex items-center justify-center">
+          <span className="text-4xl font-bold text-gray-600">
+            {(user.first_name ? user.first_name.charAt(0) : '?')}{(user.last_name ? user.last_name.charAt(0) : '?')}
+          </span>
+        </div>
+      )}
+
+      {isEditing && (
+        <label className="absolute bottom-2 right-2 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-200 hover:scale-110 border border-gray-200">
+          <Camera className="h-5 w-5 text-gray-600" />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
+        </label>
+      )}
+    </div>
+
+    {/* Name & Info */}
+    <div className="text-white w-full min-w-0 flex-1 text-center sm:text-left">
+      {isEditing ? (
+        <div className="flex flex-col sm:flex-row sm:space-x-3 w-full min-w-0 items-center sm:items-start">
+          <input
+            type="text"
+            value={editForm.first_name}
+            onChange={(e) => setEditForm(prev => ({ ...prev, first_name: e.target.value }))}
+            className="flex-1 min-w-0 text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none placeholder-white/70 text-center sm:text-left"
+            placeholder="First name"
+          />
+          <input
+            type="text"
+            value={editForm.last_name}
+            onChange={(e) => setEditForm(prev => ({ ...prev, last_name: e.target.value }))}
+            className="flex-1 min-w-0 text-3xl font-bold bg-transparent border-b-2 border-white/50 focus:border-white outline-none placeholder-white/70 text-center sm:text-left"
+            placeholder="Last name"
+          />
+        </div>
+      ) : (
+        <h2 className="text-3xl font-bold mb-2 break-words">{user.first_name} {user.last_name}</h2>
+      )}
+
+      <p className="text-green-100 text-lg mb-3">{user.email}</p>
+
+      {/* User type + Coins row */}
+      <div className="flex justify-center sm:justify-start items-center space-x-3">
+        <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm border border-white/30">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          {user.user_type || 'Not specified'}
+        </span>
+        <div className="flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-yellow-200 backdrop-blur-sm border border-orange-400/30">
+          <Coins className="w-4 h-4 mr-2 text-yellow-700" />
+          <span className="text-yellow-700">{coins} Coins</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
           {/* Profile Details */}
           <div className="px-8 py-8 bg-gray-50">
@@ -670,6 +735,94 @@ export default function UserProfile() {
                     </dd>
                   </div>
                 </dl>
+              </div>
+            </div>
+
+            {/* Organization Information */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Organization Membership</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* Member Organizations */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <h4 className="text-md font-semibold text-gray-900">Member Organizations</h4>
+                  </div>
+
+                  {organizations.length > 0 ? (
+                    <div className="space-y-3">
+                      {organizations.map((membership) => (
+                        <div key={membership.org_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <span className="text-xs font-semibold text-blue-600">
+                                {membership.organizations?.abbrev_name?.charAt(0) || membership.organizations?.name?.charAt(0) || 'O'}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {membership.organizations?.abbrev_name || membership.organizations?.name || 'Unknown Organization'}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {membership.organizations?.department && `${membership.organizations.department} • `}
+                                {membership.organizations?.org_type}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Joined {(membership.joined_at || membership.organizations?.created_at) ? new Date(membership.joined_at || membership.organizations?.created_at).toLocaleDateString() : 'Date not available'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">Not a member of any organizations</p>
+                  )}
+                </div>
+
+                {/* Officer Positions */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-md font-semibold text-gray-900">Officer Positions</h4>
+                  </div>
+
+                  {officerPositions.length > 0 ? (
+                    <div className="space-y-3">
+                      {officerPositions.map((position, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{position.position} {position.manager_role && `(${position.manager_role})`}</div>
+                              <div className="text-xs text-gray-600">
+                                {position.organizations?.abbrev_name || position.organizations?.name || 'Unknown Organization'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Since {position.assigned_at ? new Date(position.assigned_at).toLocaleDateString() : 'Date not available'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic text-sm">No officer positions</p>
+                  )}
+                </div>
               </div>
             </div>
 

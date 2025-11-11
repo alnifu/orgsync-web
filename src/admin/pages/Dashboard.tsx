@@ -2,13 +2,22 @@ import { Outlet } from "react-router";
 import Sidebar from "../components/Sidebar";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { useUserRoles } from "../../utils/roles";
 
 export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { user } = useAuth();
+  const { isAdmin, isOfficer } = useUserRoles(user?.id);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
+
+  // Dynamically set header title based on role
+  let headerTitle = "OrgSync";
+  if (isAdmin()) headerTitle = "OrgSync Admin";
+  else if (isOfficer()) headerTitle = "OrgSync Officer";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -23,7 +32,7 @@ export default function Dashboard() {
             >
               {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">OrgSync Admin</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{headerTitle}</h1>
           </div>
         </div>
       </header>

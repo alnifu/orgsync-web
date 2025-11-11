@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { Pencil, Trash2, Plus, Search, Users } from "lucide-react";
+import { Pencil, Trash2, Search, Users } from "lucide-react";
 import CreateQuiz from "../pages/CreateQuiz";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -162,13 +162,6 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
       {/* Header with Create Button and Search */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-xl font-semibold text-gray-900">Organization Quizzes</h2>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Quiz
-        </button>
       </div>
 
       {/* Search Bar */}
@@ -314,8 +307,6 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {quizScores.map((score, index) => {
-                        const totalQuestions = selectedQuiz.data?.questions?.length || 1;
-                        
                         return (
                           <tr key={score.id} className={index < 3 ? "bg-yellow-50" : ""}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -325,7 +316,7 @@ const OrganizationQuizzes: React.FC<OrganizationQuizzesProps> = ({ organizationI
                               {score.username}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {score.score}/{totalQuestions}
+                              {score.score}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {formatDate(score.created_at)}

@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { Camera, Check, ArrowRight, ArrowLeft } from "lucide-react";
 import ImageCropModal from "../admin/components/ImageCropModal";
 import type { User } from "../types/database.types";
+import toast, { Toaster } from "react-hot-toast";
 
 interface ProfileSetupData {
     firstName: string;
@@ -24,7 +25,6 @@ export default function ProfileSetup() {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [userProfile, setUserProfile] = useState<User | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -215,10 +215,18 @@ export default function ProfileSetup() {
     };
 
     const handleNext = () => {
-        if (validateStep(currentStep) && currentStep < totalSteps) {
-            setCurrentStep(currentStep + 1);
-        }
-    };
+  if (validateStep(currentStep) && currentStep < totalSteps) {
+    // Only show confirmation when moving from Step 2 → Step 3
+    if (currentStep === 2) {
+      const confirmed = window.confirm(
+        "Please ensure your information is correct before proceeding.\nOnce submitted, it cannot be changed."
+      );
+      if (!confirmed) return; // stop if user cancels
+    }
+
+    setCurrentStep(currentStep + 1);
+  }
+};
 
     const handlePrevious = () => {
         if (currentStep > 1) {
@@ -231,23 +239,23 @@ export default function ProfileSetup() {
 
         // Validate required fields
         if (!profileData.firstName.trim() || !profileData.lastName.trim()) {
-            setError("First name and last name are required");
+            toast.error("First name and last name are required");
             return;
         }
 
         if (!profileData.department || (userProfile.user_type === 'student' && profileData.department === 'NONE')) {
-            setError("Please select a valid department");
+            toast.error("Please select a valid department");
             return;
         }
 
         if (userProfile.user_type === "student") {
             if (!profileData.program || !profileData.studentNumber || !profileData.yearLevel) {
-                setError("All academic information fields are required for students");
+                toast.error("All academic information fields are required for students");
                 return;
             }
         } else {
             if (!profileData.employeeId || !profileData.position) {
-                setError("Employee ID and position are required for faculty");
+                toast.error("Employee ID and position are required for faculty");
                 return;
             }
         }
@@ -255,7 +263,6 @@ export default function ProfileSetup() {
         try {
             setIsSubmitting(true);
             setLoading(true);
-            setError(null);
 
             let avatarUrl = userProfile.avatar_url;
 
@@ -341,7 +348,7 @@ export default function ProfileSetup() {
             navigate("/dashboard");
 
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to complete profile setup");
+            toast.error(err instanceof Error ? err.message : "Failed to complete profile setup");
         } finally {
             setLoading(false);
             setIsSubmitting(false);
@@ -498,12 +505,14 @@ export default function ProfileSetup() {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Student Number</label>
                                         <input
-                                            type="text"
+                                            type="number"
                                             name="studentNumber"
-                                            value={profileData.studentNumber}
+                                            value={profileData.studentNumber ?? ""}
                                             onChange={handleInputChange}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                                             required
+                                            min={0} 
+                                            step={1}
                                         />
                                     </div>
 
@@ -667,12 +676,6 @@ export default function ProfileSetup() {
                     <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
                         {renderStepContent()}
 
-                        {error && (
-                            <div className="mt-6 rounded-md bg-red-50 p-4">
-                                <p className="text-sm text-red-800">{error}</p>
-                            </div>
-                        )}
-
                         <div className="mt-8 flex justify-between">
                             <button
                                 onClick={handlePrevious}
@@ -706,6 +709,7 @@ export default function ProfileSetup() {
                     </div>
                 </div>
             </div>
+            <Toaster position="top-center" reverseOrder={false} />
         </>
     );
 }
