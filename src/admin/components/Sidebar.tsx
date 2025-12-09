@@ -22,8 +22,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   // Define links based on user role
   const getLinks = () => {
     const baseLinks = [
-      { to: `profile/${user?.id}`, label: "My Profile", icon: User },
-      { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }
+      { to: `profile/${user?.id}`, label: "My Profile", icon: User }
     ];
 
     // Only admins see additional admin links
@@ -35,8 +34,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
         { to: "officers", label: "Officers", icon: Users },
         { to: "members", label: "Members", icon: User },
         { to: "posts", label: "Posts", icon: FileText },
-        { to: "reports", label: "Reports", icon: BarChart3 },
-        ...baseLinks.slice(1) // Return to Portal
+        { to: "reports", label: "Reports", icon: BarChart3 }
       ];
     }
 
@@ -63,7 +61,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
 
       links.push(
         { to: "submissions", label: "Submissions", icon: Image },
-        ...baseLinks.slice(1) // Return to Portal
+        { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }
       );
 
       return links;
@@ -84,7 +82,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   };
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 flex h-full w-50 flex-col bg-green-700 border-r border-green-600 transition-transform duration-300 ${
+    <div className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col bg-green-700 border-r border-green-600 transition-transform duration-300 ${
       isOpen ? 'translate-x-0' : '-translate-x-full'
     }`}>
       <div className="flex h-16 items-center justify-between border-b border-green-600 px-4">

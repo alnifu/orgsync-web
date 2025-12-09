@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, RouterProvider, Link } from "react-route
 
 // Shared Components
 import PrivateRoute from "./components/PrivateRoute";
+import RoleRoute from "./components/RoleRoute";
 import { useAuth } from "./context/AuthContext";
 import { useUserRoles } from "./utils/roles";
 import { useNotifications } from "./hooks/useNotifications";
@@ -66,46 +67,70 @@ const DashboardRedirect = () => {
     );
   }
 
-  const showAdminPortal = isAdmin() || isOfficer() || isAdviser();
-  const showUserPortal = !isAdmin() || true; // Always show user portal, or show it for non-admins
-
-  let adminPortalLabel = "";
+  // Auto-redirect based on user role
   if (isAdmin()) {
-    adminPortalLabel = "Admin Portal";
-  } else if (isOfficer()) {
-    adminPortalLabel = "Officer Portal";
-  } else if (isAdviser()) {
-    adminPortalLabel = "Adviser Portal";
-  }
+    return <Navigate to="/admin/dashboard" replace />;
+  } else if (isOfficer() || isAdviser()) {
+    // Officers and advisers get to choose their dashboard
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-2xl w-full space-y-8 p-8">
-        <h2 className="text-center text-3xl font-bold text-gray-900">Select Dashboard</h2>
-        <div className={`grid grid-cols-1 ${showAdminPortal && showUserPortal ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-md mx-auto'} gap-6`}>
-          {showUserPortal && (
+    let adminPortalLabel = "";
+    if (isOfficer()) {
+      adminPortalLabel = "Officer Portal";
+    } else if (isAdviser()) {
+      adminPortalLabel = "Adviser Portal";
+    }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
+        <div className="max-w-4xl w-full space-y-8 p-8">
+          <div className="text-center">
+            <h2 className="text-4xl font-bold text-gray-900 mb-2">Welcome to OrgSync</h2>
+            <p className="text-lg text-gray-600">Choose your dashboard to get started</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Link to="/user/dashboard"
-              className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-green-500 flex flex-col items-center">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Member Portal</h3>
-              <p className="text-gray-600 text-center">Access news feed, events, organizations, and games</p>
+              className="group p-8 bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-green-200 hover:border-green-400 flex flex-col items-center transform hover:-translate-y-1">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-3">Member Portal</h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Access news feed, join events, participate in organizations, and enjoy games with your community
+              </p>
             </Link>
-          )}
-          {showAdminPortal && (
+
             <Link to="/admin/dashboard"
-              className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border-2 border-blue-500 flex flex-col items-center">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">{adminPortalLabel}</h3>
-              <p className="text-gray-600 text-center">Manage organizations, officers, members, and posts</p>
+              className="group p-8 bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-blue-200 hover:border-blue-400 flex flex-col items-center transform hover:-translate-y-1">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-3">{adminPortalLabel}</h3>
+              <p className="text-gray-600 text-center leading-relaxed">
+                Manage organizations, oversee officers and members, moderate content, and access administrative tools
+              </p>
             </Link>
+          </div>
+
+          {roles && (
+            <div className="text-center">
+              <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full">
+                <span className="text-sm text-gray-600">Logged in as:</span>
+                <span className="ml-2 font-medium text-gray-900 capitalize">{roles.role}</span>
+              </div>
+            </div>
           )}
         </div>
-        {roles && (
-          <div className="text-center text-sm text-gray-500">
-            Logged in as: <span className="font-medium capitalize">{roles.role}</span>
-          </div>
-        )}
       </div>
-    </div>
-  );
+    );
+  } else {
+    // Regular members go directly to user dashboard
+    return <Navigate to="/user/dashboard" replace />;
+  }
 };
 
 const router = createBrowserRouter([
@@ -136,7 +161,7 @@ const router = createBrowserRouter([
   // Admin Routes
   {
     path: "/admin/dashboard",
-    element: <PrivateRoute><AdminDashboard /></PrivateRoute>,
+    element: <PrivateRoute><RoleRoute allowedRoles={['admin', 'officer', 'adviser']}><AdminDashboard /></RoleRoute></PrivateRoute>,
     children: [
       {
         index: true,
@@ -144,7 +169,7 @@ const router = createBrowserRouter([
       },
       {
         path: "org-table",
-        element: <AdminOrgTable />
+        element: <RoleRoute allowedRoles={['admin']}><AdminOrgTable /></RoleRoute>
       },
       {
         path: "organizations",
@@ -152,27 +177,27 @@ const router = createBrowserRouter([
           { index: true, element: <AdminOrganizations /> },
           { path: "new", element: <AdminNewOrganization /> },
           { path: ":id", element: <AdminOrganizationDetails /> },
-          { path: ":orgId/ml-dashboard", element: <MLDashboard /> }
+          { path: ":orgId/ml-dashboard", element: <RoleRoute allowedRoles={['officer', 'adviser']}><MLDashboard /></RoleRoute> }
         ]
       },
-      { path: "officers", element: <AdminOfficers /> },
-      { path: "members", element: <AdminMembers /> },
-      { path: "posts", element: <AdminPosts /> },
-      { path: "reports", element: <AdminReports /> },
+      { path: "officers", element: <RoleRoute allowedRoles={['admin']}><AdminOfficers /></RoleRoute> },
+      { path: "members", element: <RoleRoute allowedRoles={['admin']}><AdminMembers /></RoleRoute> },
+      { path: "posts", element: <RoleRoute allowedRoles={['admin']}><AdminPosts /></RoleRoute> },
+      { path: "reports", element: <RoleRoute allowedRoles={['admin']}><AdminReports /></RoleRoute> },
       { path: "profile/:id", element: <AdminUserProfile /> },
       { path: "posts/:postId", element: <PostDetail /> },
-      { path: "contests", element: <OfficerContestManager /> },
-      { path: "submissions", element: <OfficerSubmissions /> },
-      { path: "officer-tools", element: <OfficerLandingPage /> },
-      { path: "flappy-config/:orgId", element: <FlappyConfigUploaderWrapper /> },
-      { path: "contests/:orgId", element: <OfficerContestManager /> },
-      { path: "create-quiz/:orgId", element: <CreateQuizWrapper /> }, 
+      { path: "contests", element: <RoleRoute allowedRoles={['officer', 'adviser']}><OfficerContestManager /></RoleRoute> },
+      { path: "submissions", element: <RoleRoute allowedRoles={['officer', 'adviser']}><OfficerSubmissions /></RoleRoute> },
+      { path: "officer-tools", element: <RoleRoute allowedRoles={['officer', 'adviser']}><OfficerLandingPage /></RoleRoute> },
+      { path: "flappy-config/:orgId", element: <RoleRoute allowedRoles={['officer', 'adviser']}><FlappyConfigUploaderWrapper /></RoleRoute> },
+      { path: "contests/:orgId", element: <RoleRoute allowedRoles={['officer', 'adviser']}><OfficerContestManager /></RoleRoute> },
+      { path: "create-quiz/:orgId", element: <RoleRoute allowedRoles={['officer', 'adviser']}><CreateQuizWrapper /></RoleRoute> }, 
     ]
   },
   // User Routes
   {
     path: "/user/dashboard",
-    element: <PrivateRoute><UserDashboard /></PrivateRoute>,
+    element: <PrivateRoute><RoleRoute allowedRoles={['officer', 'adviser', 'member']} redirectTo="/admin/dashboard"><UserDashboard /></RoleRoute></PrivateRoute>,
     children: [
       {
         path: "",
@@ -215,11 +240,7 @@ const router = createBrowserRouter([
       { path: "leaderboard", element: <LeaderboardPage /> },
       { path: "notifications", element: <NotificationInbox /> },
       { path: "flappy-challenges", element: <FlappyChallengePicker /> },
-      { path: "flappy-game", element: <FlappyGame /> },
-      {
-        path: "posts/:postId",
-        element: <PostDetail />
-      }
+      { path: "flappy-game", element: <FlappyGame /> }
      
     ]
   },

@@ -6,7 +6,12 @@ import {
   FileText,
   UserCheck,
   AlertCircle,
-  Plus
+  Plus,
+  User,
+  LayoutDashboard,
+  BarChart3,
+  Brain,
+  Image
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
@@ -25,9 +30,10 @@ interface DashboardStats {
   managedOrgId?: string;
   managedMembers?: number;
   managedPosts?: number;
+  managedOrgPic?: string; // org logo
 }
 
-export default function AdminDashboardHome() {
+export default function AdminDashboard() {
   const { user } = useAuth();
   const { roles, loading: rolesLoading, isAdmin, isOfficer, isAdviser } = useUserRoles(user?.id);
   const [stats, setStats] = useState<DashboardStats>({
@@ -159,12 +165,12 @@ export default function AdminDashboardHome() {
         // Get organization details
         const { data: orgData, error: orgError } = await supabase
           .from('organizations')
-          .select('id, abbrev_name')
+          .select('id, abbrev_name, org_pic')
           .eq('id', primaryOrgId)
           .single();
 
         if (orgError) throw orgError;
-        console.log('orgData:', orgData);
+
         // Get member count for the managed organization
         const { count: memberCount, error: memberError } = await supabase
           .from('org_members')
@@ -204,7 +210,8 @@ export default function AdminDashboardHome() {
           managedOrganization: orgData?.abbrev_name || 'Unknown Organization',
           managedOrgId: primaryOrgId,
           managedMembers: memberCount || 0,
-          managedPosts: postCount || 0
+          managedPosts: postCount || 0,
+          managedOrgPic: orgData?.org_pic || undefined
         });
       }
 
@@ -220,7 +227,7 @@ export default function AdminDashboardHome() {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Dashboard</h3>
           <p className="text-gray-600">Fetching your admin data...</p>
         </div>
@@ -242,7 +249,7 @@ export default function AdminDashboardHome() {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto mb-4"></div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Statistics</h3>
           <p className="text-gray-600">Calculating dashboard metrics...</p>
         </div>
@@ -258,7 +265,7 @@ export default function AdminDashboardHome() {
         <p className="text-gray-600">{error}</p>
         <button
           onClick={fetchDashboardStats}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="mt-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
         >
           Try Again
         </button>
@@ -266,19 +273,87 @@ export default function AdminDashboardHome() {
     );
   }
 
+  // Define shortcuts based on user role
+  const getShortcuts = () => {
+    const baseShortcuts = [
+      { to: `profile/${user?.id}`, label: "My Profile", icon: User, description: "View and edit your profile" }
+    ];
+
+    // Only admins see additional admin shortcuts
+    if (isAdmin()) {
+      return [
+        ...baseShortcuts, // My Profile
+        { to: "organizations", label: "Organizations", icon: Building, description: "Manage all organizations" },
+        { to: "officers", label: "Officers", icon: Users, description: "Assign and oversee officers" },
+        { to: "members", label: "Members", icon: User, description: "Browse and manage members" },
+        { to: "posts", label: "Posts", icon: FileText, description: "Review and moderate posts" },
+        { to: "reports", label: "Reports", icon: BarChart3, description: "Check pending reports" }
+      ];
+    }
+
+    // Officers and advisers see contest management shortcuts + officer tools
+    if (isOfficer() || isAdviser()) {
+      const shortcuts = [
+        ...baseShortcuts.slice(0, 1), // My Profile
+      ];
+
+      // Add organization shortcut if they have assigned organizations
+      if (stats.managedOrgId) {
+        shortcuts.push(
+          { to: `organizations/${stats.managedOrgId}`, label: "My Organization", icon: Building, description: "View and manage your organization" },
+          { to: `organizations/${stats.managedOrgId}/ml-dashboard`, label: "ML Analytics", icon: Brain, description: "View ML insights for your org" }
+        );
+      }
+
+      // Officer Tools landing page
+      shortcuts.push({
+        to: "/admin/dashboard/officer-tools",
+        label: "Game Creators",
+        icon: LayoutDashboard,
+        description: "Access game creation tools"
+      });
+
+      shortcuts.push(
+        { to: "/user/dashboard", label: "Member Portal", icon: LayoutDashboard, description: "Access member features and content" },
+        { to: "submissions", label: "Submissions", icon: Image, description: "Review contest submissions" }
+      );
+
+      return shortcuts;
+    }
+
+    // Regular users only see basic shortcuts
+    return baseShortcuts;
+  };
+
+  const shortcuts = getShortcuts();
+
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
-        <h1 className="text-3xl font-bold mb-2">
-          Welcome to {isAdmin() ? 'OrgSync Admin' : 'Officer Dashboard'}
-        </h1>
-        <p className="text-blue-100">
-          {isAdmin()
-            ? 'Manage organizations, oversee members, and monitor platform activity from your central dashboard.'
-            : 'Manage your organizations, oversee members, and monitor activity within your assigned organizations.'
-          }
-        </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header with branding */}
+      <div className="bg-green-600 text-white p-6 mb-6 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            {isAdmin() ? (
+                <img src="/DLSL.png" alt={stats.managedOrganization} className="h-20 auto rounded-lg mr-4" />
+            ) : (
+              stats.managedOrgPic ? (
+                <img src={stats.managedOrgPic} alt={stats.managedOrganization} className="h-16 w-16 rounded-lg mr-4" />
+              ) : (
+                <div className="h-16 w-16 bg-white rounded-lg flex items-center justify-center mr-4">
+                  <Building className="h-8 w-8 text-green-600" />
+                </div>
+              )
+            )}
+            <div>
+              <h1 className="text-2xl font-bold">
+                {isAdmin() ? 'Admin Dashboard' : `${stats.managedOrganization || 'Organization'} Dashboard`}
+              </h1>
+              <p className="text-green-100">
+                {isAdmin() ? 'Platform Administration' : `${roles?.role === 'adviser' ? 'Adviser' : 'Officer'} Tools`}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Quick Stats Grid */}
@@ -287,8 +362,8 @@ export default function AdminDashboardHome() {
           <>
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Building className="h-6 w-6 text-green-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Organizations</p>
@@ -347,20 +422,6 @@ export default function AdminDashboardHome() {
           <>
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Your Organization</p>
-                  <p className="text-lg font-bold text-gray-900 truncate" title={stats.managedOrganization}>
-                    {stats.managedOrganization || 'No Organization'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
                 <div className="p-2 bg-green-100 rounded-lg">
                   <Users className="h-6 w-6 text-green-600" />
                 </div>
@@ -407,167 +468,21 @@ export default function AdminDashboardHome() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {isAdmin() ? (
-            <>
-              <Link
-                to="/admin/dashboard/organizations/new"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                  <Plus className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Create Organization</h3>
-                  <p className="text-sm text-gray-600">Add a new organization to the platform</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/organizations"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-green-100 rounded-lg mr-3">
-                  <Building className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Manage Organizations</h3>
-                  <p className="text-sm text-gray-600">View and edit existing organizations</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/members"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-purple-100 rounded-lg mr-3">
-                  <Users className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">View Members</h3>
-                  <p className="text-sm text-gray-600">Browse and manage platform members</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/posts"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-orange-100 rounded-lg mr-3">
-                  <FileText className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Manage Posts</h3>
-                  <p className="text-sm text-gray-600">Review and moderate posts</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/reports"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-red-100 rounded-lg mr-3">
-                  <AlertCircle className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">View Reports</h3>
-                  <p className="text-sm text-gray-600">Check pending reports and issues</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/officers"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-indigo-100 rounded-lg mr-3">
-                  <UserCheck className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Manage Officers</h3>
-                  <p className="text-sm text-gray-600">Assign and oversee organization officers</p>
-                </div>
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                to={stats.managedOrgId ? `/admin/dashboard/organizations/${stats.managedOrgId}` : "/admin/dashboard/organizations"}
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                  <Building className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Your Organization</h3>
-                  <p className="text-sm text-gray-600">View and manage your organization details</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/members"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-green-100 rounded-lg mr-3">
-                  <Users className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Manage Members</h3>
-                  <p className="text-sm text-gray-600">View members in your organizations</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/posts"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-orange-100 rounded-lg mr-3">
-                  <FileText className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Organization Posts</h3>
-                  <p className="text-sm text-gray-600">Review posts in your organizations</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/officers"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-indigo-100 rounded-lg mr-3">
-                  <UserCheck className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Manage Officers</h3>
-                  <p className="text-sm text-gray-600">Assign officers to your organizations</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/contests"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-purple-100 rounded-lg mr-3">
-                  <AlertCircle className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Manage Contests</h3>
-                  <p className="text-sm text-gray-600">Create and manage organization contests</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/dashboard/submissions"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="p-2 bg-red-100 rounded-lg mr-3">
-                  <FileText className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">Review Submissions</h3>
-                  <p className="text-sm text-gray-600">Check contest submissions and evaluations</p>
-                </div>
-              </Link>
-            </>
-          )}
+          {shortcuts.map(({ to, label, icon: Icon, description }) => (
+            <Link
+              key={to}
+              to={to}
+              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="p-2 bg-green-100 rounded-lg mr-3">
+                <Icon className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">{label}</h3>
+                <p className="text-sm text-gray-600">{description}</p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
 
@@ -598,10 +513,6 @@ export default function AdminDashboardHome() {
             ) : (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Your Organization</span>
-                  <span className="font-semibold text-blue-600">{stats.managedOrganization || 'None'}</span>
-                </div>
-                <div className="flex items-center justify-between">
                   <span className="text-gray-600">New Members (30 days)</span>
                   <span className="font-semibold text-green-600">+{stats.recentMembers}</span>
                 </div>
@@ -620,8 +531,8 @@ export default function AdminDashboardHome() {
             {isAdmin() ? (
               <>
                 <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-blue-600">1</span>
+                  <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-medium text-green-600">1</span>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-900">Create Organizations</h3>
@@ -629,8 +540,8 @@ export default function AdminDashboardHome() {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-blue-600">2</span>
+                  <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-medium text-green-600">2</span>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-900">Assign Officers</h3>
@@ -638,8 +549,8 @@ export default function AdminDashboardHome() {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-blue-600">3</span>
+                  <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-medium text-green-600">3</span>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-900">Monitor Activity</h3>

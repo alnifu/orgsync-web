@@ -30,12 +30,6 @@ interface ReportStats {
 interface EngagementStats {
   totalInteractions: number;
   averageInteractionsPerUser: number;
-  topEngagedUsers: Array<{
-    user_id: string;
-    first_name: string;
-    last_name: string;
-    totalInteractions: number;
-  }>;
   interactionBreakdown: {
     views: number;
     likes: number;
@@ -82,7 +76,6 @@ export default function Reports() {
   const [engagementStats, setEngagementStats] = useState<EngagementStats>({
     totalInteractions: 0,
     averageInteractionsPerUser: 0,
-    topEngagedUsers: [],
     interactionBreakdown: {
       views: 0,
       likes: 0,
@@ -106,7 +99,7 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReportStats();
-  }, [timeRange, filters]);
+  }, [timeRange, filters, customStartDate, customEndDate]);
 
   const getDateRange = (range: TimeRange) => {
     if (range === 'all') return null;
@@ -118,7 +111,21 @@ export default function Reports() {
       };
     }
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-    return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    return {
+      start: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString(),
+      end: new Date().toISOString()
+    };
+  };
+
+  const applyDateFilter = (query: any, dateFilter: any, dateColumn: string) => {
+    if (!dateFilter) return query;
+    if (typeof dateFilter === 'string') {
+      return query.gte(dateColumn, dateFilter);
+    }
+    if (dateFilter.start && dateFilter.end) {
+      return query.gte(dateColumn, dateFilter.start).lte(dateColumn, dateFilter.end);
+    }
+    return query;
   };
 
   const fetchReportStats = async () => {
@@ -185,8 +192,8 @@ export default function Reports() {
       ] = await Promise.all([
         // Total users (filtered by organization membership if filters applied)
         filteredOrgIds
-          ? supabase.from('org_members').select('user_id', { count: 'exact', head: true }).in('org_id', filteredOrgIds)
-          : supabase.from('users').select('id', { count: 'exact', head: true }),
+          ? supabase.from('org_members').select('user_id').in('org_id', filteredOrgIds)
+          : supabase.from('users').select('id'),
 
         // Total organizations (with filters)
         (() => {
@@ -199,9 +206,8 @@ export default function Reports() {
 
         // Total posts (filtered by organization if filters applied)
         (() => {
-          let query = dateFilter
-            ? supabase.from('posts').select('id', { count: 'exact', head: true }).gte('created_at', dateFilter)
-            : supabase.from('posts').select('id', { count: 'exact', head: true });
+          let query = supabase.from('posts').select('id', { count: 'exact', head: true });
+          query = applyDateFilter(query, dateFilter, 'created_at');
           if (filteredOrgIds) query = query.in('org_id', filteredOrgIds);
           return query;
         })(),
@@ -229,9 +235,8 @@ export default function Reports() {
 
         // Total views (filtered by time and organization)
         (() => {
-          let query = dateFilter
-            ? supabase.from('post_views').select('id', { count: 'exact', head: true }).gte('viewed_at', dateFilter)
-            : supabase.from('post_views').select('id', { count: 'exact', head: true });
+          let query = supabase.from('post_views').select('id', { count: 'exact', head: true });
+          query = applyDateFilter(query, dateFilter, 'viewed_at');
           if (filteredPostIds && filteredPostIds.length > 0) {
             query = query.in('post_id', filteredPostIds);
           }
@@ -248,9 +253,8 @@ export default function Reports() {
 
         // Engagement data from reward_log (filtered by organization)
         (() => {
-          let query = dateFilter
-            ? supabase.from('reward_log').select('action, user_id').gte('created_at', dateFilter)
-            : supabase.from('reward_log').select('action, user_id');
+          let query = supabase.from('reward_log').select('action, user_id');
+          query = applyDateFilter(query, dateFilter, 'created_at');
           if (filteredOrgIds) {
             query = query.in('org_id', filteredOrgIds);
           }
@@ -268,21 +272,18 @@ export default function Reports() {
                 last_name
               )
             `);
-          if (dateFilter) baseQuery = baseQuery.gte('created_at', dateFilter);
+          baseQuery = applyDateFilter(baseQuery, dateFilter, 'created_at');
           if (filteredOrgIds) baseQuery = baseQuery.in('org_id', filteredOrgIds);
           return baseQuery;
         })(),
 
         // Views on event posts (for RSVP conversion rate, filtered by organization)
         (() => {
-          let query = dateFilter
-            ? supabase.from('post_views').select('id', { count: 'exact', head: true }).gte('viewed_at', dateFilter)
-            : supabase.from('post_views').select('id', { count: 'exact', head: true });
-
+          let query = supabase.from('post_views').select('id', { count: 'exact', head: true });
+          query = applyDateFilter(query, dateFilter, 'viewed_at');
           if (eventPostIds && eventPostIds.length > 0) {
             query = query.in('post_id', eventPostIds);
           }
-
           return query;
         })(),
 
@@ -373,26 +374,13 @@ export default function Reports() {
       const totalAttended = eventAttendanceResult.data?.length || 0;
       const eventAttendanceRate = totalRsvps > 0 ? (totalAttended / totalRsvps) * 100 : 0;
 
-      // Process top engaged users
-      const userInteractionMap = new Map<string, { count: number; user: any }>();
-      topUsersResult.data?.forEach((record: any) => {
-        const userId = record.user_id;
-        const current = userInteractionMap.get(userId) || { count: 0, user: record.users };
-        userInteractionMap.set(userId, { count: current.count + 1, user: record.users });
-      });
-
-      const topEngagedUsers = Array.from(userInteractionMap.entries())
-        .map(([userId, data]) => ({
-          user_id: userId,
-          first_name: data.user?.first_name || '',
-          last_name: data.user?.last_name || '',
-          totalInteractions: data.count
-        }))
-        .sort((a, b) => b.totalInteractions - a.totalInteractions)
-        .slice(0, 10);
+      // Calculate total users (distinct users)
+      const totalUsers = filteredOrgIds
+        ? new Set(usersResult.data?.map((u: any) => u.user_id)).size
+        : usersResult.data?.length || 0;
 
       setStats({
-        totalUsers: usersResult.count || 0,
+        totalUsers,
         totalOrganizations: organizationsResult.count || 0,
         totalPosts: postsResult.count || 0,
         activeOrganizations: activeOrgsResult.count || 0,
@@ -417,7 +405,6 @@ export default function Reports() {
       setEngagementStats({
         totalInteractions,
         averageInteractionsPerUser: activeUsers > 0 ? totalInteractions / activeUsers : 0,
-        topEngagedUsers,
         interactionBreakdown: {
           views: totalViews,
           likes: totalLikes,
@@ -441,32 +428,6 @@ export default function Reports() {
     await fetchReportStats();
   };
 
-  // const exportToCSV = () => {
-  //   const csvData = [
-  //     ['Metric', 'Value'],
-  //     ['Total Users', stats.totalUsers],
-  //     ['Total Organizations', `${stats.activeOrganizations}/${stats.totalOrganizations}`],
-  //     ['Total Posts', stats.totalPosts],
-  //     ['Total Views', stats.totalViews],
-  //     ['Recent Posts (30d)', stats.recentPosts],
-  //     ['Recent Views (30d)', stats.recentViews],
-  //     ['Students', stats.studentCount],
-  //     ['Faculty', stats.facultyCount],
-  //     ['Time Range', timeRange],
-  //     ['Department Filter', filters.department],
-  //     ['Organization Type Filter', filters.orgType],
-  //     ['Status Filter', filters.status]
-  //   ];
-
-  //   const csvContent = csvData.map(row => row.join(',')).join('\n');
-  //   const blob = new Blob([csvContent], { type: 'text/csv' });
-  //   const url = window.URL.createObjectURL(blob);
-  //   const a = document.createElement('a');
-  //   a.href = url;
-  //   a.download = `reports-${new Date().toISOString().split('T')[0]}.csv`;
-  //   a.click();
-  //   window.URL.revokeObjectURL(url);
-  // };
 
   const StatCard = ({ title, value, icon: Icon, color, gradient }: {
     title: string;
@@ -513,7 +474,7 @@ export default function Reports() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Enhanced Header */}
+        {/* Header Section */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="mb-6 sm:mb-0">
@@ -540,7 +501,7 @@ export default function Reports() {
                 <option value="all">All time</option>
                 <option value="custom">Custom range</option>
               </select>
-              
+
               {timeRange === 'custom' && (
                 <div className="flex gap-2">
                   <input
@@ -559,7 +520,7 @@ export default function Reports() {
                   />
                 </div>
               )}
-              
+
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -634,361 +595,283 @@ export default function Reports() {
           </div>
         </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
-        <StatCard
-          title="Total Users"
-          value={stats.totalUsers}
-          icon={Users}
-          color="bg-green-600"
-        />
-        <StatCard
-          title="Organizations"
-          value={`${stats.activeOrganizations}/${stats.totalOrganizations}`}
-          icon={Building2}
-          color="bg-green-600"
-        />
-        <StatCard
-          title="Total Posts"
-          value={stats.totalPosts}
-          icon={FileText}
-          color="bg-green-600"
-        />
-        <StatCard
-          title="Total Views"
-          value={stats.totalViews.toLocaleString()}
-          icon={TrendingUp}
-          color="bg-green-600"
-        />
-        <StatCard
-          title="Recent Activity"
-          value={`${stats.recentPosts} posts • ${stats.recentViews.toLocaleString()} views`}
-          icon={Calendar}
-          color="bg-green-600"
-        />
-      </div>
-
-      {/* Engagement Stats Grid */}
-      <div className="mb-8">
-        <div className="flex items-center space-x-2 mb-4">
-          <TrendingUp className="h-4 w-4 text-green-600" />
-          <h2 className="text-lg font-semibold text-gray-900">User Engagement</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Active Users"
-            value={`${stats.activeUsers} (${stats.engagementRate.toFixed(1)}%)`}
-            icon={Users}
-            color="bg-green-600"
-          />
-          <StatCard
-            title="Total Interactions"
-            value={engagementStats.totalInteractions.toLocaleString()}
-            icon={TrendingUp}
-            color="bg-green-600"
-          />
-          <StatCard
-            title="Avg per Active User"
-            value={engagementStats.averageInteractionsPerUser.toFixed(1)}
-            icon={FileText}
-            color="bg-green-600"
-          />
-          <StatCard
-            title="Top Engaged Users"
-            value={engagementStats.topEngagedUsers.length}
-            icon={Users}
-            color="bg-green-600"
-          />
-          <StatCard
-            title="RSVP Conversion Rate"
-            value={`${stats.rsvpConversionRate.toFixed(1)}%`}
-            icon={Calendar}
-            color="bg-green-600"
-          />
-          <StatCard
-            title="Daily Retention Rate"
-            value={`${stats.dailyRetentionRate.toFixed(1)}%`}
-            icon={TrendingUp}
-            color="bg-green-600"
-          />
-          <StatCard
-            title="30-Day Retention Rate"
-            value={`${stats.thirtyDayRetentionRate.toFixed(1)}%`}
-            icon={TrendingUp}
-            color="bg-green-600"
-          />
-          <StatCard
-            title="Event Attendance Rate"
-            value={`${stats.eventAttendanceRate.toFixed(1)}%`}
-            icon={Calendar}
-            color="bg-green-600"
-          />
-        </div>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* User Distribution Chart */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-green-600">
-            <h3 className="text-sm font-semibold text-white flex items-center">
-              <Users className="h-4 w-4 mr-2" />
-              User Distribution
-            </h3>
-          </div>
-          <div className="p-4">
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Students</span>
-                  <span className="font-medium">{stats.studentCount} ({stats.totalUsers > 0 ? Math.round((stats.studentCount / stats.totalUsers) * 100) : 0}%)</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-green-600 h-3 rounded-full"
-                    style={{ width: `${stats.totalUsers > 0 ? (stats.studentCount / stats.totalUsers) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Faculty</span>
-                  <span className="font-medium">{stats.facultyCount} ({stats.totalUsers > 0 ? Math.round((stats.facultyCount / stats.totalUsers) * 100) : 0}%)</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-green-600 h-3 rounded-full"
-                    style={{ width: `${stats.totalUsers > 0 ? (stats.facultyCount / stats.totalUsers) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
+        {/* Platform Health Insights */}
+        <div className="mb-8">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 bg-green-600">
+              <h3 className="text-sm font-semibold text-white flex items-center">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Platform Health Insights
+              </h3>
             </div>
-          </div>
-        </div>
-
-        {/* Activity Overview */}
-        {/* <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Activity Overview</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center">
-                  <FileText className="h-5 w-5 text-blue-600 mr-3" />
-                  <span className="text-sm font-medium text-gray-900">Total Posts</span>
-                </div>
-                <span className="text-lg font-semibold text-blue-600">{stats.totalPosts}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center">
-                  <TrendingUp className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-sm font-medium text-gray-900">Recent Activity</span>
-                </div>
-                <span className="text-lg font-semibold text-green-600">{stats.recentPosts}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                <div className="flex items-center">
-                  <Building2 className="h-5 w-5 text-purple-600 mr-3" />
-                  <span className="text-sm font-medium text-gray-900">Active Organizations</span>
-                </div>
-                <span className="text-lg font-semibold text-purple-600">{stats.activeOrganizations}</span>
-              </div>
-            </div>
-          </div>
-        </div> */}
-      </div>
-
-      {/* Engagement Analytics Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-        {/* Interaction Breakdown Chart */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-green-600">
-            <h3 className="text-sm font-semibold text-white flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Interaction Breakdown
-            </h3>
-          </div>
-          <div className="p-4">
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Views</span>
-                  <span className="font-medium">{engagementStats.interactionBreakdown.views.toLocaleString()}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full"
-                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.views / engagementStats.totalInteractions) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Likes</span>
-                  <span className="font-medium">{engagementStats.interactionBreakdown.likes.toLocaleString()}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full"
-                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.likes / engagementStats.totalInteractions) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>RSVPs</span>
-                  <span className="font-medium">{engagementStats.interactionBreakdown.rsvps.toLocaleString()}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full"
-                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.rsvps / engagementStats.totalInteractions) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Poll Votes</span>
-                  <span className="font-medium">{engagementStats.interactionBreakdown.pollVotes.toLocaleString()}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full"
-                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.pollVotes / engagementStats.totalInteractions) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Evaluations</span>
-                  <span className="font-medium">{engagementStats.interactionBreakdown.evaluations.toLocaleString()}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full"
-                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.evaluations / engagementStats.totalInteractions) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Registrations</span>
-                  <span className="font-medium">{engagementStats.interactionBreakdown.registrations.toLocaleString()}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full"
-                    style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.registrations / engagementStats.totalInteractions) * 100 : 0}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Top Engaged Users */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-green-600">
-            <h3 className="text-sm font-semibold text-white flex items-center">
-              <Users className="h-4 w-4 mr-2" />
-              Top Engaged Users
-            </h3>
-          </div>
-          <div className="p-4">
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {engagementStats.topEngagedUsers.length > 0 ? (
-                engagementStats.topEngagedUsers.map((user, index) => (
-                  <div key={user.user_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-xs font-medium text-green-800">{index + 1}</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.first_name} {user.last_name}
-                        </p>
-                      </div>
+            <div className="p-4">
+              <div className="space-y-4">
+                {stats.engagementRate < 30 && (
+                  <div className="flex items-start space-x-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <TrendingUp className="h-5 w-5 text-red-600" />
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">{user.totalInteractions.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">interactions</p>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-800">Critical: Low Platform Engagement</p>
+                      <p className="text-sm text-red-700 mt-1">Only {stats.engagementRate.toFixed(1)}% of users are active. This indicates potential issues with user adoption or platform usability that may require investigation.</p>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500 py-4">
-                  <p className="text-sm">No engagement data available</p>
-                </div>
-              )}
+                )}
+                {stats.engagementRate >= 30 && stats.engagementRate < 50 && (
+                  <div className="flex items-start space-x-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <TrendingUp className="h-5 w-5 text-yellow-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-yellow-800">Moderate: Platform engagement at {stats.engagementRate.toFixed(1)}%</p>
+                      <p className="text-sm text-yellow-700 mt-1">User activity levels are below optimal. Monitor growth trends and consider platform enhancements.</p>
+                    </div>
+                  </div>
+                )}
+                {stats.engagementRate >= 50 && (
+                  <div className="flex items-start space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <TrendingUp className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-800">Healthy: Platform engagement at {stats.engagementRate.toFixed(1)}%</p>
+                      <p className="text-sm text-green-700 mt-1">User activity levels are within acceptable ranges. Continue monitoring for sustained growth.</p>
+                    </div>
+                  </div>
+                )}
+                {stats.totalOrganizations > 0 && stats.activeOrganizations / stats.totalOrganizations < 0.7 && (
+                  <div className="flex items-start space-x-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <Building2 className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-orange-800">Organization Activity: {Math.round((stats.activeOrganizations / stats.totalOrganizations) * 100)}% active</p>
+                      <p className="text-sm text-orange-700 mt-1">Many organizations show low activity. This may indicate onboarding issues or lack of engagement from organization officers.</p>
+                    </div>
+                  </div>
+                )}
+                {stats.thirtyDayRetentionRate < 50 && (
+                  <div className="flex items-start space-x-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <Users className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-800">Retention Concern: 30-day retention at {stats.thirtyDayRetentionRate.toFixed(1)}%</p>
+                      <p className="text-sm text-red-700 mt-1">Users are not returning to the platform. Investigate user experience issues or content relevance.</p>
+                    </div>
+                  </div>
+                )}
+                {stats.totalPosts < 50 && (
+                  <div className="flex items-start space-x-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <FileText className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-purple-800">Content Volume: {stats.totalPosts} total posts</p>
+                      <p className="text-sm text-purple-700 mt-1">Low content creation across the platform. This may impact user engagement and community growth.</p>
+                    </div>
+                  </div>
+                )}
+                {stats.totalUsers > 1000 && stats.activeUsers / stats.totalUsers < 0.2 && (
+                  <div className="flex items-start space-x-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <Users className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-800">Critical: Only {Math.round((stats.activeUsers / stats.totalUsers) * 100)}% of {stats.totalUsers.toLocaleString()} users are active</p>
+                      <p className="text-sm text-red-700 mt-1">Large user base with very low activity rates. Requires immediate attention to platform engagement strategies.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* User Type Breakdown 
-      <div className="bg-white shadow rounded-lg mb-8">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">User Distribution</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="flex items-center">
-                <Users className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-green-600">Students</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.studentCount}</p>
-                  <p className="text-sm text-green-600">
-                    {stats.totalUsers > 0 ? Math.round((stats.studentCount / stats.totalUsers) * 100) : 0}% of total users
-                  </p>
+        {/* Engagement Overview */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Engagement Overview</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Total Users"
+              value={stats.totalUsers}
+              icon={Users}
+              color="bg-green-600"
+            />
+            <StatCard
+              title="Organizations"
+              value={`${stats.activeOrganizations}/${stats.totalOrganizations}`}
+              icon={Building2}
+              color="bg-green-600"
+            />
+            <StatCard
+              title="Total Posts"
+              value={stats.totalPosts}
+              icon={FileText}
+              color="bg-green-600"
+            />
+            <StatCard
+              title="Total Views"
+              value={stats.totalViews.toLocaleString()}
+              icon={TrendingUp}
+              color="bg-green-600"
+            />
+            <StatCard
+              title="Active Users"
+              value={`${stats.activeUsers} (${stats.engagementRate.toFixed(1)}%)`}
+              icon={Users}
+              color="bg-green-600"
+            />
+            <StatCard
+              title="Total Interactions"
+              value={engagementStats.totalInteractions.toLocaleString()}
+              icon={TrendingUp}
+              color="bg-green-600"
+            />
+            <StatCard
+              title="RSVP Conversion"
+              value={`${stats.rsvpConversionRate.toFixed(1)}%`}
+              icon={Calendar}
+              color="bg-green-600"
+            />
+            <StatCard
+              title="30-Day Retention"
+              value={`${stats.thirtyDayRetentionRate.toFixed(1)}%`}
+              icon={TrendingUp}
+              color="bg-green-600"
+            />
+          </div>
+        </div>
+
+        {/* Analytics Charts Section */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Analytics Overview</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* User Distribution Chart */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 bg-green-600">
+                <h3 className="text-sm font-semibold text-white flex items-center">
+                  <Users className="h-4 w-4 mr-2" />
+                  User Distribution
+                </h3>
+              </div>
+              <div className="p-4">
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Students</span>
+                      <span className="font-medium">{stats.studentCount} ({stats.totalUsers > 0 ? Math.round((stats.studentCount / stats.totalUsers) * 100) : 0}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-green-600 h-3 rounded-full"
+                        style={{ width: `${stats.totalUsers > 0 ? (stats.studentCount / stats.totalUsers) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Faculty</span>
+                      <span className="font-medium">{stats.facultyCount} ({stats.totalUsers > 0 ? Math.round((stats.facultyCount / stats.totalUsers) * 100) : 0}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-green-600 h-3 rounded-full"
+                        style={{ width: `${stats.totalUsers > 0 ? (stats.facultyCount / stats.totalUsers) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="bg-emerald-50 p-4 rounded-lg">
-              <div className="flex items-center">
-                <Users className="h-8 w-8 text-emerald-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-emerald-600">Faculty</p>
-                  <p className="text-2xl font-bold text-emerald-900">{stats.facultyCount}</p>
-                  <p className="text-sm text-emerald-600">
-                    {stats.totalUsers > 0 ? Math.round((stats.facultyCount / stats.totalUsers) * 100) : 0}% of total users
-                  </p>
+
+            {/* Interaction Breakdown Chart */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 bg-green-600">
+                <h3 className="text-sm font-semibold text-white flex items-center">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Interaction Breakdown
+                </h3>
+              </div>
+              <div className="p-4">
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Views</span>
+                      <span className="font-medium">{engagementStats.interactionBreakdown.views.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.views / engagementStats.totalInteractions) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Likes</span>
+                      <span className="font-medium">{engagementStats.interactionBreakdown.likes.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.likes / engagementStats.totalInteractions) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>RSVPs</span>
+                      <span className="font-medium">{engagementStats.interactionBreakdown.rsvps.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.rsvps / engagementStats.totalInteractions) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Poll Votes</span>
+                      <span className="font-medium">{engagementStats.interactionBreakdown.pollVotes.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.pollVotes / engagementStats.totalInteractions) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Evaluations</span>
+                      <span className="font-medium">{engagementStats.interactionBreakdown.evaluations.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.evaluations / engagementStats.totalInteractions) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Registrations</span>
+                      <span className="font-medium">{engagementStats.interactionBreakdown.registrations.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{ width: `${engagementStats.totalInteractions > 0 ? (engagementStats.interactionBreakdown.registrations / engagementStats.totalInteractions) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>*/}
-
-      {/* Quick Actions */}
-      {/* <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-              <BarChart3 className="h-5 w-5 mr-2" />
-              Export Report
-            </button>
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-              <Calendar className="h-5 w-5 mr-2" />
-              View Trends
-            </button>
-            <button
-              onClick={fetchReportStats}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-            >
-              <TrendingUp className="h-5 w-5 mr-2" />
-              Refresh Data
-            </button>
-          </div>
-        </div>
-      </div> */}
-
-      {/* Placeholder for future features */}
-      {/* <div className="mt-8 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-        <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">Advanced Analytics Coming Soon</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Future features may include detailed charts, user engagement metrics, organization performance analytics, and more.
-        </p>
-      </div> */}
       </div>
     </div>
   );

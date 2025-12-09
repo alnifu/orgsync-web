@@ -155,7 +155,7 @@ export default function UserNewsFeed() {
   const [pollVotes, setPollVotes] = useState<{ [key: string]: boolean }>({});
   const [pollUserVotes, setPollUserVotes] = useState<{ [key: string]: number | null }>({});
 
-  const [feedbackResponses, setFeedbackResponses] = useState<{ [key: string]: { [key: string]: string } }>({});
+  const [feedbackResponses, setFeedbackResponses] = useState<{ [key: string]: string }>({});
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<{ [key: string]: boolean }>({});
 
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -277,7 +277,7 @@ export default function UserNewsFeed() {
     const rsvpState: { [key: string]: boolean } = {};
     const registeredState: { [key: string]: boolean } = {};
     const likedState: { [key: string]: boolean } = {};
-    const feedbackResponsesState: { [key: string]: { [key: string]: string } } = {};
+    const feedbackResponsesState: { [key: string]: string } = {};
     const feedbackSubmittedState: { [key: string]: boolean } = {};
     const newPollUserVotes: { [key: string]: number | null } = {};
     const evaluatedState: { [key: string]: boolean } = {};
@@ -292,10 +292,10 @@ export default function UserNewsFeed() {
 
       const feedback = feedbackData?.find((f: any) => f.post_id.toString() === postIdStr);
       if (feedback) {
-        feedbackResponsesState[postIdStr] = feedback.responses || {};
+        feedbackResponsesState[postIdStr] = feedback.responses?.answer || "";
         feedbackSubmittedState[postIdStr] = true;
       } else {
-        feedbackResponsesState[postIdStr] = {};
+        feedbackResponsesState[postIdStr] = "";
         feedbackSubmittedState[postIdStr] = false;
       }
     });
@@ -464,8 +464,8 @@ export default function UserNewsFeed() {
   setFeedbackSubmitted,
 }: {
   post: any;
-  feedbackResponses: { [key: string]: { [key: string]: string } };
-  setFeedbackResponses: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: string } }>>;
+  feedbackResponses: { [key: string]: string };
+  setFeedbackResponses: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
   feedbackSubmitted: { [key: string]: boolean };
   setFeedbackSubmitted: React.Dispatch<React.SetStateAction<{ [key: string]: boolean }>>;
 }) {
@@ -484,7 +484,7 @@ export default function UserNewsFeed() {
       });
       setLocalValues(initialValues);
     }
-  }, [parsed.fields, feedbackResponses, post.id]);
+  }, [parsed.fields, feedbackResponses[post.id], post.id]);
 
   const handleInputChange = (index: number, value: string) => {
     setLocalValues((prev) => ({ ...prev, [index]: value }));
@@ -595,7 +595,7 @@ export default function UserNewsFeed() {
         React.SetStateAction<{ [key: string]: number | null }>
       >;
     }) {
-      const parsed = JSON.parse(post.content);
+      const parsed = useMemo(() => JSON.parse(post.content), [post.content]);
       const selectedIndex = pollSelections[post.id] ?? null;
       const userVote = pollUserVotes[post.id] ?? null;
       const hasVoted = userVote !== null;
@@ -774,7 +774,12 @@ export default function UserNewsFeed() {
 
               {/* Body */}
               <div className="mt-4">
-                <h2 className="text-lg font-bold text-gray-900">{post.title}</h2>
+                <h2 
+                  className="text-lg font-bold text-gray-900 cursor-pointer hover:text-green-600 transition-colors"
+                  onClick={() => navigate(`/user/dashboard/posts/${post.id}`)}
+                >
+                  {post.title}
+                </h2>
 
                 {post.post_type === "general" && <p className="text-gray-700 mt-4">{post.content}</p>}
 
@@ -845,12 +850,16 @@ export default function UserNewsFeed() {
                         
                         <button
                           onClick={() => handleLike(post.id)}
-                          className={`flex items-center text-gray-500 hover:text-green-700 transition-all ${
-                            liked[post.id] ? "text-green-600" : ""
+                          className={`flex items-center transition-colors ${
+                            liked[post.id] ? "text-red-500" : "text-gray-500 hover:text-red-500"
                           }`}
                         >
-                          <Heart className="w-5 h-5 mr-1" />
-                          Like
+                          <Heart
+                            className="w-5 h-5 mr-1"
+                            color={liked[post.id] ? "red" : "currentColor"}
+                            fill={liked[post.id] ? "red" : "none"}
+                          />
+                          {liked[post.id] ? "Liked" : "Like"}
                         </button>
                       </div>
                     </div>

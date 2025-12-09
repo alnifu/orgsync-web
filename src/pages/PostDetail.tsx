@@ -4,11 +4,55 @@ import { supabase } from "../lib/supabase";
 import { ArrowLeft, Heart, Share2, Eye, Calendar, Tag, FileText, Calendar as CalendarIcon, BarChart3, MessageSquare, Users, CheckCircle, Clock, XCircle, Vote, ChevronRight, Loader2 } from "lucide-react";
 import type { Posts, PostType, EventRsvp } from '../types/database.types';
 import FormSubmission from '../admin/components/FormSubmission';
+import toast from "react-hot-toast";
+import RSVPModal from '../user/components/RSVPModal';
+import RegisterModal from '../user/components/RegisterModal';
+import EvaluationModal from '../user/components/EvaluateModal';
 
 interface AuthUser {
   id: string;
   email?: string;
 }
+
+const colleges: Record<string, string[]> = {
+  "College of Business, Economics, Accountancy and Management": [
+    "BS Accountancy",
+    "BS Accounting Information System",
+    "BS Legal Management",
+    "BS Entrepreneurship",
+    "BS Management Technology",
+    "BSBA Financial Management",
+    "BSBA Marketing Management",
+    "Certificate in Entrepreneurship",
+  ],
+  "College of Education, Arts and Sciences": [
+    "Bachelor of Elementary Education",
+    "Bachelor of Secondary Education",
+    "AB Communication",
+    "Bachelor of Multimedia Arts",
+    "BS Biology",
+    "BS Forensic Science",
+    "BS Mathematics",
+    "BS Psychology",
+  ],
+  "College of International Hospitality and Tourism Management": [
+    "BS Hospitality Management",
+    "BS Tourism Management",
+    "Certificate in Culinary Arts",
+  ],
+  "College of Information Technology and Engineering": [
+    "BS Architecture",
+    "BS Computer Engineering",
+    "BS Computer Science",
+    "BS Electrical Engineering",
+    "BS Electronics Engineering",
+    "BS Entertainment and Multimedia Computing",
+    "BS Industrial Engineering",
+    "BS Information Technology",
+    "Associate in Computer Technology",
+  ],
+  "College of Nursing": ["BS Nursing"],
+};
 
 export default function PostDetail() {
   const { postId } = useParams<{ postId: string }>();
@@ -23,20 +67,19 @@ export default function PostDetail() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isHovered, setIsHovered] = useState<boolean>(false);
-  const [userRsvp, setUserRsvp] = useState<EventRsvp | null>(null);
-  const [rsvpLoading, setRsvpLoading] = useState(false);
-  const [rsvpStats, setRsvpStats] = useState({
-    attending: 0,
-    maybe: 0,
-    not_attending: 0
-  });
   const [userVote, setUserVote] = useState<number | null>(null);
   const [voteStats, setVoteStats] = useState<number[]>([]);
   const [voting, setVoting] = useState(false);
   const [userFormResponse, setUserFormResponse] = useState<any>(null);
-  const [formResponses, setFormResponses] = useState<any[]>([]);
   const [orgData, setOrgData] = useState<any>(null);
   const [userData, setUserData] = useState<any>(null);
+  const [rsvp, setRsvp] = useState<{ [key: string]: boolean }>({});
+  const [registered, setRegistered] = useState<{ [key: string]: boolean }>({});
+  const [evaluated, setEvaluated] = useState<{ [key: string]: boolean }>({});
+  const [showModal, setShowModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showEvalModal, setShowEvalModal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<any>(null);
 
   useEffect(() => {
     if (postId) {
@@ -49,7 +92,6 @@ export default function PostDetail() {
 
   useEffect(() => {
     if (currentUser && postId && post) {
-      // RSVP functionality disabled
       if (post.post_type === 'poll') {
         fetchUserVote();
         fetchVoteStats();
@@ -58,18 +100,19 @@ export default function PostDetail() {
         fetchUserFormResponse();
       }
     }
-  }, [currentUser, postId, post]);
+  }, [currentUser?.id, postId, post?.id, post?.post_type]);
 
   useEffect(() => {
-    if (post) {
-      if (post.org_id) {
-        fetchOrgData();
-      }
-      if (post.user_id) {
-        fetchUserData();
-      }
+    if (post?.org_id && !orgData) {
+      fetchOrgData();
     }
-  }, [post]);
+  }, [post?.org_id, orgData]);
+
+  useEffect(() => {
+    if (post?.user_id && !userData) {
+      fetchUserData();
+    }
+  }, [post?.user_id, userData]);
 
   async function fetchOrgData() {
     if (!post?.org_id) return;
@@ -165,21 +208,6 @@ export default function PostDetail() {
         post_views: [...(post.post_views || []), { user_id: currentUser.id }] 
       });
     }
-  }
-
-  async function fetchUserRsvp() {
-    // Disabled - RSVP functionality not implemented
-    return;
-  }
-
-  async function fetchRsvpStats() {
-    // Disabled - RSVP functionality not implemented
-    return;
-  }
-
-  async function handleRsvp(status: string) {
-    // Disabled - RSVP functionality not implemented
-    return;
   }
 
   async function fetchUserVote() {
@@ -314,6 +342,33 @@ export default function PostDetail() {
       return [];
     }
   }
+
+  const isUserDashboard = location.pathname.startsWith('/user/dashboard/posts/');
+
+  const handleRSVPClick = () => {
+    if (!post) return;
+    setSelectedPost(post);
+    setShowModal(true);
+  };
+
+  const handleRegisterClick = () => {
+    if (!post) return;
+    setSelectedPost(post);
+    setShowRegisterModal(true);
+  };
+
+  const handleEvaluateClick = () => {
+    if (!post) return;
+    
+    // Check if user has registered for the event
+    if (!registered[postId || '']) {
+      toast.error('You must register for the event before you can evaluate it.');
+      return;
+    }
+    
+    setSelectedPost(post);
+    setShowEvalModal(true);
+  };
 
   function getFormDescription(): string {
     if (!post || post.post_type !== 'feedback') return post?.content || '';
@@ -609,17 +664,6 @@ export default function PostDetail() {
                   Event Details
                 </h3>
                 <div className="space-y-3">
-                  {(() => {
-                    console.log('Event Details Debug:', {
-                      postType: post.post_type,
-                      eventDate: post.event_date,
-                      startTime: post.start_time,
-                      endTime: post.end_time,
-                      location: post.location,
-                      fullPost: post
-                    });
-                    return null;
-                  })()}
                   {post.event_date && (
                     <div className="flex items-center gap-3">
                       <CalendarIcon size={18} className="text-blue-600" />
@@ -663,82 +707,73 @@ export default function PostDetail() {
                     </div>
                   )}
                 </div>
-              </div>
-            )}
 
-            {/* Event RSVP Section - Commented out */}
-            {false && (
-              <div className="bg-gray-50 rounded-lg p-6 mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Users size={20} />
-                  Event Attendance
-                </h3>
-
-                {/* RSVP Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{rsvpStats.attending}</div>
-                    <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                      <CheckCircle size={14} />
-                      Attending
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-600">{rsvpStats.maybe}</div>
-                    <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                      <Clock size={14} />
-                      Maybe
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{rsvpStats.not_attending}</div>
-                    <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                      <XCircle size={14} />
-                      Not Attending
-                    </div>
-                  </div>
+                {/* Event Action Buttons */}
+                <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-blue-200">
+                  <button
+                    onClick={handleRSVPClick}
+                    disabled={!isUserDashboard}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      !isUserDashboard
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : rsvp[postId || ''] 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                    title={!isUserDashboard ? 'RSVP is only available from the user dashboard' : ''}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    {rsvp[postId || ''] ? 'RSVP\'d' : 'RSVP'}
+                  </button>
+                  
+                  <button
+                    onClick={handleRegisterClick}
+                    disabled={!isUserDashboard}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      !isUserDashboard
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : registered[postId || ''] 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : 'bg-purple-600 text-white hover:bg-purple-700'
+                    }`}
+                    title={!isUserDashboard ? 'Registration is only available from the user dashboard' : ''}
+                  >
+                    <Users className="w-4 h-4" />
+                    {registered[postId || ''] ? 'Registered' : 'Register'}
+                  </button>
+                  
+                  <button
+                    onClick={handleEvaluateClick}
+                    disabled={!isUserDashboard || !registered[postId || '']}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      !isUserDashboard
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : evaluated[postId || ''] 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : registered[postId || '']
+                            ? 'bg-orange-600 text-white hover:bg-orange-700'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                    title={!isUserDashboard ? 'Evaluation is only available from the user dashboard' : !registered[postId || ''] ? 'You must register for the event before you can evaluate it' : ''}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    {evaluated[postId || ''] ? 'Evaluated' : 'Evaluate'}
+                  </button>
                 </div>
 
-                {/* RSVP Buttons */}
-                {currentUser && (
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleRsvp('attending')}
-                      className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                        userRsvp?.status === 'attending'
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white border border-green-600 text-green-600 hover:bg-green-50'
-                      }`}
-                    >
-                      <CheckCircle size={16} className="inline mr-2" />
-                      Attending
-                    </button>
-                    <button
-                      onClick={() => handleRsvp('maybe')}
-                      className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                        userRsvp?.status === 'maybe'
-                          ? 'bg-yellow-600 text-white'
-                          : 'bg-white border border-yellow-600 text-yellow-600 hover:bg-yellow-50'
-                      }`}
-                    >
-                      <Clock size={16} className="inline mr-2" />
-                      Maybe
-                    </button>
-                    <button
-                      onClick={() => handleRsvp('not_attending')}
-                      className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                        userRsvp?.status === 'not_attending'
-                          ? 'bg-red-600 text-white'
-                          : 'bg-white border border-red-600 text-red-600 hover:bg-red-50'
-                      }`}
-                    >
-                      <XCircle size={16} className="inline mr-2" />
-                      Not Attending
-                    </button>
+                {/* Admin Notice */}
+                {!isUserDashboard && (
+                  <div className="bg-blue-50 p-2 mt-4">
+                    <div className="flex items-center">
+                      <p className="text-sm text-gray-500">
+                        Event actions (RSVP, Register, Evaluate) are only available to User Dashboard.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
             )}
+
 
             {/* Poll Voting Section */}
             {post.post_type === 'poll' && (
@@ -1042,6 +1077,38 @@ export default function PostDetail() {
             </div>
           </div>
         </div>
+
+        {/* Modals */}
+        {showModal && selectedPost && (
+          <RSVPModal
+            showModal={showModal}
+            selectedPost={selectedPost}
+            setRsvp={setRsvp}
+            setShowModal={setShowModal}
+          />
+        )}
+
+        {showRegisterModal && selectedPost && (
+          <RegisterModal
+            showModal={showRegisterModal}
+            selectedPost={selectedPost}
+            setRegistered={setRegistered}
+            setRsvp={setRsvp}
+            setShowModal={setShowRegisterModal}
+            colleges={colleges}
+            rsvp={rsvp}
+          />
+        )}
+
+        {showEvalModal && selectedPost && (
+          <EvaluationModal
+            showModal={showEvalModal}
+            selectedPost={selectedPost}
+            evaluated={evaluated}
+            setEvaluated={setEvaluated}
+            setShowModal={setShowEvalModal}
+          />
+        )}
       </div>
     </div>
   );
