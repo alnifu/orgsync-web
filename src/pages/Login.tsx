@@ -70,7 +70,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     if (error) {
         toast.error(error.message);
     } else {
-        toast.success("Password reset email sent. Check your inbox.");
+        toast.success("Password reset email will be sent within a few minutes. Please check your inbox.");
     }
 };
 

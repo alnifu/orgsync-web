@@ -168,12 +168,6 @@ const QuizGame: React.FC = () => {
           </div>
         )}
 
-        {!isLoaded && (
-          <p style={{ color: "#fff", position: "absolute", top: "50%" }}>
-            Loading Unity... {Math.round(loadingProgression * 100)}%
-          </p>
-        )}
-
         <div
           style={{
             position: "relative",
@@ -185,6 +179,12 @@ const QuizGame: React.FC = () => {
             alignItems: "center",
           }}
         >
+          {!isLoaded && (
+            <p style={{ color: "#fff", fontSize: "20px", zIndex: 10 }}>
+              Loading Unity... {Math.round(loadingProgression * 100)}%
+            </p>
+          )}
+
           <Unity
             unityProvider={unityProvider}
             style={{
@@ -194,7 +194,8 @@ const QuizGame: React.FC = () => {
               width: "100%",
               height: "100%",
               objectFit: "contain",
-              background: "#000",
+              opacity: isLoaded ? 1 : 0,
+              transition: "opacity 0.3s ease",
             }}
           />
         </div>

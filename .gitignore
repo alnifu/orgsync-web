@@ -25,5 +25,4 @@ dist-ssr
 *.sw?
 src/supabase/*
 supabase/*
-src/lib/supabase.ts
 src/types/supabase.ts

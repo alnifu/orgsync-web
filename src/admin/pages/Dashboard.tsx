@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useUserRoles } from "../../utils/roles";
+import { Link } from "react-router";
 
 export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -32,7 +33,12 @@ export default function Dashboard() {
             >
               {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">{headerTitle}</h1>
+            <Link
+              to="/admin/dashboard"
+              className="text-xl font-semibold text-gray-900 hover:text-green-600 transition-colors"
+            >
+              {headerTitle}
+            </Link>
           </div>
         </div>
       </header>

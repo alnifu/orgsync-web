@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { supabase } from "../../../lib/supabase";
+import { Link } from "react-router";
 
 type EventDetails = {
   id: string;
@@ -187,9 +188,10 @@ export default function Events() {
             </div>
           ) : events.length > 0 ? (
             events.map((event) => (
-              <div
+              <Link
                 key={event.id}
-                className="p-4 mb-2 bg-green-50 rounded-lg border border-green-200"
+                to={`/user/dashboard/posts/${event.id}`}
+                className="block p-4 mb-2 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-colors cursor-pointer"
               >
                 <h3 className="font-bold text-green-800 text-base">
                   {event.title}
@@ -204,7 +206,7 @@ export default function Events() {
                 {event.location && (
                   <p className="text-sm text-gray-700">@ {event.location}</p>
                 )}
-              </div>
+              </Link>
             ))
           ) : (
             <p className="text-sm text-gray-500">No upcoming events</p>

@@ -356,9 +356,9 @@ export default function OrganizationReports({ organizationId }: OrganizationRepo
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header Section */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Organization Reports</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Reports</h2>
         <div className="flex items-center space-x-3">
           <select
             value={timeRange}
@@ -380,7 +380,7 @@ export default function OrganizationReports({ organizationId }: OrganizationRepo
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Key Metrics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Activity Summary */}
         <div className="bg-white shadow rounded-lg p-6">
@@ -405,10 +405,10 @@ export default function OrganizationReports({ organizationId }: OrganizationRepo
         </div>
       </div>
 
-      {/* Content Distribution */}
+      {/* Content Analytics Section */}
       <ContentDistributionChart stats={stats} />
 
-      {/* Event Analytics */}
+      {/* Event Analytics Section */}
       {(stats.totalEventRegistrations > 0 || stats.eventCount > 0) && (
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Event Analytics</h3>
@@ -419,6 +419,102 @@ export default function OrganizationReports({ organizationId }: OrganizationRepo
           </div>
         </div>
       )}
+
+      {/* Recommendations Section */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="px-4 py-3 bg-blue-600 mb-4 rounded">
+          <h3 className="text-lg font-medium text-white flex items-center">
+            <TrendingUp className="h-5 w-5 mr-2" />
+            Recommendations
+          </h3>
+        </div>
+        <div className="space-y-4">
+          {stats.engagementRate < 50 && (
+            <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <TrendingUp className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    <strong>Low Engagement Rate:</strong> Current engagement is {stats.engagementRate.toFixed(1)}%. Consider posting more frequently, using polls and interactive content, or collaborating with other organizations to boost participation.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {stats.rsvpConversionRate < 30 && (
+            <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <Calendar className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-700">
+                    <strong>Event Attendance:</strong> Only {stats.rsvpConversionRate.toFixed(1)}% of RSVPs convert to attendance. Try sending event reminders, providing clear directions, or offering incentives like certificates or prizes.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {stats.thirtyDayRetentionRate < 60 && (
+            <div className="p-4 bg-green-50 border-l-4 border-green-400 rounded">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <Users className="h-5 w-5 text-green-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-700">
+                    <strong>Member Retention:</strong> 30-day retention is {stats.thirtyDayRetentionRate.toFixed(1)}%. Focus on regular communication, exclusive member benefits, or mentorship programs to keep members engaged.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {stats.totalPosts < 5 && (
+            <div className="p-4 bg-purple-50 border-l-4 border-purple-400 rounded">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <FileText className="h-5 w-5 text-purple-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-purple-700">
+                    <strong>Content Strategy:</strong> Only {stats.totalPosts} posts exist. Create a content calendar with diverse post types (events, announcements, polls) to maintain consistent engagement with members.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {stats.attendanceRate < 50 && stats.totalEventRegistrations > 0 && (
+            <div className="p-4 bg-indigo-50 border-l-4 border-indigo-400 rounded">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <BarChart3 className="h-5 w-5 text-indigo-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-indigo-700">
+                    <strong>Event Quality:</strong> Attendance rate is {stats.attendanceRate.toFixed(1)}%. Review event feedback, improve event descriptions, or partner with popular speakers to increase attendance.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {stats.totalMembers > 0 && stats.activeUsers / stats.totalMembers < 0.5 && (
+            <div className="p-4 bg-orange-50 border-l-4 border-orange-400 rounded">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <Users className="h-5 w-5 text-orange-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-orange-700">
+                    <strong>Member Activation:</strong> Only {Math.round((stats.activeUsers / stats.totalMembers) * 100)}% of members are active. Send personalized welcome messages, create member spotlights, or organize smaller events to increase participation.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -29,7 +29,7 @@
     "react-image-crop": "^11.0.10",
     "react-router": "^7.8.0",
     "react-unity-webgl": "^10.1.5",
-    "supabase": "^2.47.2",
+    "supabase": "^2.65.6",
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {

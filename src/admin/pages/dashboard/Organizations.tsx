@@ -12,7 +12,6 @@ import { Link, useNavigate } from 'react-router';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
 import { useUserRoles } from '../../../utils/roles';
-import AccessDenied from '../../../components/AccessDenied';
 import type { Organization } from '../../../types/database.types';
 
 type SortField = 'name' | 'org_code' | 'date_established' | 'org_type';
@@ -21,7 +20,7 @@ type SortDirection = 'asc' | 'desc';
 export default function Organizations() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { roles, loading: rolesLoading, isAdmin, isOfficer, isAdviser } = useUserRoles(user?.id);
+  const { loading: rolesLoading, isAdmin, isOfficer, isAdviser } = useUserRoles(user?.id);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,35 +132,6 @@ export default function Organizations() {
     }
   }, [organizations, loading, rolesLoading, navigate]);
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ChevronDown className="h-4 w-4 text-gray-400" />;
-    return sortDirection === 'asc' ? 
-      <ChevronUp className="h-4 w-4 text-green-600" /> : 
-      <ChevronDown className="h-4 w-4 text-green-600" />;
-  };
-
-  // Check if user has admin access
-  if (rolesLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
-
-  if (!isAdmin() && !isOfficer() && !isAdviser()) {
-    return <AccessDenied />;
-  }
-
   return (
     <div className="p-6">
       <div className="sm:flex sm:items-center">
@@ -186,7 +156,7 @@ export default function Organizations() {
       </div>
 
       {/* Search and filters */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -221,6 +191,25 @@ export default function Organizations() {
           <option value="CON">CON</option>
           <option value="CEAS">CEAS</option>
           <option value="OTHERS">Others</option>
+        </select>
+
+        <select
+          value={`${sortField}-${sortDirection}`}
+          onChange={(e) => {
+            const [field, direction] = e.target.value.split('-') as [SortField, SortDirection];
+            setSortField(field);
+            setSortDirection(direction);
+          }}
+          className="block w-full rounded-md border-0 py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-green-600 sm:text-sm"
+        >
+          <option value="name-asc">Name (A-Z)</option>
+          <option value="name-desc">Name (Z-A)</option>
+          <option value="org_code-asc">Code (A-Z)</option>
+          <option value="org_code-desc">Code (Z-A)</option>
+          <option value="date_established-desc">Newest First</option>
+          <option value="date_established-asc">Oldest First</option>
+          <option value="org_type-asc">Type (A-Z)</option>
+          <option value="org_type-desc">Type (Z-A)</option>
         </select>
       </div>
 

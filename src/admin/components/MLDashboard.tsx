@@ -27,7 +27,11 @@ const MLDashboard: React.FC = () => {
   const [trainingProgress, setTrainingProgress] = useState(0);
   const [trainingMessage, setTrainingMessage] = useState('');
   const [showDataWarning, setShowDataWarning] = useState(false);
+  const [dataQuality, setDataQuality] = useState<{ quality: 'good' | 'fair' | 'poor'; message: string; suggestions: string[] } | null>(null);
+  const [clusterInsights, setClusterInsights] = useState<{ [cluster: number]: { description: string; characteristics: string[]; recommendations: string[] } } | null>(null);
+  const [predictionInsights, setPredictionInsights] = useState<{ summary: string; topPredictors: string[]; actionItems: string[] } | null>(null);
   const [isTrained, setIsTrained] = useState(false);
+  const [dynamicThresholds, setDynamicThresholds] = useState<{ high: number; medium: number }>({ high: 0.7, medium: 0.4 });
   const mlService = MLService.getInstance();
 
   const loadData = async () => {
@@ -82,7 +86,14 @@ const MLDashboard: React.FC = () => {
       setClusters(clusteredUsers);
       setPredictions(mlService.getUserPredictions());
       setIsTrained(true);
-      toast.success('Models trained successfully');
+
+      // Get user-friendly insights
+      setDataQuality(mlService.getDataQualityReport());
+      setClusterInsights(mlService.getClusterInsights());
+      setPredictionInsights(mlService.getPredictionInsights());
+      setDynamicThresholds(mlService.getDynamicThresholds());
+
+      toast.success('Analysis complete! Check out your personalized insights below.');
     } catch (error) {
       console.error('Error training models:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to train models');
@@ -94,7 +105,27 @@ const MLDashboard: React.FC = () => {
   };
 
   const exportToCSV = () => {
+    console.log('Export button clicked, isTrained:', isTrained);
+    console.log('ML Service instance:', mlService);
+
     const csvContent = mlService.exportToCSV();
+
+    // Debug: Check if we have data
+    const dataLength = mlService.getAllUserFeatures().length;
+    console.log('Exporting CSV with', dataLength, 'data points');
+    console.log('CSV content length:', csvContent.length);
+    console.log('CSV preview:', csvContent.substring(0, 200));
+
+    if (dataLength === 0) {
+      toast.error('No data available to export. Please load and train models first.');
+      return;
+    }
+
+    if (csvContent === 'No data available') {
+      toast.error('CSV generation failed. Please try again.');
+      return;
+    }
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -102,48 +133,50 @@ const MLDashboard: React.FC = () => {
     a.download = `ml-data-${orgId}-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('CSV exported');
+    toast.success(`CSV exported with ${dataLength} data points`);
   };
 
   const getConfidenceColor = (probability: number) => {
-    if (probability >= 0.7) return 'text-green-600';
-    if (probability >= 0.4) return 'text-yellow-600';
+    if (probability >= dynamicThresholds.high) return 'text-green-600';
+    if (probability >= dynamicThresholds.medium) return 'text-yellow-600';
     return 'text-red-600';
   };
 
   const getProbabilityBarColor = (probability: number) => {
-    if (probability >= 0.7) return 'bg-green-500';
-    if (probability >= 0.4) return 'bg-yellow-500';
+    if (probability >= dynamicThresholds.high) return 'bg-green-500';
+    if (probability >= dynamicThresholds.medium) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
   const scatterData = {
-    datasets: Object.entries(clusters).map(([cluster, events]) => {
-      // Deduplicate by user for scatter plot
-      const userMap = new Map<string, EventFeatures>();
-      events.forEach(event => {
-        if (!userMap.has(event.userId)) {
-          userMap.set(event.userId, event);
-        }
-      });
-      const uniqueUsers = Array.from(userMap.values());
+    datasets: Object.entries(clusters)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b)) // Sort clusters by numeric order
+      .map(([cluster, events]) => {
+        // Deduplicate by user for scatter plot
+        const userMap = new Map<string, EventFeatures>();
+        events.forEach(event => {
+          if (!userMap.has(event.anonymousUserId)) {
+            userMap.set(event.anonymousUserId, event);
+          }
+        });
+        const uniqueUsers = Array.from(userMap.values());
 
-      return {
-        label: `Cluster ${cluster}`,
-        data: uniqueUsers.map(event => ({
-          x: event.engagementScore,
-          y: event.rsvpRate,
-          userName: event.userName
-        })),
-        backgroundColor: cluster === '0' ? 'rgba(255, 99, 132, 0.6)' :
-                         cluster === '1' ? 'rgba(54, 162, 235, 0.6)' :
-                         'rgba(255, 205, 86, 0.6)',
-        borderColor: cluster === '0' ? 'rgba(255, 99, 132, 1)' :
-                     cluster === '1' ? 'rgba(54, 162, 235, 1)' :
-                     'rgba(255, 205, 86, 1)',
-        borderWidth: 1,
-      };
-    }),
+        return {
+          label: `Cluster ${cluster}`,
+          data: uniqueUsers.map(event => ({
+            x: event.engagementScore,
+            y: event.rsvpRate,
+            anonymousLabel: event.anonymousUserId.replace('User_', 'User ')
+          })),
+          backgroundColor: cluster === '0' ? 'rgba(255, 99, 132, 0.6)' :
+                           cluster === '1' ? 'rgba(54, 162, 235, 0.6)' :
+                           'rgba(255, 205, 86, 0.6)',
+          borderColor: cluster === '0' ? 'rgba(255, 99, 132, 1)' :
+                       cluster === '1' ? 'rgba(54, 162, 235, 1)' :
+                       'rgba(255, 205, 86, 1)',
+          borderWidth: 1,
+        };
+      }),
   };
 
   const scatterOptions = {
@@ -164,7 +197,7 @@ const MLDashboard: React.FC = () => {
     plugins: {
       tooltip: {
         callbacks: {
-          label: (context: any) => `${context.raw.userName}: (${context.parsed.x}, ${context.parsed.y.toFixed(2)}%)`,
+          label: (context: any) => `${context.raw.anonymousLabel}: (${context.parsed.x}, ${context.parsed.y.toFixed(2)}%)`,
         },
       },
     },
@@ -285,6 +318,130 @@ const MLDashboard: React.FC = () => {
 
       {!isLoading && isTrained && (
         <>
+          {/* Data Quality Report */}
+          {dataQuality && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                {dataQuality.quality === 'good' && <div className="w-4 h-4 bg-green-500 rounded-full"></div>}
+                {dataQuality.quality === 'fair' && <div className="w-4 h-4 bg-yellow-500 rounded-full"></div>}
+                {dataQuality.quality === 'poor' && <div className="w-4 h-4 bg-red-500 rounded-full"></div>}
+                <h2 className="text-xl font-semibold text-gray-900">Data Quality Check</h2>
+              </div>
+              <p className="text-gray-700 mb-4">{dataQuality.message}</p>
+              {dataQuality.suggestions.length > 0 && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-medium text-blue-900 mb-2">💡 Suggestions:</h3>
+                  <ul className="list-disc list-inside text-blue-800 space-y-1">
+                    {dataQuality.suggestions.map((suggestion, index) => (
+                      <li key={index}>{suggestion}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Engagement Score Explanation */}
+          {isTrained && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <TrendingUp className="h-8 w-8 text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Understanding Engagement Score</h2>
+              </div>
+              <p className="text-gray-700" dangerouslySetInnerHTML={{ __html: mlService.getEngagementScoreExplanation().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}></p>
+            </div>
+          )}
+
+          {/* Cluster Insights */}
+          {clusterInsights && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Users className="h-8 w-8 text-purple-600" />
+                <h2 className="text-2xl font-semibold text-gray-900">Member Behavior Groups</h2>
+              </div>
+              <p className="text-gray-600 mb-4">
+                We've identified 3 distinct groups of members based on their engagement patterns:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {Object.entries(clusterInsights).map(([clusterId, insight]) => {
+                  const cluster = parseInt(clusterId);
+                  const clusterColor = cluster === 0 ? 'red' : cluster === 1 ? 'blue' : 'yellow';
+                  const clusterUsers = clusters[cluster] || [];
+                  // Count unique users in this cluster (not event-user combinations)
+                  const uniqueUsersInCluster = new Set(clusterUsers.map(user => user.anonymousUserId)).size;
+
+                  return (
+                    <div key={cluster} className={`bg-${clusterColor}-50 border border-${clusterColor}-200 rounded-lg p-4`}>
+                      <div className={`w-12 h-12 bg-${clusterColor}-100 rounded-full flex items-center justify-center mb-3`}>
+                        <span className={`text-${clusterColor}-800 font-bold text-lg`}>
+                          {uniqueUsersInCluster}
+                        </span>
+                      </div>
+                      <h3 className={`text-lg font-semibold text-${clusterColor}-900 mb-2`}>
+                        {insight.description}
+                      </h3>
+                      <div className="mb-3">
+                        <h4 className="font-medium text-gray-700 mb-1">Characteristics:</h4>
+                        <ul className="text-sm text-gray-600 space-y-1">
+                          {insight.characteristics.map((char, index) => (
+                            <li key={index}>• {char}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-1">Recommendations:</h4>
+                        <ul className="text-sm text-gray-600 space-y-1">
+                          {insight.recommendations.map((rec, index) => (
+                            <li key={index}>• {rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Prediction Insights */}
+          {predictionInsights && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Target className="h-8 w-8 text-green-600" />
+                <h2 className="text-2xl font-semibold text-gray-900">RSVP Prediction Insights</h2>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg mb-6">
+                <p className="text-green-800 font-medium">{predictionInsights.summary}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">🎯 What Drives RSVPs:</h3>
+                  <ul className="space-y-2">
+                    {predictionInsights.topPredictors.map((predictor, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-gray-700">{predictor}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">🚀 Action Items:</h3>
+                  <ul className="space-y-2">
+                    {predictionInsights.actionItems.map((action, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <span className="text-gray-700">{action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Cluster Visualization */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -304,6 +461,13 @@ const MLDashboard: React.FC = () => {
             <div className="flex items-center gap-3 mb-6">
               <Target className="h-8 w-8 text-green-600" />
               <h2 className="text-2xl font-semibold text-gray-900">RSVP Prediction</h2>
+            </div>
+
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Dynamic Thresholds:</strong> High ≥ {Math.round(dynamicThresholds.high * 100)}%,
+                Medium ≥ {Math.round(dynamicThresholds.medium * 100)}% (automatically calculated from your data distribution)
+              </p>
             </div>
 
             <div className="overflow-x-auto">
@@ -326,17 +490,17 @@ const MLDashboard: React.FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {predictions.map((prediction) => (
-                    <tr key={prediction.userId} className="hover:bg-gray-50">
+                    <tr key={prediction.anonymousUserId} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{prediction.userName}</div>
+                        <div className="text-sm font-medium text-gray-900">{prediction.anonymousUserId.replace('User_', 'User ')}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{Math.round((prediction.predictedRSVPProb || 0) * 100)}%</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`text-sm font-medium ${getConfidenceColor(prediction.predictedRSVPProb || 0)}`}>
-                          {(prediction.predictedRSVPProb || 0) >= 0.7 ? 'High' :
-                            (prediction.predictedRSVPProb || 0) >= 0.4 ? 'Medium' : 'Low'}
+                          {(prediction.predictedRSVPProb || 0) >= dynamicThresholds.high ? 'High' :
+                            (prediction.predictedRSVPProb || 0) >= dynamicThresholds.medium ? 'Medium' : 'Low'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

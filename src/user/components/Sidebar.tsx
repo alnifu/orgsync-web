@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../../context/AuthContext";
+import { useUserRoles } from "../../utils/roles";
 import { 
   LayoutDashboard,
   Newspaper,
@@ -20,9 +21,11 @@ export default function Sidebar({
   onLinkClick?: () => void 
 }) {
   const { signOut } = useAuth();
+  const { user } = useAuth();
+  const { isOfficer, isAdviser } = useUserRoles(user?.id);
   const navigate = useNavigate();
   
-  const links = [
+  const baseLinks = [
     { to: ".", label: "Dashboard", icon: LayoutDashboard },
     { to: "newsfeed", label: "News Feed", icon: Newspaper },
     { to: "notifications", label: "Notifications", icon: Bell },
@@ -32,9 +35,13 @@ export default function Sidebar({
     { to: "games", label: "Games", icon: Gamepad2 },
     { to: "leaderboard", label: "Leaderboard", icon: Trophy },
     { to: "community-goals", label: "Community Goals", icon: Target },
-    { to: "member-contests", label: "Room Design Contests", icon: Palette },
-    { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard },
+    { to: "member-contests", label: "Room Design Contests", icon: Palette }
   ];
+
+  // Add "Return to Portal" for officers and advisers
+  const links = (isOfficer() || isAdviser()) 
+    ? [...baseLinks, { to: "/dashboard", label: "Return to Portal", icon: LayoutDashboard }]
+    : baseLinks;
 
   const handleSignOut = async () => {
     const confirmLogout = window.confirm("Are you sure you want to sign out?");
